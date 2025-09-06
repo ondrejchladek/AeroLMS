@@ -157,6 +157,7 @@ export default function SignInViewPage() {
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     disabled={isLoading}
+                    autoComplete='username'
                     required
                   />
                 </div>
@@ -181,6 +182,7 @@ export default function SignInViewPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading}
+                    autoComplete='email'
                     required
                   />
                 </div>
@@ -193,6 +195,7 @@ export default function SignInViewPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     disabled={isLoading}
+                    autoComplete='current-password'
                     required
                   />
                 </div>
