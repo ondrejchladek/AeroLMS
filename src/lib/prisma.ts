@@ -14,15 +14,15 @@ const createPrismaClient = (): PrismaClientType => {
   const dbProvider = process.env.DB_PROVIDER || 'sqlserver';
   
   const logConfig = process.env.NODE_ENV === 'production'
-    ? ['error'] as const
-    : ['query', 'info', 'warn', 'error'] as const;
+    ? ['error']
+    : ['query', 'info', 'warn', 'error'];
 
   if (dbProvider === 'sqlite') {
     if (process.env.NODE_ENV !== 'production') {
       console.log('🗄️ Using SQLite database');
     }
     return new PrismaClientSQLite({
-      log: logConfig
+      log: logConfig as any
     });
   }
   
@@ -30,7 +30,7 @@ const createPrismaClient = (): PrismaClientType => {
     console.log('🗄️ Using SQL Server database');
   }
   return new PrismaClient({
-    log: logConfig
+    log: logConfig as any
   });
 };
 
