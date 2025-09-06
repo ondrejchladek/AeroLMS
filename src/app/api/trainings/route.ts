@@ -3,8 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-// Definice všech školení
-export const trainingDefinitions = [
+// Definice všech školení - dočasně inline, bude přesunuto do databáze
+const trainingDefinitions = [
   { key: 'CMM', name: 'CMM', slug: 'cmm', icon: 'post' },
   { key: 'EDM', name: 'EDM', slug: 'edm', icon: 'post' },
   {
@@ -160,19 +160,15 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, description, content, duration, url } = body;
+    const { code, name, description, content } = body;
 
     // Create the training in database
     const training = await prisma.training.create({
       data: {
+        code: code || name.toUpperCase().replace(/\s+/g, '_'),
         name,
         description,
-        content,
-        duration: duration || 0,
-        url: url || name.toLowerCase().replace(/\s+/g, '-'),
-        icon: 'book',
-        overview: description,
-        isActive: true
+        content
       }
     });
 
