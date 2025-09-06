@@ -14,7 +14,7 @@ export async function POST(
     }
 
     const { id } = await params;
-    const test = await prisma.test.findFirst({
+    const test = await (prisma as any).test.findFirst({
       where: { trainingId: parseInt(id) }
     });
 
@@ -23,7 +23,7 @@ export async function POST(
     }
 
     // Check if there's an unfinished attempt
-    const existingAttempt = await prisma.testAttempt.findFirst({
+    const existingAttempt = await (prisma as any).testAttempt.findFirst({
       where: {
         testId: test.id,
         userId: parseInt(session.user.id),
@@ -39,11 +39,11 @@ export async function POST(
     }
 
     // Create new test attempt
-    const newAttempt = await prisma.testAttempt.create({
+    const newAttempt = await (prisma as any).testAttempt.create({
       data: {
         testId: test.id,
         userId: parseInt(session.user.id),
-        employeeCode: parseInt(session.user.code),
+        employeeCode: session.user.code || null,
         employeeName: session.user.name,
         startedAt: new Date()
       }

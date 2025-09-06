@@ -3,149 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
-// Definice všech školení - dočasně inline, bude přesunuto do databáze
-const trainingDefinitions = [
-  { key: 'CMM', name: 'CMM', slug: 'cmm', icon: 'post' },
-  { key: 'EDM', name: 'EDM', slug: 'edm', icon: 'post' },
-  {
-    key: 'VizualniKontrola',
-    name: 'Vizuální kontrola',
-    slug: 'vizualni-kontrola',
-    icon: 'post'
-  },
-  { key: 'Znaceni', name: 'Značení', slug: 'znaceni', icon: 'post' },
-  {
-    key: 'ZlomeniNastroje',
-    name: 'Zlomení nástroje',
-    slug: 'zlomeni-nastroje',
-    icon: 'post'
-  },
-  { key: 'Vzorovani', name: 'Vzorování', slug: 'vzorovani', icon: 'post' },
-  {
-    key: 'UdrzbaStrojuPracovnikyDilny',
-    name: 'Údržba strojů pracovníky dílny',
-    slug: 'udrzba-stroju-pracovniky-dilny',
-    icon: 'post'
-  },
-  {
-    key: 'SystemmanagemenntuKvalityCilepodniku',
-    name: 'Systém managementu kvality',
-    slug: 'system-managementu-kvality',
-    icon: 'post'
-  },
-  {
-    key: 'SymbolyvBB',
-    name: 'Symboly v BB',
-    slug: 'symboly-v-bb',
-    icon: 'post'
-  },
-  {
-    key: 'SeriovaCisla',
-    name: 'Sériová čísla',
-    slug: 'seriova-cisla',
-    icon: 'post'
-  },
-  {
-    key: 'Samokontrola',
-    name: 'Samokontrola',
-    slug: 'samokontrola',
-    icon: 'post'
-  },
-  {
-    key: 'RegulacniKarty',
-    name: 'Regulační karty',
-    slug: 'regulacni-karty',
-    icon: 'post'
-  },
-  { key: 'Pruvodka', name: 'Průvodka', slug: 'pruvodka', icon: 'post' },
-  {
-    key: 'PraceKonProdukt',
-    name: 'Práce kon. produkt',
-    slug: 'prace-kon-produkt',
-    icon: 'post'
-  },
-  {
-    key: 'PouzitiNatsroju',
-    name: 'Použití nástrojů',
-    slug: 'pouziti-nastroju',
-    icon: 'post'
-  },
-  {
-    key: 'OpotrebeniNastrojuuCMT',
-    name: 'Opotřebení nástrojů u CMT',
-    slug: 'opotrebeni-nastroju-cmt',
-    icon: 'post'
-  },
-  {
-    key: 'MonitorVyraCMTDilu',
-    name: 'Monitor výroba CMT dílů',
-    slug: 'monitor-vyra-cmt-dilu',
-    icon: 'post'
-  },
-  { key: 'Meridla', name: 'Měřidla', slug: 'meridla', icon: 'post' },
-  {
-    key: 'KnihaStroje',
-    name: 'Kniha stroje',
-    slug: 'kniha-stroje',
-    icon: 'post'
-  },
-  {
-    key: 'MerAVyhodOpotrebeni',
-    name: 'Měření a vyhodnocení opotřebení',
-    slug: 'mereni-vyhodnoceni-opotrebeni',
-    icon: 'post'
-  },
-  {
-    key: 'PozdavkyEN10204Dodak',
-    name: 'Požadavky EN10204',
-    slug: 'pozadavky-en10204',
-    icon: 'post'
-  },
-  {
-    key: 'VrtaniKritDily',
-    name: 'Vrtání krit. díly',
-    slug: 'vrtani-krit-dily',
-    icon: 'post'
-  },
-  {
-    key: 'ZkouskaTvrdosti',
-    name: 'Zkouška tvrdosti',
-    slug: 'zkouska-tvrdosti',
-    icon: 'post'
-  },
-  {
-    key: 'EleZnaceni',
-    name: 'Elektronické značení',
-    slug: 'elektronicke-znaceni',
-    icon: 'post'
-  },
-  {
-    key: 'TrideniOdpadu',
-    name: 'Třídění odpadu',
-    slug: 'trideni-odpadu',
-    icon: 'post'
-  },
-  {
-    key: 'NakladaniLatkami',
-    name: 'Nakládání s látkami',
-    slug: 'nakladani-latkami',
-    icon: 'post'
-  },
-  {
-    key: 'ITBezpecnost',
-    name: 'IT Bezpečnost',
-    slug: 'it-bezpecnost',
-    icon: 'post'
-  },
-  { key: 'RazK1K', name: 'Raz K1K', slug: 'raz-k1k', icon: 'post' },
-  {
-    key: 'KontrPrijZboz',
-    name: 'Kontrola přijatého zboží',
-    slug: 'kontrola-prijateho-zbozi',
-    icon: 'post'
-  }
-];
-
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
 
@@ -234,20 +91,34 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Pro každé školení zkontroluj, zda je požadováno (bez podtržítek v názvech polí)
-    const trainings = trainingDefinitions.map((training) => {
+    // Načti všechna školení z databáze
+    const dbTrainings = await (prisma as any).training.findMany({
+      orderBy: {
+        name: 'asc'
+      }
+    });
+
+    // Pro každé školení z databáze zkontroluj, zda je požadováno pro uživatele
+    const trainings = dbTrainings.map((training: any) => {
+      const slug = training.code.toLowerCase(); // Použij code jako slug
       const pozadovano = Boolean(
-        user[`${training.key}Pozadovano` as keyof typeof user]
+        user[`${training.code}Pozadovano` as keyof typeof user]
       );
       return {
-        ...training,
+        id: training.id,
+        key: training.code,
+        code: training.code,
+        name: training.name,
+        description: training.description,
+        slug: slug,
+        icon: 'post',
         required: pozadovano,
-        url: `/${training.slug}`
+        url: `/${slug}`
       };
     });
 
     // Filtruj pouze požadovaná školení pro zobrazení v sidebaru
-    const requiredTrainings = trainings.filter((t) => t.required);
+    const requiredTrainings = trainings.filter((t: any) => t.required);
 
     return NextResponse.json({
       trainings: requiredTrainings,

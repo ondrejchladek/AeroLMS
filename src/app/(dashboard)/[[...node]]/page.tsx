@@ -10,78 +10,6 @@ import { TrainingClient } from './training-client';
 
 import React from 'react';
 
-// Mapping názvů školení na URL slug
-const trainingNameToSlug = {
-  CMM: 'cmm',
-  EDM: 'edm',
-  VizualniKontrola: 'vizualni-kontrola',
-  Znaceni: 'znaceni',
-  ZlomeniNastroje: 'zlomeni-nastroje',
-  Vzorovani: 'vzorovani',
-  UdrzbaStrojuPracovnikyDilny: 'udrzba-stroju-pracovniky-dilny',
-  SystemmanagemenntuKvalityCilepodniku: 'system-managementu-kvality',
-  SymbolyvBB: 'symboly-v-bb',
-  SeriovaCisla: 'seriova-cisla',
-  Samokontrola: 'samokontrola',
-  RegulacniKarty: 'regulacni-karty',
-  Pruvodka: 'pruvodka',
-  PraceKonProdukt: 'prace-kon-produkt',
-  PouzitiNatsroju: 'pouziti-nastroju',
-  OpotrebeniNastrojuuCMT: 'opotrebeni-nastroju-cmt',
-  MonitorVyraCMTDilu: 'monitor-vyra-cmt-dilu',
-  Meridla: 'meridla',
-  KnihaStroje: 'kniha-stroje',
-  MerAVyhodOpotrebeni: 'mereni-vyhodnoceni-opotrebeni',
-  PozdavkyEN10204Dodak: 'pozadavky-en10204',
-  VrtaniKritDily: 'vrtani-krit-dily',
-  ZkouskaTvrdosti: 'zkouska-tvrdosti',
-  EleZnaceni: 'elektronicke-znaceni',
-  TrideniOdpadu: 'trideni-odpadu',
-  NakladaniLatkami: 'nakladani-latkami',
-  ITBezpecnost: 'it-bezpecnost',
-  RazK1K: 'raz-k1k',
-  KontrPrijZboz: 'kontrola-prijateho-zbozi'
-} as const;
-
-// Inverted mapping pro získání názvu z URL
-const slugToTrainingName = Object.entries(trainingNameToSlug).reduce(
-  (acc, [key, value]) => ({ ...acc, [value]: key }),
-  {} as Record<string, string>
-);
-
-// Mapping názvů na user friendly názvy
-const trainingDisplayNames: Record<string, string> = {
-  CMM: 'CMM',
-  EDM: 'EDM',
-  VizualniKontrola: 'Vizuální kontrola',
-  Znaceni: 'Značení',
-  ZlomeniNastroje: 'Zlomení nástroje',
-  Vzorovani: 'Vzorování',
-  UdrzbaStrojuPracovnikyDilny: 'Údržba strojů pracovníky dílny',
-  SystemmanagemenntuKvalityCilepodniku: 'Systém managementu kvality - cíle podniku',
-  SymbolyvBB: 'Symboly v BB',
-  SeriovaCisla: 'Sériová čísla',
-  Samokontrola: 'Samokontrola',
-  RegulacniKarty: 'Regulační karty',
-  Pruvodka: 'Průvodka',
-  PraceKonProdukt: 'Práce kon. produkt',
-  PouzitiNatsroju: 'Použití nástrojů',
-  OpotrebeniNastrojuuCMT: 'Opotřebení nástrojů u CMT',
-  MonitorVyraCMTDilu: 'Monitor výroba CMT dílů',
-  Meridla: 'Měřidla',
-  KnihaStroje: 'Kniha stroje',
-  MerAVyhodOpotrebeni: 'Měření a vyhodnocení opotřebení',
-  PozdavkyEN10204Dodak: 'Požadavky EN10204 dodák',
-  VrtaniKritDily: 'Vrtání krit. díly',
-  ZkouskaTvrdosti: 'Zkouška tvrdosti',
-  EleZnaceni: 'Elektronické značení',
-  TrideniOdpadu: 'Třídění odpadu',
-  NakladaniLatkami: 'Nakládání s látkami',
-  ITBezpecnost: 'IT Bezpečnost',
-  RazK1K: 'Raz K1K',
-  KontrPrijZboz: 'Kontrola přijatého zboží'
-};
-
 interface PageProps {
   params: Promise<{
     node?: string[];
@@ -95,16 +23,29 @@ export default async function DynamicPage({ params }: PageProps) {
   const resolvedParams = await params;
   const node = resolvedParams.node || [];
 
+  // Načti všechna školení z databáze pro použití v celé aplikaci
+  const dbTrainings = await (prisma as any).training.findMany({
+    orderBy: {
+      name: 'asc'
+    }
+  });
+
+  // Vytvoř mapu code -> training pro rychlý přístup
+  const trainingsByCode = dbTrainings.reduce((acc: any, training: any) => {
+    acc[training.code] = training;
+    return acc;
+  }, {});
+
   // Pokud není žádná cesta, zobraz přehled
   if (node.length === 0) {
     // Načti data přihlášeného uživatele
     let user;
     if (session!.user?.code) {
-      user = await prisma.user.findUnique({
+      user = await (prisma as any).user.findUnique({
         where: { code: session!.user.code }
       });
     } else if (session!.user?.email) {
-      user = await prisma.user.findUnique({
+      user = await (prisma as any).user.findUnique({
         where: { email: session!.user.email }
       });
     }
@@ -114,16 +55,16 @@ export default async function DynamicPage({ params }: PageProps) {
     }
 
     // Připrav data všech školení pro tabulku ze skutečných dat uživatele
-    const allTrainings = Object.entries(trainingNameToSlug).map(([key, slug]) => {
+    const allTrainings = dbTrainings.map((training: any) => {
       // Dynamicky získej data o školení z databáze uživatele
-      const lastDate = user[`${key}DatumPosl` as keyof typeof user] as Date | null;
-      const nextDate = user[`${key}DatumPristi` as keyof typeof user] as Date | null;
-      const required = Boolean(user[`${key}Pozadovano` as keyof typeof user]);
+      const lastDate = user[`${training.code}DatumPosl` as keyof typeof user] as Date | null;
+      const nextDate = user[`${training.code}DatumPristi` as keyof typeof user] as Date | null;
+      const required = Boolean(user[`${training.code}Pozadovano` as keyof typeof user]);
 
       return {
-        key,
-        name: trainingDisplayNames[key],
-        slug,
+        key: training.code,
+        name: training.name,
+        slug: training.code.toLowerCase(), // Použij code jako slug
         required,
         lastDate,
         nextDate,
@@ -142,6 +83,7 @@ export default async function DynamicPage({ params }: PageProps) {
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       return diffDays > 0 && diffDays <= 30;
     }).length;
+    
     return (
       <PageContainer>
         <div className="w-full space-y-4">
@@ -227,11 +169,14 @@ export default async function DynamicPage({ params }: PageProps) {
     );
   }
 
+  // Použij code přímo jako slug (case-insensitive)
   const slug = node[0];
-  const trainingKey = slugToTrainingName[slug];
+  const training = dbTrainings.find((t: any) => 
+    t.code.toLowerCase() === slug.toLowerCase()
+  );
 
   // Pokud slug neodpovídá žádnému školení, zobraz 404
-  if (!trainingKey) {
+  if (!training) {
     return (
       <div className="flex h-[calc(100vh-4rem)] items-center justify-center">
         <div className="text-center">
@@ -248,14 +193,14 @@ export default async function DynamicPage({ params }: PageProps) {
 
   if (session!.user?.code) {
     // Uživatel přihlášen kódem
-    user = await prisma.user.findUnique({
+    user = await (prisma as any).user.findUnique({
       where: {
         code: session!.user.code
       }
     });
   } else if (session!.user?.email) {
     // Uživatel přihlášen emailem
-    user = await prisma.user.findUnique({
+    user = await (prisma as any).user.findUnique({
       where: {
         email: session!.user.email
       }
@@ -269,16 +214,14 @@ export default async function DynamicPage({ params }: PageProps) {
 
   // Dynamicky získej data o školení (bez podtržítek v názvech polí)
   const trainingData = {
-    datumPosl: user[`${trainingKey}DatumPosl` as keyof typeof user] as Date | null,
-    pozadovano: Boolean(user[`${trainingKey}Pozadovano` as keyof typeof user]),
-    datumPristi: user[`${trainingKey}DatumPristi` as keyof typeof user] as Date | null,
+    datumPosl: user[`${training.code}DatumPosl` as keyof typeof user] as Date | null,
+    pozadovano: Boolean(user[`${training.code}Pozadovano` as keyof typeof user]),
+    datumPristi: user[`${training.code}DatumPristi` as keyof typeof user] as Date | null,
   };
 
-  const displayName = trainingDisplayNames[trainingKey];
-
-  // Načti data o školení z databáze
-  const training = await prisma.training.findUnique({
-    where: { code: trainingKey },
+  // Načti detaily školení včetně testů
+  const trainingWithTests = await (prisma as any).training.findUnique({
+    where: { code: training.code },
     include: {
       tests: {
         select: {
@@ -289,14 +232,14 @@ export default async function DynamicPage({ params }: PageProps) {
   });
 
   // Připrav data pro klienta
-  const trainingForClient = training ? {
-    id: training.id,
-    code: training.code,
-    name: training.name,
-    description: training.description,
-    content: training.content ? JSON.parse(training.content) : null,
-    hasTest: training.tests.length > 0,
-    testId: training.tests[0]?.id
+  const trainingForClient = trainingWithTests ? {
+    id: trainingWithTests.id,
+    code: trainingWithTests.code,
+    name: trainingWithTests.name,
+    description: trainingWithTests.description,
+    content: trainingWithTests.content ? JSON.parse(trainingWithTests.content) : null,
+    hasTest: trainingWithTests.tests.length > 0,
+    testId: trainingWithTests.tests[0]?.id
   } : null;
 
   return (
@@ -304,7 +247,7 @@ export default async function DynamicPage({ params }: PageProps) {
       <TrainingClient
         trainingData={trainingData}
         training={trainingForClient}
-        displayName={displayName}
+        displayName={training.name} // Použij name z databáze
       />
     </PageContainer>
   );
@@ -323,8 +266,16 @@ export async function generateMetadata({ params }: { params: Promise<{ node?: st
   }
 
   const slug = node[0];
-  const trainingKey = slugToTrainingName[slug];
-  const displayName = trainingDisplayNames[trainingKey] || 'Stránka';
+  
+  // Načti školení z databáze pro získání názvu
+  // SQL Server automaticky dělá case-insensitive porovnání
+  const training = await (prisma as any).training.findFirst({
+    where: {
+      code: slug.toUpperCase() // Převeď na uppercase pro SQL Server
+    }
+  });
+
+  const displayName = training ? training.name : 'Stránka';
 
   return {
     title: `${displayName} | AeroLMS`,
