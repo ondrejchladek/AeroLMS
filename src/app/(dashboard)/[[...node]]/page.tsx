@@ -73,10 +73,10 @@ export default async function DynamicPage({ params }: PageProps) {
 
     // Spočítej statistiky ze skutečných dat
     const now = new Date();
-    const requiredTrainings = allTrainings.filter(t => t.required).length;
-    const completedTrainings = allTrainings.filter(t => t.lastDate !== null).length;
-    const expiredTrainings = allTrainings.filter(t => t.nextDate && new Date(t.nextDate) < now).length;
-    const upcomingTrainings = allTrainings.filter(t => {
+    const requiredTrainings = allTrainings.filter((t: any) => t.required).length;
+    const completedTrainings = allTrainings.filter((t: any) => t.lastDate !== null).length;
+    const expiredTrainings = allTrainings.filter((t: any) => t.nextDate && new Date(t.nextDate) < now).length;
+    const upcomingTrainings = allTrainings.filter((t: any) => {
       if (!t.nextDate) return false;
       const nextDate = new Date(t.nextDate);
       const diffTime = nextDate.getTime() - now.getTime();
@@ -144,7 +144,7 @@ export default async function DynamicPage({ params }: PageProps) {
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7'>
             <div className='col-span-4'>
               <BarGraph
-                trainings={allTrainings.map(t => ({
+                trainings={allTrainings.map((t: any) => ({
                   name: t.name,
                   date: t.nextDate
                 }))}
@@ -152,7 +152,7 @@ export default async function DynamicPage({ params }: PageProps) {
             </div>
             <div className='col-span-4 md:col-span-3'>
               <RecentSales
-                trainings={allTrainings.map(t => ({
+                trainings={allTrainings.map((t: any) => ({
                   name: t.name,
                   lastDate: t.lastDate,
                   required: t.required
