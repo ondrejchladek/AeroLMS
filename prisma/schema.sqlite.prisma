@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client-sqlite"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL_SQLITE")
+}
+
+model User {
+  id                                              Int           @id @default(autoincrement())
+  code                                            Int?          @unique
+  name                                            String
+  createdAt                                       DateTime      @default(now())
+  CMMDatumPosl                                    DateTime?
+  CMMDatumPristi                                  DateTime?
+  CMMPozadovano                                   Boolean       @default(false)
+  EDMDatumPosl                                    DateTime?
+  EDMDatumPristi                                  DateTime?
+  EDMPozadovano                                   Boolean       @default(false)
+  EleZnaceniDatumPosl                             DateTime?
+  EleZnaceniDatumPristi                           DateTime?
+  EleZnaceniPozadovano                            Boolean       @default(false)
+  ITBezpecnostDatumPosl                           DateTime?
+  ITBezpecnostDatumPristi                         DateTime?
+  ITBezpecnostPozadovano                          Boolean       @default(false)
+  KnihaStrojeDatumPosl                            DateTime?
+  KnihaStrojeDatumPristi                          DateTime?
+  KnihaStrojePozadovano                           Boolean       @default(false)
+  KontrPrijZbozDatumPosl                          DateTime?
+  KontrPrijZbozDatumPristi                        DateTime?
+  KontrPrijZbozPozadovano                         Boolean       @default(false)
+  MerAVyhodOpotrebeniDatumPosl                    DateTime?
+  MerAVyhodOpotrebeniDatumPristi                  DateTime?
+  MerAVyhodOpotrebeniPozadovano                   Boolean       @default(false)
+  MeridlaDatumPosl                                DateTime?
+  MeridlaDatumPristi                              DateTime?
+  MeridlaPozadovano                               Boolean       @default(false)
+  MonitorVyraCMTDiluDatumPosl                     DateTime?
+  MonitorVyraCMTDiluDatumPristi                   DateTime?
+  MonitorVyraCMTDiluPozadovano                    Boolean       @default(false)
+  NakladaniLatkamiDatumPosl                       DateTime?
+  NakladaniLatkamiDatumPristi                     DateTime?
+  NakladaniLatkamiPozadovano                      Boolean       @default(false)
+  OpotrebeniNastrojuuCMTDatumPosl                 DateTime?
+  OpotrebeniNastrojuuCMTDatumPristi               DateTime?
+  OpotrebeniNastrojuuCMTPozadovano                Boolean       @default(false)
+  PouzitiNatsrojuDatumPosl                        DateTime?
+  PouzitiNatsrojuDatumPristi                      DateTime?
+  PouzitiNatsrojuPozadovano                       Boolean       @default(false)
+  PozdavkyEN10204DodakDatumPosl                   DateTime?
+  PozdavkyEN10204DodakDatumPristi                 DateTime?
+  PozdavkyEN10204DodakPozadovano                  Boolean       @default(false)
+  PraceKonProduktDatumPosl                        DateTime?
+  PraceKonProduktDatumPristi                      DateTime?
+  PraceKonProduktPozadovano                       Boolean       @default(false)
+  PruvodkaDatumPosl                               DateTime?
+  PruvodkaDatumPristi                             DateTime?
+  PruvodkaPozadovano                              Boolean       @default(false)
+  RazK1KDatumPosl                                 DateTime?
+  RazK1KDatumPristi                               DateTime?
+  RazK1KPozadovano                                Boolean       @default(false)
+  RegulacniKartyDatumPosl                         DateTime?
+  RegulacniKartyDatumPristi                       DateTime?
+  RegulacniKartyPozadovano                        Boolean       @default(false)
+  SamokontrolaDatumPosl                           DateTime?
+  SamokontrolaDatumPristi                         DateTime?
+  SamokontrolaPozadovano                          Boolean       @default(false)
+  SeriovaCislaDatumPosl                           DateTime?
+  SeriovaCislaDatumPristi                         DateTime?
+  SeriovaCislaPozadovano                          Boolean       @default(false)
+  SymbolyvBBDatumPosl                             DateTime?
+  SymbolyvBBDatumPristi                           DateTime?
+  SymbolyvBBPozadovano                            Boolean       @default(false)
+  SystemmanagemenntuKvalityCilepodnikuDatumPosl   DateTime?
+  SystemmanagemenntuKvalityCilepodnikuDatumPristi DateTime?
+  SystemmanagemenntuKvalityCilepodnikuPozadovano  Boolean       @default(false)
+  TrideniOdpaduDatumPosl                          DateTime?
+  TrideniOdpaduDatumPristi                        DateTime?
+  TrideniOdpaduPozadovano                         Boolean       @default(false)
+  UdrzbaStrojuPracovnikyDilnyDatumPosl            DateTime?
+  UdrzbaStrojuPracovnikyDilnyDatumPristi          DateTime?
+  UdrzbaStrojuPracovnikyDilnyPozadovano           Boolean       @default(false)
+  VizualniKontrolaDatumPosl                       DateTime?
+  VizualniKontrolaDatumPristi                     DateTime?
+  VizualniKontrolaPozadovano                      Boolean       @default(false)
+  VrtaniKritDilyDatumPosl                         DateTime?
+  VrtaniKritDilyDatumPristi                       DateTime?
+  VrtaniKritDilyPozadovano                        Boolean       @default(false)
+  VzorovaniDatumPosl                              DateTime?
+  VzorovaniDatumPristi                            DateTime?
+  VzorovaniPozadovano                             Boolean       @default(false)
+  ZkouskaTvrdostiDatumPosl                        DateTime?
+  ZkouskaTvrdostiDatumPristi                      DateTime?
+  ZkouskaTvrdostiPozadovano                       Boolean       @default(false)
+  ZlomeniNastrojeDatumPosl                        DateTime?
+  ZlomeniNastrojeDatumPristi                      DateTime?
+  ZlomeniNastrojePozadovano                       Boolean       @default(false)
+  ZnaceniDatumPosl                                DateTime?
+  ZnaceniDatumPristi                              DateTime?
+  ZnaceniPozadovano                               Boolean       @default(false)
+  email                                           String?       @unique
+  password                                        String?
+  updatedAt                                       DateTime      @default(now()) @updatedAt
+  testAttempts                                    TestAttempt[]
+
+  @@map("User")
+}
+
+model Training {
+  id          Int      @id @default(autoincrement())
+  code        String   @unique
+  name        String
+  description String?
+  content     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tests       Test[]
+
+  @@map("Training")
+}
+
+model Test {
+  id           Int           @id @default(autoincrement())
+  trainingId   Int
+  title        String
+  description  String?
+  passingScore Int           @default(80)
+  timeLimit    Int?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  questions    Question[]
+  training     Training      @relation(fields: [trainingId], references: [id])
+  testAttempts TestAttempt[]
+
+  @@map("Test")
+}
+
+model Question {
+  id            Int      @id @default(autoincrement())
+  testId        Int
+  order         Int
+  type          String
+  question      String
+  options       String?
+  correctAnswer String?
+  points        Int      @default(1)
+  required      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  test          Test     @relation(fields: [testId], references: [id])
+
+  @@map("Question")
+}
+
+model TestAttempt {
+  id            Int       @id @default(autoincrement())
+  testId        Int
+  userId        Int
+  startedAt     DateTime  @default(now())
+  completedAt   DateTime?
+  score         Float?
+  passed        Boolean?
+  answers       String?
+  employeeCode  Int?
+  employeeName  String?
+  department    String?
+  workPosition  String?
+  supervisor    String?
+  evaluator     String?
+  signatureData String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  test          Test      @relation(fields: [testId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
+
+  @@map("TestAttempt")
+}

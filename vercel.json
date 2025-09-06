@@ -1,0 +1,15 @@
+{
+  "buildCommand": "npm run build:vercel",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "env": {
+    "DB_PROVIDER": "sqlite",
+    "DATABASE_URL_SQLITE": "file:./prisma/dev.db"
+  },
+  "build": {
+    "env": {
+      "DB_PROVIDER": "sqlite",
+      "DATABASE_URL_SQLITE": "file:./prisma/dev.db"
+    }
+  }
+}

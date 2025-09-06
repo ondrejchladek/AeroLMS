@@ -42,7 +42,7 @@ These servers enhance development capabilities and are available immediately in 
   - Nuqs v2.4.1 for URL search params state
 - **Forms & Validation**:
   - React Hook Form v7.54.1
-  - Zod v3.24.1 for schema validation
+  - Zod v3.24.1 for schema validations
 - **Data Tables**:
   - Tanstack React Table v8.21.2
   - Server-side pagination/filtering via Nuqs

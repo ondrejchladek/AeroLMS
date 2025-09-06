@@ -11,11 +11,18 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "lint:fix": "eslint src --fix && pnpm format",
+    "lint:fix": "eslint src --fix && npm run format",
     "lint:strict": "eslint --max-warnings=0 src",
     "format": "prettier --write .",
     "format:check": "prettier -c -w .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "prisma:generate:sqlite": "prisma generate --schema=./prisma/schema.sqlite.prisma",
+    "prisma:migrate:sqlite": "prisma migrate dev --schema=./prisma/schema.sqlite.prisma",
+    "prisma:push:sqlite": "prisma db push --schema=./prisma/schema.sqlite.prisma",
+    "prisma:seed:sqlite": "node prisma/seed-sqlite.js",
+    "db:setup:sqlite": "npm run prisma:generate:sqlite && npm run prisma:push:sqlite && npm run prisma:seed:sqlite",
+    "dev:sqlite": "next dev --turbopack",
+    "build:vercel": "npm run prisma:generate:sqlite && next build"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

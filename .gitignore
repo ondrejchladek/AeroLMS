@@ -48,6 +48,11 @@ next-env.d.ts
 .env.sentry-build-plugin
 
 /generated/prisma
+/prisma/generated/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite-journal
 
 /.playwright-mcp
 
