@@ -76,7 +76,7 @@ export async function POST(
     const { title, description, passingScore, timeLimit, questions } = body;
 
     // Create test with questions in a transaction
-    const test = await prisma.$transaction(async (tx) => {
+    const test = await (prisma as any).$transaction(async (tx: any) => {
       // Create the test
       const newTest = await tx.test.create({
         data: {

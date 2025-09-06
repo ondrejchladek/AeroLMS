@@ -11,12 +11,12 @@ export async function PUT(
     const { questions } = body;
 
     // Smazat existující otázky
-    await prisma.question.deleteMany({
+    await (prisma as any).question.deleteMany({
       where: { testId: parseInt(testId) }
     });
 
     // Vložit nové otázky
-    const createdQuestions = await prisma.question.createMany({
+    const createdQuestions = await (prisma as any).question.createMany({
       data: questions.map((q: any, index: number) => ({
         testId: parseInt(testId),
         order: index + 1,

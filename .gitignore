@@ -39,6 +39,7 @@ next-env.d.ts
 # clerk configuration (can include secrets)
 /.clerk/
 /.claude
+CLAUDE.md
 
 # cursor 
 .cursorrules
@@ -57,5 +58,5 @@ next-env.d.ts
 /.playwright-mcp
 
 2da7c004-ac2d-4c41-956a-7ebd7e0fb29c.jpg
-AeroLMS-data.xlsx
-ATC 037.10 Ověření účinnosti školení (Schulungsabfrage) - Monitorování výroby CMT dílů + CMT pravidla.docx
+AeroLMS-data.*
+skoleni-vzor.*

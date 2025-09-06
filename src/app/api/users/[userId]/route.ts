@@ -56,7 +56,7 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     }
 
     // Aktualizovat uživatele
-    const updatedUser = await prisma.user.update({
+    const updatedUser = await (prisma as any).user.update({
       where: {
         UserID: userId
       },

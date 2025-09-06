@@ -107,7 +107,7 @@ export async function POST(
 
     // Update user's training completion date if passed
     if (passed) {
-      await prisma.user.update({
+      await (prisma as any).user.update({
         where: { id: parseInt(session.user.id) },
         data: {
           MonitorVyraCMTDiluDatumPosl: new Date(),

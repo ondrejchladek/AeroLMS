@@ -163,7 +163,7 @@ export async function POST(request: Request) {
     const { code, name, description, content } = body;
 
     // Create the training in database
-    const training = await prisma.training.create({
+    const training = await (prisma as any).training.create({
       data: {
         code: code || name.toUpperCase().replace(/\s+/g, '_'),
         name,
@@ -193,7 +193,7 @@ export async function GET(request: Request) {
     // Check if admin request for all trainings from database
     const url = new URL(request.url);
     if (url.searchParams.get('admin') === 'true' && session.user.email === 'test@test.cz') {
-      const trainings = await prisma.training.findMany({
+      const trainings = await (prisma as any).training.findMany({
         include: {
           tests: true
         },
@@ -203,7 +203,7 @@ export async function GET(request: Request) {
       });
       
       return NextResponse.json({
-        trainings: trainings.map(t => ({
+        trainings: trainings.map((t: any) => ({
           ...t,
           testsCount: t.tests.length
         }))
@@ -214,14 +214,14 @@ export async function GET(request: Request) {
     
     if (session.user.code) {
       // Uživatel přihlášen kódem
-      user = await prisma.user.findUnique({
+      user = await (prisma as any).user.findUnique({
         where: {
           code: session.user.code
         }
       });
     } else if (session.user.email) {
       // Uživatel přihlášen emailem
-      user = await prisma.user.findUnique({
+      user = await (prisma as any).user.findUnique({
         where: {
           email: session.user.email
         }
