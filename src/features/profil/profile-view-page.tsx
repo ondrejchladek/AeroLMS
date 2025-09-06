@@ -1,6 +1,6 @@
 // src/features/profil/components/profile-view-page.tsx
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/auth';
 
 export default async function ProfileViewPage() {
   const session = await getServerSession(authOptions);

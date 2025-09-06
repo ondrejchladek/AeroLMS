@@ -21,14 +21,16 @@ export async function middleware(request: NextRequest) {
   });
 
   if (!token || !token.id) {
-    // Logování neautorizovaných pokusů
-    const ip =
-      request.headers.get('x-forwarded-for') ||
-      request.headers.get('x-real-ip') ||
-      'unknown';
-    console.warn(
-      `[SECURITY] Unauthorized access attempt to: ${normalizedPath} from IP: ${ip}`
-    );
+    // Logování neautorizovaných pokusů (pouze v non-production)
+    if (process.env.NODE_ENV !== 'production') {
+      const ip =
+        request.headers.get('x-forwarded-for') ||
+        request.headers.get('x-real-ip') ||
+        'unknown';
+      console.warn(
+        `[SECURITY] Unauthorized access attempt to: ${normalizedPath} from IP: ${ip}`
+      );
+    }
 
     // Pokud není token, přesměrovat na login
     const loginUrl = new URL('/login', request.url);
