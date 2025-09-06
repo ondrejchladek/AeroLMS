@@ -90,7 +90,7 @@ export async function POST(
     const passed = score >= attempt.test.passingScore;
 
     // Update test attempt
-    const updatedAttempt = await prisma.testAttempt.update({
+    await (prisma as any).testAttempt.update({
       where: { id: attemptId },
       data: {
         completedAt: new Date(),
