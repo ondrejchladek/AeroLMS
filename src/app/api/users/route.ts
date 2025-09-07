@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Načíst všechny uživatele
-    const users = await prisma.user.findMany({
+    const users = await (prisma as any).user.findMany({
       orderBy: {
         code: 'asc'
       }

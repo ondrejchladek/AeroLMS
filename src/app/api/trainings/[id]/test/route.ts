@@ -14,7 +14,7 @@ export async function GET(
     }
 
     const { id } = await params;
-    const test = await prisma.test.findFirst({
+    const test = await (prisma as any).test.findFirst({
       where: { trainingId: parseInt(id) },
       include: {
         questions: {
@@ -28,7 +28,7 @@ export async function GET(
     }
 
     // Transform questions for frontend
-    const transformedQuestions = test.questions.map((q) => ({
+    const transformedQuestions = test.questions.map((q: any) => ({
       id: q.id,
       order: q.order,
       type: q.type,

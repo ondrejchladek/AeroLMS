@@ -20,7 +20,7 @@ export async function POST(
     const attemptId = parseInt(id);
 
     // Get test attempt with test and questions
-    const attempt = await prisma.testAttempt.findUnique({
+    const attempt = await (prisma as any).testAttempt.findUnique({
       where: { id: attemptId },
       include: {
         test: {
