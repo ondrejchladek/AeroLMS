@@ -12,10 +12,11 @@ declare global {
 
 const createPrismaClient = (): PrismaClientType => {
   const dbProvider = process.env.DB_PROVIDER || 'sqlserver';
-  
-  const logConfig = process.env.NODE_ENV === 'production'
-    ? ['error']
-    : ['query', 'info', 'warn', 'error'];
+
+  const logConfig =
+    process.env.NODE_ENV === 'production'
+      ? ['error']
+      : ['query', 'info', 'warn', 'error'];
 
   if (dbProvider === 'neon') {
     if (process.env.NODE_ENV !== 'production') {
@@ -25,7 +26,7 @@ const createPrismaClient = (): PrismaClientType => {
       log: logConfig as any
     });
   }
-  
+
   if (process.env.NODE_ENV !== 'production') {
     console.log('🗄️ Using SQL Server database');
   }
