@@ -4,15 +4,24 @@ const path = require('path');
 
 console.log('🚀 Starting Vercel build process...');
 
-// Copy Neon schema to default location
+// Read Neon schema
 const neonSchemaPath = path.join(__dirname, '../prisma/schema.neon.prisma');
 const defaultSchemaPath = path.join(__dirname, '../prisma/schema.prisma');
 
-console.log('📋 Copying Neon schema to default location...');
-fs.copyFileSync(neonSchemaPath, defaultSchemaPath);
+console.log('📋 Preparing Neon schema for Vercel...');
+let neonSchema = fs.readFileSync(neonSchemaPath, 'utf-8');
 
-// Generate Prisma client (will use the copied schema)
-console.log('🔧 Generating Prisma client...');
+// Remove the custom output path so it generates to default location
+neonSchema = neonSchema.replace(
+  'output   = "../prisma/generated/client-neon"',
+  '// output removed for Vercel build'
+);
+
+// Write modified schema as default
+fs.writeFileSync(defaultSchemaPath, neonSchema);
+
+// Generate Prisma client to default location (node_modules/@prisma/client)
+console.log('🔧 Generating Prisma client to default location...');
 execSync('npx prisma generate', { stdio: 'inherit' });
 
 // Also generate to custom location for compatibility
