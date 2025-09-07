@@ -26,7 +26,7 @@ function slugify(text: string): string {
 
 async function getTrainingBySlugOrCode(slug: string): Promise<{ name: string; code: string } | null> {
   // Nejprve zkus najít školení podle přímého kódu
-  const trainingByCode = await prisma.training.findUnique({
+  const trainingByCode = await (prisma as any).training.findUnique({
     where: { code: slug.toUpperCase() },
     select: { name: true, code: true }
   });
@@ -36,7 +36,7 @@ async function getTrainingBySlugOrCode(slug: string): Promise<{ name: string; co
   }
 
   // Pokud nenajdeš podle kódu, načti všechna školení a porovnej slugy
-  const allTrainings = await prisma.training.findMany({
+  const allTrainings = await (prisma as any).training.findMany({
     select: { name: true, code: true }
   });
 
