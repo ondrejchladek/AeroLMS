@@ -19,7 +19,7 @@
     "prisma:generate:neon": "prisma generate --schema=./prisma/schema.neon.prisma",
     "prisma:migrate:neon": "prisma migrate dev --schema=./prisma/schema.neon.prisma",
     "prisma:push:neon": "prisma db push --schema=./prisma/schema.neon.prisma --accept-data-loss",
-    "prisma:seed:neon": "node prisma/seed-neon.js",
+    "prisma:seed:neon": "cross-env DB_PROVIDER=neon node prisma/seed-neon.js",
     "db:setup:neon": "npm run prisma:generate:neon && npm run prisma:push:neon && npm run prisma:seed:neon",
     "dev:neon": "cross-env DB_PROVIDER=neon next dev --turbopack",
     "postinstall": "node scripts/postinstall.js",
