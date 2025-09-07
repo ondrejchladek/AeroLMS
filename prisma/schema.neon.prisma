@@ -1,18 +1,25 @@
+// Prisma schema for PostgreSQL/Neon database
+
 generator client {
   provider = "prisma-client-js"
-  output   = "./generated/client-sqlite"
+  output   = "../prisma/generated/client-neon"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL_SQLITE")
+  provider = "postgresql"
+  url      = env("DATABASE_URL_NEON")
 }
 
 model User {
-  id                                              Int           @id @default(autoincrement())
-  code                                            Int?          @unique
-  name                                            String
-  createdAt                                       DateTime      @default(now())
+  id        Int      @id @default(autoincrement())
+  code      Int?     @unique
+  name      String?
+  createdAt DateTime @default(now())
+  email     String?  @unique
+  password  String?
+  updatedAt DateTime @updatedAt
+
+  // Training fields - odpovídá SQL Server databázi
   CMMDatumPosl                                    DateTime?
   CMMDatumPristi                                  DateTime?
   CMMPozadovano                                   Boolean       @default(false)
@@ -100,32 +107,26 @@ model User {
   ZnaceniDatumPosl                                DateTime?
   ZnaceniDatumPristi                              DateTime?
   ZnaceniPozadovano                               Boolean       @default(false)
-  email                                           String?       @unique
-  password                                        String?
-  updatedAt                                       DateTime      @default(now()) @updatedAt
-  testAttempts                                    TestAttempt[]
 
-  @@map("User")
+  testAttempts TestAttempt[]
 }
 
 model Training {
   id          Int      @id @default(autoincrement())
   code        String   @unique
   name        String
-  description String?
-  content     String?
+  description String?  @db.Text
+  content     String?  @db.Text
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   tests       Test[]
-
-  @@map("Training")
 }
 
 model Test {
   id           Int           @id @default(autoincrement())
   trainingId   Int
   title        String
-  description  String?
+  description  String?       @db.Text
   passingScore Int           @default(80)
   timeLimit    Int?
   createdAt    DateTime      @default(now())
@@ -133,8 +134,6 @@ model Test {
   questions    Question[]
   training     Training      @relation(fields: [trainingId], references: [id])
   testAttempts TestAttempt[]
-
-  @@map("Test")
 }
 
 model Question {
@@ -142,16 +141,14 @@ model Question {
   testId        Int
   order         Int
   type          String
-  question      String
-  options       String?
-  correctAnswer String?
+  question      String   @db.Text
+  options       String?  @db.Text
+  correctAnswer String?  @db.Text
   points        Int      @default(1)
   required      Boolean  @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   test          Test     @relation(fields: [testId], references: [id])
-
-  @@map("Question")
 }
 
 model TestAttempt {
@@ -162,18 +159,16 @@ model TestAttempt {
   completedAt   DateTime?
   score         Float?
   passed        Boolean?
-  answers       String?
+  answers       String?   @db.Text
   employeeCode  Int?
   employeeName  String?
   department    String?
   workPosition  String?
   supervisor    String?
   evaluator     String?
-  signatureData String?
+  signatureData String?   @db.Text
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   test          Test      @relation(fields: [testId], references: [id])
   user          User      @relation(fields: [userId], references: [id])
-
-  @@map("TestAttempt")
 }

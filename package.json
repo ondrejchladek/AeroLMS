@@ -16,13 +16,13 @@
     "format": "prettier --write .",
     "format:check": "prettier -c -w .",
     "prepare": "husky",
-    "prisma:generate:sqlite": "prisma generate --schema=./prisma/schema.sqlite.prisma",
-    "prisma:migrate:sqlite": "prisma migrate dev --schema=./prisma/schema.sqlite.prisma",
-    "prisma:push:sqlite": "prisma db push --schema=./prisma/schema.sqlite.prisma",
-    "prisma:seed:sqlite": "node prisma/seed-sqlite.js",
-    "db:setup:sqlite": "npm run prisma:generate:sqlite && npm run prisma:push:sqlite && npm run prisma:seed:sqlite",
-    "dev:sqlite": "next dev --turbopack",
-    "build:vercel": "npm run prisma:generate:sqlite && npm run prisma:push:sqlite && node prisma/seed-sqlite.js && node prisma/seed-trainings-sqlite.js && next build"
+    "prisma:generate:neon": "prisma generate --schema=./prisma/schema.neon.prisma",
+    "prisma:migrate:neon": "prisma migrate dev --schema=./prisma/schema.neon.prisma",
+    "prisma:push:neon": "prisma db push --schema=./prisma/schema.neon.prisma --accept-data-loss",
+    "prisma:seed:neon": "node prisma/seed-neon.js",
+    "db:setup:neon": "npm run prisma:generate:neon && npm run prisma:push:neon && npm run prisma:seed:neon",
+    "dev:neon": "cross-env DB_PROVIDER=neon next dev --turbopack",
+    "build:vercel": "npm run prisma:generate:neon && npm run prisma:push:neon && npm run prisma:seed:neon && next build"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -122,6 +122,7 @@
     "@types/sort-by": "^1.2.3",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^6.11.0",
+    "cross-env": "^10.0.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.2.11",
     "prettier": "3.4.2",

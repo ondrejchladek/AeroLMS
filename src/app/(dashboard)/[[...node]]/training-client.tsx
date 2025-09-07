@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -180,8 +180,14 @@ export function TrainingClient({ trainingData, training, displayName }: Training
     }
   };
 
-  const isExpired = trainingData.datumPristi && new Date(trainingData.datumPristi) < new Date();
+  const [isExpired, setIsExpired] = useState(false);
   const isCompleted = trainingData.datumPosl !== null;
+
+  useEffect(() => {
+    if (trainingData.datumPristi) {
+      setIsExpired(new Date(trainingData.datumPristi) < new Date());
+    }
+  }, [trainingData.datumPristi]);
 
 
   // Test mode
