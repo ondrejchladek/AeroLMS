@@ -24,12 +24,12 @@ export async function GET() {
     const timelineData: any[] = [];
     
     // Sort data by time
-    const sortedData = jsonData.sort((a: any, b: any) => {
+    const sortedData = (jsonData as any[]).sort((a: any, b: any) => {
       return new Date(a.datumcasOD).getTime() - new Date(b.datumcasOD).getTime();
     });
 
     // Create timeline segments
-    sortedData.forEach((row: any, index: number) => {
+    sortedData.forEach((row: any) => {
       const intervalStart = new Date(row.datumcasOD);
       const intervalEnd = new Date(row.datumcasDO);
       const intervalDuration = intervalEnd.getTime() - intervalStart.getTime(); // 15 minutes in ms
@@ -149,7 +149,7 @@ export async function GET() {
     
     if (sortedData.length > 0) {
       // Get the date from the first record
-      const baseDate = new Date(sortedData[0].datumcasOD);
+      const baseDate = new Date((sortedData[0] as any).datumcasOD);
       baseDate.setHours(0, 0, 0, 0); // Set to midnight
       minTime = baseDate.getTime();
       
