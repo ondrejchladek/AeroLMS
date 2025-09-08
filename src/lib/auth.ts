@@ -10,6 +10,7 @@ export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt' }, // pouze JWT
   secret: process.env.NEXTAUTH_SECRET, // prefix NEXTAUTH_
   pages: { signIn: '/login' },
+  debug: process.env.NODE_ENV === 'development' || process.env.DB_PROVIDER === 'neon', // Debug on Vercel too
 
   providers: [
     Credentials({
@@ -54,17 +55,31 @@ export const authOptions: NextAuthOptions = {
         } else if (credentials.loginType === 'code') {
           // Přihlášení kódem zaměstnance (původní implementace)
           const code = Number(credentials.code?.trim());
-          if (!code) return null;
+          if (!code || isNaN(code)) {
+            console.error('[AUTH] Invalid code format:', credentials.code);
+            return null;
+          }
 
-          const user = await prisma.user.findUnique({ where: { code } });
-          if (!user) return null;
+          try {
+            const user = await prisma.user.findUnique({ where: { code } });
+            
+            if (!user) {
+              console.error('[AUTH] User not found with code:', code);
+              return null;
+            }
 
-          return {
-            id: String(user.id),
-            name: user.name,
-            email: user.email,
-            code: user.code
-          } satisfies User;
+            console.log('[AUTH] User found:', { id: user.id, code: user.code });
+            
+            return {
+              id: String(user.id),
+              name: user.name || null,
+              email: user.email || null,
+              code: user.code
+            } satisfies User;
+          } catch (error) {
+            console.error('[AUTH] Database error:', error);
+            return null;
+          }
         }
 
         return null;

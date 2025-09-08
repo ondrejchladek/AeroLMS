@@ -43,7 +43,8 @@ export default function SignInViewPage() {
         email,
         password,
         loginType: 'email',
-        redirect: false
+        redirect: false,
+        callbackUrl: callbackUrl
       });
 
       if (res?.error) {
@@ -66,7 +67,8 @@ export default function SignInViewPage() {
       const res = await signIn('credentials', {
         code,
         loginType: 'code',
-        redirect: false
+        redirect: false,
+        callbackUrl: callbackUrl
       });
 
       if (res?.error) {

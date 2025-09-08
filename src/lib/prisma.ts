@@ -19,12 +19,18 @@ const createPrismaClient = (): PrismaClient => {
 
   const logConfig =
     process.env.NODE_ENV === 'production'
-      ? ['error']
+      ? ['error', 'warn']
       : ['query', 'info', 'warn', 'error'];
 
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`🗄️ Using ${isNeon ? 'Neon PostgreSQL' : 'SQL Server'} database`);
-    console.log(`📊 DATABASE_URL set: ${isNeon ? 'DATABASE_URL_NEON' : 'DATABASE_URL'}`);
+  // Log database connection info even in production for debugging
+  console.log(`🗄️ Using ${isNeon ? 'Neon PostgreSQL' : 'SQL Server'} database`);
+  console.log(`📊 DATABASE_URL set: ${isNeon ? 'DATABASE_URL_NEON' : 'DATABASE_URL'}`);
+  
+  if (isNeon && process.env.DATABASE_URL) {
+    // Log first part of connection string for debugging (hide sensitive data)
+    const url = process.env.DATABASE_URL;
+    const sanitized = url.substring(0, url.indexOf('@') > 0 ? url.indexOf('@') : 30) + '...';
+    console.log(`🔗 Connection: ${sanitized}`);
   }
 
   return new PrismaClient({
