@@ -1,15 +1,11 @@
 const { execSync } = require('child_process');
 
 console.log('🚀 Starting Vercel build process...');
+console.log('📊 DB_PROVIDER:', process.env.DB_PROVIDER);
+console.log('📊 DATABASE_URL_NEON exists:', !!process.env.DATABASE_URL_NEON);
 
-// Set DATABASE_URL to DATABASE_URL_NEON for Prisma
-if (process.env.DATABASE_URL_NEON) {
-  process.env.DATABASE_URL = process.env.DATABASE_URL_NEON;
-  console.log('📋 Using Neon PostgreSQL database on Vercel');
-}
-
-// Generate Prisma client from Neon schema
-console.log('🔧 Generating Prisma client for Neon...');
+// Generate Prisma client from Neon schema which uses DATABASE_URL_NEON
+console.log('🔧 Generating Prisma client for Neon (using DATABASE_URL_NEON)...');
 execSync('npx prisma generate --schema=./prisma/schema.neon.prisma', {
   stdio: 'inherit'
 });

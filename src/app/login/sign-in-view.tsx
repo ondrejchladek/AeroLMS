@@ -47,11 +47,18 @@ export default function SignInViewPage() {
         callbackUrl: callbackUrl
       });
 
+      console.log('[LOGIN] Email signin response:', res);
+
       if (res?.error) {
+        console.error('[LOGIN] Email signin error:', res.error);
         setEmailError('Neplatný email nebo heslo');
-      } else {
-        router.replace(callbackUrl);
+      } else if (res?.ok) {
+        console.log('[LOGIN] Email signin success, redirecting to:', callbackUrl);
+        router.push(callbackUrl);
       }
+    } catch (error) {
+      console.error('[LOGIN] Email signin exception:', error);
+      setEmailError('Chyba při přihlašování');
     } finally {
       setIsLoading(false);
     }
@@ -71,11 +78,18 @@ export default function SignInViewPage() {
         callbackUrl: callbackUrl
       });
 
+      console.log('[LOGIN] Code signin response:', res);
+
       if (res?.error) {
+        console.error('[LOGIN] Code signin error:', res.error);
         setCodeError('Neplatný kód zaměstnance');
-      } else {
-        router.replace(callbackUrl);
+      } else if (res?.ok) {
+        console.log('[LOGIN] Code signin success, redirecting to:', callbackUrl);
+        router.push(callbackUrl);
       }
+    } catch (error) {
+      console.error('[LOGIN] Code signin exception:', error);
+      setCodeError('Chyba při přihlašování');
     } finally {
       setIsLoading(false);
     }

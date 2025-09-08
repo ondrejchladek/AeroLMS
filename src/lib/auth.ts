@@ -7,10 +7,20 @@ import type { User } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 
 export const authOptions: NextAuthOptions = {
-  session: { strategy: 'jwt' }, // pouze JWT
-  secret: process.env.NEXTAUTH_SECRET, // prefix NEXTAUTH_
-  pages: { signIn: '/login' },
-  debug: process.env.NODE_ENV === 'development' || process.env.DB_PROVIDER === 'neon', // Debug on Vercel too
+  session: { 
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  jwt: {
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+  pages: { 
+    signIn: '/login',
+    error: '/login', // Error page
+  },
+  debug: true, // Enable debug for all environments temporarily
+  trustHost: true, // Important for production
 
   providers: [
     Credentials({
