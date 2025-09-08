@@ -1,25 +1,15 @@
 const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
 
 console.log('🚀 Starting Vercel build process...');
 
-// Read Neon schema
-const neonSchemaPath = path.join(__dirname, '../prisma/schema.neon.prisma');
-const defaultSchemaPath = path.join(__dirname, '../prisma/schema.prisma');
+// Set DATABASE_URL to DATABASE_URL_NEON for Prisma
+if (process.env.DATABASE_URL_NEON) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL_NEON;
+  console.log('📋 Using Neon PostgreSQL database on Vercel');
+}
 
-console.log('📋 Preparing Neon schema for Vercel...');
-let neonSchema = fs.readFileSync(neonSchemaPath, 'utf-8');
-
-// Write modified schema as default
-fs.writeFileSync(defaultSchemaPath, neonSchema);
-
-// Generate Prisma client to default location (node_modules/@prisma/client)
-console.log('🔧 Generating Prisma client to default location...');
-execSync('npx prisma generate', { stdio: 'inherit' });
-
-// Also generate to custom location for compatibility
-console.log('🔧 Generating Neon-specific client...');
+// Generate Prisma client from Neon schema
+console.log('🔧 Generating Prisma client for Neon...');
 execSync('npx prisma generate --schema=./prisma/schema.neon.prisma', {
   stdio: 'inherit'
 });

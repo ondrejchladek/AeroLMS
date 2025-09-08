@@ -38,7 +38,7 @@ export const authOptions: NextAuthOptions = {
 
           if (!email || !password) return null;
 
-          const user = await (prisma as any).user.findUnique({ where: { email } });
+          const user = await prisma.user.findUnique({ where: { email } });
           if (!user || !user.password) return null;
 
           // Ověření hesla
@@ -56,7 +56,7 @@ export const authOptions: NextAuthOptions = {
           const code = Number(credentials.code?.trim());
           if (!code) return null;
 
-          const user = await (prisma as any).user.findUnique({ where: { code } });
+          const user = await prisma.user.findUnique({ where: { code } });
           if (!user) return null;
 
           return {
