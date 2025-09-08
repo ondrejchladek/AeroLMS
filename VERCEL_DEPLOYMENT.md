@@ -44,18 +44,36 @@ VALUES (123, 'Test User', 'test@example.com', NOW(), NOW());
 
 ## Troubleshooting
 
-### Chyba "Neplatný kód zaměstnance"
-- Zkontrolujte, zda uživatel existuje v Neon databázi
-- Ověřte, že `code` je typu INT v databázi
+### Chyba "Neplatný kód zaměstnance" (401 Unauthorized)
+
+**Možné příčiny:**
+1. **Uživatel neexistuje v databázi** - použijte `neon-test-user.sql` pro vytvoření
+2. **Špatné připojení k databázi** - zkontrolujte logy na Vercelu
+3. **Prisma client není správně vygenerovaný** - zkontrolujte build logy
+
+**Debugging kroky:**
+1. Zkontrolujte Vercel Function Logs pro detailní chybové hlášky
+2. Ověřte v Neon SQL Editor: `SELECT * FROM "User" WHERE code = 123;`
+3. Zkontrolujte Environment Variables na Vercelu
+4. V logu hledejte: `🗄️ Using Neon PostgreSQL database`
 
 ### Chyba "Callback for provider type credentials not supported"
+- Tato chyba je v produkci normální při neúspěšném přihlášení
 - Ujistěte se, že NEXTAUTH_SECRET je správně nastavený
 - Zkontrolujte, že NEXTAUTH_URL odpovídá doméně na Vercelu
 
-### Build chyby
-- Zkontrolujte logy na Vercelu
-- Ověřte, že DATABASE_URL_NEON je správně nastavená
-- Ujistěte se, že schema.neon.prisma je commitnuté v Gitu
+### Connection string pro Neon
+**DŮLEŽITÉ:** Odstraňte `channel_binding=require` z connection stringu!
+
+Správný formát:
+```
+postgresql://user:password@host/database?sslmode=require
+```
+
+Špatný formát:
+```
+postgresql://user:password@host/database?sslmode=require&channel_binding=require
+```
 
 ## Lokální testování s Neon
 
