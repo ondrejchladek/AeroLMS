@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "node scripts/build.js",
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "eslint src --fix && npm run format",
@@ -19,8 +19,7 @@
     "prisma:generate:neon": "prisma generate --schema=./prisma/schema.neon.prisma",
     "prisma:push:neon": "prisma db push --schema=./prisma/schema.neon.prisma --accept-data-loss",
     "dev:neon": "cross-env DB_PROVIDER=neon DATABASE_URL=\"$DATABASE_URL_NEON\" next dev --turbopack",
-    "postinstall": "node scripts/postinstall.js",
-    "build:vercel": "node scripts/vercel-build.js"
+    "postinstall": "node scripts/postinstall.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

@@ -20,7 +20,6 @@ export const authOptions: NextAuthOptions = {
     error: '/login', // Error page
   },
   debug: true, // Enable debug for all environments temporarily
-  trustHost: true, // Important for production
 
   providers: [
     Credentials({
