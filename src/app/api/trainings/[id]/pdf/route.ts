@@ -20,7 +20,7 @@ export async function GET(
     const trainingId = parseInt(id);
 
     // Načti data školení z databáze
-    const training = await (prisma as any).training.findUnique({
+    const training = await prisma.training.findUnique({
       where: { id: trainingId },
       select: {
         name: true,
@@ -36,7 +36,7 @@ export async function GET(
     // Získej jméno uživatele
     let userName = 'Uživatel';
     if (session.user.code) {
-      const user = await (prisma as any).user.findUnique({
+      const user = await prisma.user.findUnique({
         where: { code: session.user.code },
         select: { name: true },
       });
@@ -44,7 +44,7 @@ export async function GET(
         userName = user.name;
       }
     } else if (session.user.email) {
-      const user = await (prisma as any).user.findUnique({
+      const user = await prisma.user.findUnique({
         where: { email: session.user.email },
         select: { name: true },
       });

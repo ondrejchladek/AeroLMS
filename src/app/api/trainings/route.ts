@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isAdmin, isTrainer } from '@/types/roles';
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -10,9 +11,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Check if user is admin
-  if (session.user.email !== 'test@test.cz') {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  // Check if user is admin or trainer
+  if (!isAdmin(session.user.role) && !isTrainer(session.user.role)) {
+    return NextResponse.json({ error: 'Forbidden - Admin or Trainer access required' }, { status: 403 });
   }
 
   try {
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     const { code, name, description, content } = body;
 
     // Create the training in database
-    const training = await (prisma as any).training.create({
+    const training = await prisma.training.create({
       data: {
         code: code || name.toUpperCase().replace(/\s+/g, '_'),
         name,
@@ -47,10 +48,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Check if admin request for all trainings from database
+    // Check if admin or trainer request for all trainings from database
     const url = new URL(request.url);
-    if (url.searchParams.get('admin') === 'true' && session.user.email === 'test@test.cz') {
-      const trainings = await (prisma as any).training.findMany({
+    const isAdminOrTrainer = isAdmin(session.user.role) || isTrainer(session.user.role);
+    if (url.searchParams.get('admin') === 'true' && isAdminOrTrainer) {
+      const trainings = await prisma.training.findMany({
         include: {
           tests: true
         },
@@ -71,14 +73,14 @@ export async function GET(request: Request) {
     
     if (session.user.code) {
       // Uživatel přihlášen kódem
-      user = await (prisma as any).user.findUnique({
+      user = await prisma.user.findUnique({
         where: {
           code: session.user.code
         }
       });
     } else if (session.user.email) {
       // Uživatel přihlášen emailem
-      user = await (prisma as any).user.findUnique({
+      user = await prisma.user.findUnique({
         where: {
           email: session.user.email
         }
@@ -92,7 +94,7 @@ export async function GET(request: Request) {
     }
 
     // Načti všechna školení z databáze
-    const dbTrainings = await (prisma as any).training.findMany({
+    const dbTrainings = await prisma.training.findMany({
       orderBy: {
         name: 'asc'
       }

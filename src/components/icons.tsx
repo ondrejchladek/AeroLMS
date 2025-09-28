@@ -32,7 +32,8 @@ import {
   IconBrandGithub,
   IconSchool,
   IconCertificate,
-  IconBook
+  IconBook,
+  IconRefresh
 } from '@tabler/icons-react';
 
 export type Icon = React.ComponentType<IconProps>;
@@ -70,5 +71,6 @@ export const Icons = {
   check: IconCheck,
   training: IconSchool,
   certificate: IconCertificate,
-  book: IconBook
+  book: IconBook,
+  refresh: IconRefresh
 };

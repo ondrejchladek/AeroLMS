@@ -19,7 +19,7 @@ export const authOptions: NextAuthOptions = {
     signIn: '/login',
     error: '/login', // Error page
   },
-  debug: true, // Enable debug for all environments temporarily
+  debug: false,
 
   providers: [
     Credentials({
@@ -59,34 +59,31 @@ export const authOptions: NextAuthOptions = {
             id: String(user.id),
             name: user.name,
             email: user.email,
-            code: user.code
+            code: user.code,
+            role: user.role
           } satisfies User;
         } else if (credentials.loginType === 'code') {
           // Přihlášení kódem zaměstnance (původní implementace)
           const code = Number(credentials.code?.trim());
           if (!code || isNaN(code)) {
-            console.error('[AUTH] Invalid code format:', credentials.code);
             return null;
           }
 
           try {
             const user = await prisma.user.findUnique({ where: { code } });
-            
+
             if (!user) {
-              console.error('[AUTH] User not found with code:', code);
               return null;
             }
 
-            console.log('[AUTH] User found:', { id: user.id, code: user.code });
-            
             return {
               id: String(user.id),
               name: user.name || null,
               email: user.email || null,
-              code: user.code
+              code: user.code,
+              role: user.role
             } satisfies User;
           } catch (error) {
-            console.error('[AUTH] Database error:', error);
             return null;
           }
         }
@@ -97,13 +94,55 @@ export const authOptions: NextAuthOptions = {
   ],
 
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: User }) {
-      if (user) {
-        token.id = user.id;
-        token.code = (user as any).code;
-        token.email = (user as any).email;
+    async jwt({ token, user, account, trigger }: { token: JWT; user?: User; account?: any; trigger?: any }) {
+      try {
+        // Při prvním přihlášení nebo refresh
+        if (user) {
+          token.id = user.id;
+          token.code = (user as any).code;
+          token.email = (user as any).email;
+          token.role = (user as any).role;
+          // Přidáme timestamp pro tracking
+          token.iat = Math.floor(Date.now() / 1000);
+        }
+
+        // Pokud nemáme základní údaje, vraťme token s výchozími hodnotami
+        if (!token.id) {
+          return {
+            ...token,
+            id: '',
+            code: null,
+            email: null,
+            role: 'WORKER'
+          };
+        }
+
+        // Kontrola expirace tokenu
+        const tokenAge = Math.floor(Date.now() / 1000) - (token.iat as number || 0);
+        if (tokenAge > 30 * 24 * 60 * 60) {
+          // Token je starší než 30 dní, vynutit re-login
+          return {
+            ...token,
+            id: '',
+            code: null,
+            email: null,
+            role: 'WORKER',
+            expired: true
+          };
+        }
+
+        return token;
+      } catch (error) {
+        // Vrátit token s výchozími hodnotami pro zachování kompatibility
+        return {
+          ...token,
+          id: '',
+          code: null,
+          email: null,
+          role: 'WORKER',
+          error: true
+        };
       }
-      return token;
     },
     async session({
       session,
@@ -112,12 +151,26 @@ export const authOptions: NextAuthOptions = {
       session: import('next-auth').Session;
       token: JWT;
     }) {
-      if (session.user) {
-        session.user.id = token.id as string;
-        session.user.code = token.code as number | null;
-        session.user.email = token.email as string | null;
+      try {
+        // Kontrola validity tokenu
+        if (!token || !token.id) {
+          throw new Error('Invalid token');
+        }
+
+        if (session.user) {
+          session.user.id = token.id as string;
+          session.user.code = token.code as number | null;
+          session.user.email = token.email as string | null;
+          session.user.role = token.role as string;
+        }
+        return session;
+      } catch (error) {
+        // Vrátit prázdnou session pro vyvolání re-login
+        return {
+          ...session,
+          expires: new Date(0).toISOString() // Expirovaná session
+        };
       }
-      return session;
     }
   }
 };

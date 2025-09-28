@@ -4,11 +4,99 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 🚀 Claude Code Session Start
 
+## 🔥 Quick Start Checklist
+
+```bash
+# 1. Setup project
+cd AeroLMS
+npm install
+
+# 2. Environment variables
+cp .env.example .env.local
+# Edit .env.local with database connection
+
+# 3. Database setup (SQL Server local)
+npx prisma generate
+npx prisma migrate dev
+npx prisma db seed  # Optional
+
+# 4. Start development
+npm run dev  # http://localhost:3000
+
+# 5. Login with employee code
+# Check seed data for test codes
+
+# 6. Open Prisma Studio (správně)
+npx dotenv -e .env.local -- prisma studio
+```
+
 ## Project Overview
 
 **AeroLMS v1.0.0** - Employee Training System (Systém školení zaměstnanců)
 
 A production-ready learning management system featuring employee training modules, assessment capabilities, and comprehensive progress tracking. Built with Next.js 15, React 19, and Microsoft SQL Server.
+
+## 🔐 Role-Based Access Control System
+
+The system implements three user roles with distinct permissions:
+
+### User Roles
+
+- **ADMIN** 👑
+  - Full system access
+  - Manage trainers and training assignments
+  - Create/edit/delete all trainings and tests
+  - Access admin dashboard and synchronization tools
+  - Example user: `test@test.cz`
+
+- **TRAINER** 👨‍🏫
+  - Edit assigned trainings (name, description, content)
+  - Create and manage tests for assigned trainings
+  - View training statistics and test results
+  - Can override training names from database codes
+
+- **WORKER** 👷
+  - View required trainings
+  - Take tests and assessments
+  - View training materials and progress
+  - Must complete ALL active tests for each training
+  - Example user: code `123456`
+
+## 🔄 Automatic Training Synchronization
+
+The system automatically detects and synchronizes trainings from database columns:
+
+### How It Works
+1. **On Application Start** (`src/instrumentation.ts`):
+   - Scans User table for training columns pattern: `{code}DatumPosl`, `{code}DatumPristi`, `{code}Pozadovano`
+   - Creates missing Training records automatically
+   - Preserves existing training data
+
+2. **Manual Synchronization**:
+   - Admin page: `/admin/synchronizace`
+   - API endpoint: `POST /api/admin/sync-trainings`
+
+### Training Detection Pattern
+For each training, the system looks for three columns in User table:
+- `{code}DatumPosl` - Last completion date
+- `{code}DatumPristi` - Next due date
+- `{code}Pozadovano` - Required flag (boolean)
+
+Example: `CMMDatumPosl`, `CMMDatumPristi`, `CMMPozadovano` → Creates training with code "CMM"
+
+## 📚 Multiple Tests Support
+
+Each training can have multiple tests:
+
+### Test Features
+- **Multiple Tests per Training**: Unlimited number of tests
+- **Test Management**: Trainers can create, edit, activate/deactivate tests
+- **Worker Requirements**: Must pass ALL active tests to complete training
+- **Test Configuration**:
+  - Passing score (percentage)
+  - Time limit (optional)
+  - Active/inactive status
+  - Questions with various types (single choice, multiple choice, etc.)
 
 ## Available MCP Servers
 
@@ -19,8 +107,8 @@ Claude Code has access to these MCP servers (configured globally):
 - **Sequential Thinking** (`mcp__sequential-thinking__`) - Step-by-step problem solving and analysis
 - **Context7** (`mcp__context7__`) - Library documentation lookup for any framework/library
 - **IDE** (`mcp__ide__`) - VS Code integration for diagnostics and code execution
-- **Basic Memory** (`basic-memory`) - Persistent knowledge base for storing project insights and solutions
-- **Shadcn UI v4** (`shadcn-ui-v4`) - Direct access to shadcn/ui v4 component source code (React/Svelte/Vue)
+- **Basic Memory** (`mcp__basic-memory`) - Persistent knowledge base for storing project insights and solutions
+- **Shadcn** (`mcp__shadcn__`) - Direct access to shadcn/ui component source code and demos
 
 These servers enhance development capabilities and are available immediately in all Claude Code sessions.
 
@@ -32,8 +120,13 @@ These servers enhance development capabilities and are available immediately in 
   - shadcn/ui (full suite of Radix UI components)
   - Tailwind CSS v4.0.0 with tailwindcss-animate
   - Lucide React & Tabler Icons for iconography
-- **Database**:
-  - Microsoft SQL Server Express 2019 (local installation)
+- **Database (Hybridní systém)**:
+  - **Lokální vývoj**: Microsoft SQL Server Express 2019 (localhost:1433)
+    - Schema: `prisma/schema.prisma`
+    - Environment: `.env.local` s `DATABASE_URL`
+  - **Produkce (Vercel)**: Neon PostgreSQL
+    - Schema: `prisma/schema.neon.prisma`
+    - Environment: `.env` s `DATABASE_URL_NEON`
   - Prisma ORM v6.11.1 as database abstraction layer
   - Database migrations in `prisma/migrations/`
 - **Authentication**: NextAuth v4.24.11 with JWT strategy (employee code-based)
@@ -79,7 +172,10 @@ npx prisma migrate dev   # Run migrations in development
 npx prisma db push       # Push schema changes without migration
 npx prisma generate      # Generate Prisma client
 npx prisma db seed       # Seed database (runs prisma/seed.js)
-npx prisma studio        # Open Prisma Studio GUI at :5555
+
+# ⚠️ DŮLEŽITÉ: Správné spuštění Prisma Studio s lokální databází
+npx dotenv -e .env.local -- prisma studio  # ✅ SPRÁVNĚ - načte DATABASE_URL z .env.local
+# NIKDY nepoužívej: npx prisma studio     # ❌ ŠPATNĚ - chybí DATABASE_URL
 
 # SQL Server Management
 # Use SQL Server Management Studio (SSMS) to manage database
@@ -152,26 +248,37 @@ Components currently in the project:
 ### Database Models
 - **User**: Employee records with:
   - Unique employee code for authentication
+  - Role field (ADMIN, TRAINER, WORKER)
   - Multiple training date tracking fields (DatumPosl/DatumPristi/Pozadovano pattern)
   - Each training module tracks: last completion, next due date, required flag
 - **Training**: Training modules with code, name, description, and content
+  - Code: Database column identifier (e.g., "CMM", "EDM")
+  - Name: Display name (can be overridden by trainers)
 - **Test**: Assessment tests linked to trainings with passing score and time limits
+  - Multiple tests per training support
+  - Active/inactive status for test management
 - **Question**: Test questions with types, options, correct answers, and points
 - **TestAttempt**: User test attempts with scores, completion status, and signature data
+- **TrainingAssignment**: Many-to-many relationship between trainers and trainings
 
-### Routing Structure  
+### Routing Structure
 - **App Router** with Next.js 15
 - Main routes:
   - `app/(dashboard)/[[...node]]/` - Dynamic training routes with catch-all segments
   - `app/(dashboard)/profil/` - User profile page
+  - `app/(dashboard)/admin/` - Admin dashboard and tools
+  - `app/(dashboard)/trainer/` - Trainer dashboard and management
   - `app/login/` - Authentication page with sign-in-view component
-- API routes:
-  - `/api/auth/[...nextauth]/` - NextAuth endpoints
-  - `/api/trainings/` - Training modules API
-  - `/api/trainings/[id]/test/` - Test retrieval and management
-  - `/api/trainings/[id]/test/start/` - Start test attempt
-  - `/api/test-attempts/[id]/submit/` - Submit test answers
-  - `/api/trainings/by-code/[code]/` - Get training by employee code
+- Admin routes:
+  - `/admin/synchronizace` - Manual training synchronization
+  - `/admin/users` - User management
+- Trainer routes:
+  - `/trainer` - Trainer dashboard
+  - `/trainer/training/[code]/edit` - Edit training details
+  - `/trainer/training/[code]/tests` - Manage tests for training
+  - `/trainer/test/[id]/edit` - Edit test details
+  - `/trainer/test/[id]/questions` - Manage test questions
+- API routes - See API Endpoints section above
 
 ### State Management
 - **Nuqs** for URL search params state management
@@ -211,18 +318,37 @@ src/features/     # Feature-based modules
 - **Input OTP v1.4**: One-time password inputs
 - **React Day Picker v8**: Date picker component
 
-## API Endpoints
+## API Endpoints - Complete List (16 files)
 
 ### Training APIs
-- **GET /api/trainings** - List all trainings
+- **GET /api/trainings** - List trainings (role-based: admin/trainer gets all, workers get their assigned)
+- **POST /api/trainings** - Create new training (admin/trainer only)
 - **GET /api/trainings/[id]/content** - Get training content sections
-- **GET /api/trainings/[id]/test** - Get test questions for a training
-- **POST /api/trainings/[id]/test/start** - Start a new test attempt
-- **GET /api/trainings/by-code/[code]** - Get training by employee code
+- **PUT /api/trainings/[id]** - Update training (name, description, content) - trainer/admin only
+- **GET /api/trainings/[id]/tests** - Get all tests for a training (multiple test support)
+- **POST /api/trainings/[id]/tests** - Create new test for training (trainer/admin only)
+- **POST /api/trainings/[id]/test/start** - Start a new test attempt (with testId in body)
+- **GET /api/trainings/by-code/[code]** - Get training by code
+- **GET /api/trainings/slug/[slug]** - Get training by URL slug
 - **GET /api/trainings/[id]/pdf** - Generate and download training content as PDF
 
 ### Test Management
+- **GET /api/tests/[id]** - Get test details with questions
+- **PUT /api/tests/[id]** - Update test including questions (trainer/admin only)
+- **DELETE /api/tests/[id]** - Delete test (admin only)
+
+### Test Attempts
 - **POST /api/test-attempts/[id]/submit** - Submit test answers and calculate score
+
+### User Management
+- **GET /api/users** - List all users (admin only)
+- **PATCH /api/users/[userId]** - Update user (admin only, for role assignment)
+
+### Admin Functions
+- **POST /api/admin/sync-trainings** - Manually sync trainings from User columns to Training table
+
+### Data Import (Legacy)
+- **POST /api/excel-data** - Import data from Excel (kept for future use)
 
 ## Key Implementation Patterns
 
@@ -465,6 +591,42 @@ Lint-staged runs on staged files:
 }
 ```
 
+## Testing Approach
+
+### E2E Testing with Playwright MCP
+Use the Playwright MCP server for browser automation:
+```javascript
+// Example: Test login flow
+mcp__playwright__browser_navigate({ url: "http://localhost:3000/login" })
+mcp__playwright__browser_type({ element: "Employee Code input", text: "12345" })
+mcp__playwright__browser_click({ element: "Sign in button" })
+
+// Test training module navigation
+mcp__playwright__browser_snapshot() // Get accessibility snapshot
+mcp__playwright__browser_click({ element: "Training module link" })
+mcp__playwright__browser_wait_for({ text: "Training Overview" })
+```
+
+### Unit Testing
+Currently no test scripts configured. To add testing:
+```bash
+# Unit/Integration testing
+npm install --save-dev jest @testing-library/react @testing-library/jest-dom
+npm install --save-dev @testing-library/user-event jest-environment-jsdom
+
+# E2E testing with Playwright (MCP server available)
+npm install --save-dev @playwright/test
+```
+
+### Testing Patterns
+- **Unit tests**: Co-locate with components as `*.test.ts(x)`
+- **API tests**: In `app/api/**/*.test.ts`
+- **E2E tests**: Use Playwright MCP for browser automation
+- **Run single test file**: `npm test -- path/to/test.test.ts`
+- **Run specific test by name**: `npm test -- -t "test name pattern"`
+- **Debug tests**: `npm run test:watch` then press `p` to filter
+- **Coverage report**: `npm test -- --coverage`
+
 ## Common Pitfalls to Avoid
 
 1. Don't modify global Next.js config without understanding implications
@@ -478,6 +640,28 @@ Lint-staged runs on staged files:
 5. Zustand stores persist locally - consider privacy implications
 6. React 19 is used - some libraries may have compatibility issues
 7. Tailwind v4 uses different config format than v3
+
+## 🔧 Recent Code Changes & Fixes
+
+### Prisma Type Casting Removal (December 2024)
+Removed `prisma as any` type casting from the following files to improve type safety:
+
+**Files modified:**
+1. `src/app/api/trainings/route.ts` - 4 instances
+2. `src/app/api/users/[userId]/route.ts` - 1 instance
+3. `src/app/api/users/route.ts` - 1 instance
+4. `src/app/api/trainings/slug/[slug]/route.ts` - 3 instances
+5. `src/app/api/trainings/by-code/[code]/route.ts` - 2 instances
+6. `src/app/api/trainings/[id]/pdf/route.ts` - 3 instances
+7. `src/app/api/trainings/[id]/content/route.ts` - 1 instance
+8. `src/app/api/test-attempts/[id]/submit/route.ts` - 3 instances
+9. `src/app/(dashboard)/[[...node]]/page.tsx` - 7 instances
+10. `src/components/server-breadcrumbs.tsx` - 2 instances
+
+**Note**: If TypeScript type checking fails after these changes, you may need to:
+1. Run `npx prisma generate` to regenerate the Prisma client
+2. Or temporarily revert by adding `as any` back to the affected lines
+3. The type casting was originally used due to SQL Server case sensitivity issues
 
 ## Quick Component Examples
 
@@ -590,6 +774,7 @@ export function InteractiveComponent() {
 - **Dark theme problems?** Check ThemeProvider wrapper in layout
 - **TypeScript errors?** Run `npx tsc --noEmit` for detailed type checking
 - **Parallel routes not loading?** Each needs its own error.tsx and loading.tsx
+- **Route protection failing?** Check middleware.ts configuration
 
 ## Key Components for Training System
 
@@ -623,6 +808,440 @@ export function InteractiveComponent() {
 - Automatic date tracking for training compliance
 - Real-time statistics widgets on dashboard
 
+## 🔄 Neon Database Migration (Production)
+
+### Migration Files
+- **Schema**: `prisma/schema.neon.prisma` - Updated with RBAC
+- **SQL Script**: `prisma/migrations/neon/001_add_roles.sql`
+- **Guide**: `NEON_MIGRATION.md` - Complete migration instructions
+
+### Key Changes for Production
+1. **User table**: Added `role` field (ADMIN/TRAINER/WORKER)
+2. **Test table**: Added `isActive`, `validFrom`, `validTo` fields
+3. **New table**: `TrainingAssignment` for trainer-training relationships
+
+### Quick Migration Command
+```bash
+# Apply to Neon production
+export DATABASE_URL=$DATABASE_URL_NEON
+npx prisma migrate deploy --schema=./prisma/schema.neon.prisma
+```
+
+## Deployment Strategy
+
+### Docker Deployment
+
+#### Multi-stage Dockerfile
+```dockerfile
+# Dockerfile
+FROM node:22-alpine AS base
+
+# Dependencies
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install dependencies
+RUN npm ci --legacy-peer-deps
+
+# Generate Prisma client for both schemas
+RUN npx prisma generate --schema=./prisma/schema.prisma
+RUN npx prisma generate --schema=./prisma/schema.neon.prisma
+
+# Builder
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Build Next.js
+ENV NEXT_TELEMETRY_DISABLED 1
+RUN npm run build
+
+# Runner
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV production
+ENV NEXT_TELEMETRY_DISABLED 1
+
+# Security: non-root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+# Copy built application
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Copy Prisma files
+COPY --from=deps /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=deps /app/node_modules/@prisma ./node_modules/@prisma
+COPY prisma ./prisma
+
+USER nextjs
+
+EXPOSE 3000
+
+ENV PORT 3000
+ENV HOSTNAME "0.0.0.0"
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+CMD ["node", "server.js"]
+```
+
+#### Docker Compose Development
+```yaml
+# docker-compose.dev.yml
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: deps
+    command: npm run dev
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "sqlserver://sqlserver:1433;database=AeroLMS;trustServerCertificate=true"
+      NEXTAUTH_URL: "http://localhost:3000"
+      NEXTAUTH_SECRET: "development-secret"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - sqlserver
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "YourStrong@Password"
+      MSSQL_PID: "Express"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+
+volumes:
+  sqlserver_data:
+```
+
+### CI/CD Pipeline
+
+#### GitHub Actions Workflow
+```yaml
+# .github/workflows/ci-cd.yml
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  # Linting and Type Checking
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Run linter
+        run: npm run lint:strict
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Format check
+        run: npm run format:check
+
+  # Unit and Integration Tests
+  test:
+    name: Testing
+    runs-on: ubuntu-latest
+    needs: lint
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: Test@Password123
+          MSSQL_PID: Express
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Test@Password123 -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: "sqlserver://localhost:1433;database=AeroLMS_Test;user=sa;password=Test@Password123;trustServerCertificate=true"
+        run: npx prisma migrate deploy
+
+      - name: Run tests
+        env:
+          DATABASE_URL: "sqlserver://localhost:1433;database=AeroLMS_Test;user=sa;password=Test@Password123;trustServerCertificate=true"
+          NEXTAUTH_SECRET: "test-secret"
+        run: npm test
+
+  # Build Docker Image
+  build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/aerolms:latest
+            ${{ secrets.DOCKER_USERNAME }}/aerolms:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64,linux/arm64
+
+  # Deploy to Production (Vercel/Neon)
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
+
+      - name: Run Neon migrations
+        env:
+          DATABASE_URL_NEON: ${{ secrets.DATABASE_URL_NEON }}
+        run: |
+          npx prisma migrate deploy --schema=./prisma/schema.neon.prisma
+
+  # E2E Tests with Playwright
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps
+
+      - name: Run E2E tests
+        env:
+          PLAYWRIGHT_BASE_URL: ${{ secrets.PRODUCTION_URL }}
+        run: npx playwright test
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: playwright-report
+          path: playwright-report/
+```
+
+### Azure DevOps Pipeline (Alternative)
+```yaml
+# azure-pipelines.yml
+trigger:
+  branches:
+    include:
+      - main
+      - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  NODE_VERSION: '22.x'
+  DOCKER_REGISTRY: 'aerolms.azurecr.io'
+
+stages:
+  - stage: Build
+    jobs:
+      - job: BuildAndTest
+        steps:
+          - task: NodeTool@0
+            inputs:
+              versionSpec: $(NODE_VERSION)
+            displayName: 'Install Node.js'
+
+          - script: |
+              npm ci --legacy-peer-deps
+              npx prisma generate
+            displayName: 'Install dependencies'
+
+          - script: |
+              npm run lint:strict
+              npm run format:check
+              npx tsc --noEmit
+            displayName: 'Code quality checks'
+
+          - script: npm test
+            displayName: 'Run tests'
+
+          - task: Docker@2
+            inputs:
+              containerRegistry: 'AzureContainerRegistry'
+              repository: 'aerolms'
+              command: 'buildAndPush'
+              Dockerfile: '**/Dockerfile'
+              tags: |
+                $(Build.BuildId)
+                latest
+
+  - stage: Deploy
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployToProduction
+        environment: 'production'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureWebAppContainer@1
+                  inputs:
+                    azureSubscription: 'AeroLMS-Production'
+                    appName: 'aerolms-app'
+                    containers: '$(DOCKER_REGISTRY)/aerolms:$(Build.BuildId)'
+```
+
+### Production Deployment Checklist
+
+#### Pre-deployment
+- [ ] All tests passing (unit, integration, E2E)
+- [ ] Code review completed
+- [ ] Database migrations tested
+- [ ] Environment variables configured
+- [ ] SSL certificates ready
+- [ ] Backup strategy in place
+- [ ] Monitoring setup (Application Insights/Sentry)
+- [ ] Load testing completed
+
+#### Deployment Process
+- [ ] Create database backup
+- [ ] Deploy to staging environment
+- [ ] Run smoke tests on staging
+- [ ] Deploy to production (blue-green or canary)
+- [ ] Verify health checks
+- [ ] Monitor error rates and performance
+
+#### Post-deployment
+- [ ] Verify all features working
+- [ ] Check database connections
+- [ ] Monitor performance metrics
+- [ ] Review error logs
+- [ ] Update documentation
+- [ ] Notify stakeholders
+
+### Environment Management
+
+#### Development
+```env
+DATABASE_URL="sqlserver://localhost:1433;database=AeroLMS_Dev"
+NEXTAUTH_URL="http://localhost:3000"
+NEXT_PUBLIC_SENTRY_DISABLED="true"
+```
+
+#### Staging
+```env
+DATABASE_URL="sqlserver://staging-server:1433;database=AeroLMS_Staging"
+NEXTAUTH_URL="https://staging.aerolms.com"
+NEXT_PUBLIC_SENTRY_DSN="staging-sentry-dsn"
+```
+
+#### Production
+```env
+DATABASE_URL_NEON="postgresql://..."
+NEXTAUTH_URL="https://aerolms.com"
+NEXT_PUBLIC_SENTRY_DSN="production-sentry-dsn"
+```
+
+### Monitoring & Observability
+
+- **Application Performance**: Vercel Analytics / Azure Application Insights
+- **Error Tracking**: Sentry with source maps
+- **Uptime Monitoring**: UptimeRobot / Pingdom
+- **Database Monitoring**: Azure SQL Analytics / Neon console
+- **Log Aggregation**: Azure Log Analytics / Datadog
+
 ## Important Reminders for Claude Code
 
 - **Never create files** unless absolutely necessary for the task
@@ -633,7 +1252,14 @@ export function InteractiveComponent() {
   - Playwright for browser testing
   - Magic for UI component generation
   - Sequential Thinking for complex problem solving
-  - Shadcn UI v4 for getting latest shadcn/ui component source code
+  - Shadcn for getting latest shadcn/ui component source code and demos
   - Basic Memory for persistent knowledge storage
 - **Check existing patterns** before implementing new ones
 - **Follow project conventions** for imports, naming, and structure
+- **Run linting** after significant changes: `npm run lint:fix`
+- **Test authentication** flow when modifying auth-related code
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

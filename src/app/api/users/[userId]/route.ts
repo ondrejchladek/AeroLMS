@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isAdmin } from '@/types/roles';
 
 interface Props {
   params: Promise<{
@@ -21,8 +22,8 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       );
     }
 
-    // Kontrola admin práv (pouze test@test.cz)
-    if (session.user.email !== 'test@test.cz') {
+    // Kontrola admin práv pomocí role
+    if (!isAdmin(session.user.role)) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }
@@ -56,9 +57,9 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     }
 
     // Aktualizovat uživatele
-    const updatedUser = await (prisma as any).user.update({
+    const updatedUser = await prisma.user.update({
       where: {
-        UserID: userId
+        id: userId
       },
       data: {
         ...updateData,

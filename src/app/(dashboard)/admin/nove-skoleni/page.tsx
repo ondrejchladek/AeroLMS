@@ -240,7 +240,7 @@ export default function NoveSkoleniPage() {
       const { training } = await trainingResponse.json();
 
       // Create test
-      const testResponse = await fetch(`/api/trainings/${training.id}/test`, {
+      const testResponse = await fetch(`/api/trainings/${training.id}/tests`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

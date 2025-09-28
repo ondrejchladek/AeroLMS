@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { ROLES } from '@/types/roles';
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
@@ -14,24 +15,39 @@ export async function middleware(request: NextRequest) {
   // Normalizace cesty - case-insensitive kontrola
   const normalizedPath = pathname.toLowerCase();
 
-  // Zkontrolovat token
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET
-  });
+  // Zkontrolovat token s error handling
+  let token = null;
+  try {
+    token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET
+    });
+  } catch (error) {
+    // JWT decryption failed - pravděpodobně kvůli změně NEXTAUTH_SECRET nebo starým cookies
+
+    // Vyčistit staré cookies
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('callbackUrl', pathname);
+    loginUrl.searchParams.set('error', 'SessionExpired');
+
+    const response = NextResponse.redirect(loginUrl);
+
+    // Vymazat všechny auth cookies
+    response.cookies.delete('next-auth.session-token');
+    response.cookies.delete('next-auth.csrf-token');
+    response.cookies.delete('next-auth.callback-url');
+    response.cookies.delete('__Secure-next-auth.session-token');
+    response.cookies.delete('__Secure-next-auth.csrf-token');
+    response.cookies.delete('__Secure-next-auth.callback-url');
+
+    // Přidání základních security headerů
+    response.headers.set('X-Frame-Options', 'DENY');
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+
+    return response;
+  }
 
   if (!token || !token.id) {
-    // Logování neautorizovaných pokusů (pouze v non-production)
-    if (process.env.NODE_ENV !== 'production') {
-      const ip =
-        request.headers.get('x-forwarded-for') ||
-        request.headers.get('x-real-ip') ||
-        'unknown';
-      console.warn(
-        `[SECURITY] Unauthorized access attempt to: ${normalizedPath} from IP: ${ip}`
-      );
-    }
-
     // Pokud není token, přesměrovat na login
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
@@ -42,6 +58,43 @@ export async function middleware(request: NextRequest) {
     response.headers.set('X-Content-Type-Options', 'nosniff');
 
     return response;
+  }
+
+  // Role-based access control
+  const userRole = token.role || ROLES.WORKER;
+
+  // Admin routes
+  if (normalizedPath.startsWith('/admin')) {
+    if (userRole !== ROLES.ADMIN) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+  }
+
+  // Trainer routes
+  if (normalizedPath.startsWith('/trainer')) {
+    if (userRole !== ROLES.ADMIN && userRole !== ROLES.TRAINER) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+  }
+
+  // Admin API routes
+  if (normalizedPath.startsWith('/api/admin')) {
+    if (userRole !== ROLES.ADMIN) {
+      return NextResponse.json(
+        { error: 'Forbidden - Admin access required' },
+        { status: 403 }
+      );
+    }
+  }
+
+  // Trainer API routes
+  if (normalizedPath.startsWith('/api/trainer')) {
+    if (userRole !== ROLES.ADMIN && userRole !== ROLES.TRAINER) {
+      return NextResponse.json(
+        { error: 'Forbidden - Trainer access required' },
+        { status: 403 }
+      );
+    }
   }
 
   // Pro autorizované požadavky - přidání security headerů

@@ -1,7 +1,7 @@
 // src/features/auth/components/sign-in-view.tsx
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
@@ -11,10 +11,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
 import { GitHubLogoIcon } from '@radix-ui/react-icons';
-import { IconStar, IconMail, IconIdBadge } from '@tabler/icons-react';
+import { IconStar, IconMail, IconIdBadge, IconAlertCircle } from '@tabler/icons-react';
 import Link from 'next/link';
 
 export default function SignInViewPage() {
@@ -27,10 +28,30 @@ export default function SignInViewPage() {
   const [code, setCode] = useState('');
   const [codeError, setCodeError] = useState('');
 
+  // State pro obecné chyby
+  const [generalError, setGeneralError] = useState('');
+
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const params = useSearchParams();
   const callbackUrl = params.get('callbackUrl') ?? '/';
+  const error = params.get('error');
+
+  // Zpracování error parametrů z URL
+  useEffect(() => {
+    if (error === 'SessionExpired') {
+      setGeneralError('Vaše relace vypršela. Prosím přihlaste se znovu.');
+      // Vyčistit localStorage a sessionStorage
+      if (typeof window !== 'undefined') {
+        localStorage.clear();
+        sessionStorage.clear();
+      }
+    } else if (error === 'CredentialsSignin') {
+      setGeneralError('Neplatné přihlašovací údaje.');
+    } else if (error) {
+      setGeneralError('Došlo k chybě při přihlašování.');
+    }
+  }, [error]);
 
   // Submit pro email/heslo
   async function handleEmailSubmit(e: FormEvent) {
@@ -147,6 +168,14 @@ export default function SignInViewPage() {
       {/* pravý panel – vlastní přihlášení */}
       <div className='flex h-full items-center justify-center p-4 lg:p-8'>
         <div className='flex w-full max-w-md flex-col items-center justify-center space-y-6'>
+
+          {/* Zobrazení obecných chyb */}
+          {generalError && (
+            <Alert variant='destructive' className='mb-4'>
+              <IconAlertCircle className='h-4 w-4' />
+              <AlertDescription>{generalError}</AlertDescription>
+            </Alert>
+          )}
 
           {/* TABS s formuláři */}
           <Tabs defaultValue='code' className='w-full space-y-4'>

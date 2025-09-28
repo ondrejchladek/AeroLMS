@@ -20,7 +20,7 @@ export async function POST(
     const attemptId = parseInt(id);
 
     // Get test attempt with test and questions
-    const attempt = await (prisma as any).testAttempt.findUnique({
+    const attempt = await prisma.testAttempt.findUnique({
       where: { id: attemptId },
       include: {
         test: {
@@ -90,7 +90,7 @@ export async function POST(
     const passed = score >= attempt.test.passingScore;
 
     // Update test attempt
-    await (prisma as any).testAttempt.update({
+    await prisma.testAttempt.update({
       where: { id: attemptId },
       data: {
         completedAt: new Date(),
@@ -107,7 +107,7 @@ export async function POST(
 
     // Update user's training completion date if passed
     if (passed) {
-      await (prisma as any).user.update({
+      await prisma.user.update({
         where: { id: parseInt(session.user.id) },
         data: {
           MonitorVyraCMTDiluDatumPosl: new Date(),

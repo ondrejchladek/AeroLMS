@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isAdmin } from '@/types/roles';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,8 +16,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Kontrola admin práv (pouze test@test.cz)
-    if (session.user.email !== 'test@test.cz') {
+    // Kontrola admin práv pomocí role
+    if (!isAdmin(session.user.role)) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Načíst všechny uživatele
-    const users = await (prisma as any).user.findMany({
+    const users = await prisma.user.findMany({
       orderBy: {
         code: 'asc'
       }

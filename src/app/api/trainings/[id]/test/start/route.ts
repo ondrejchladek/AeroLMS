@@ -14,18 +14,33 @@ export async function POST(
     }
 
     const { id } = await params;
-    const test = await (prisma as any).test.findFirst({
-      where: { trainingId: parseInt(id) }
+    const trainingId = parseInt(id);
+
+    // Get testId from request body
+    const body = await request.json();
+    const { testId } = body;
+
+    if (!testId) {
+      return NextResponse.json({ error: 'Test ID is required' }, { status: 400 });
+    }
+
+    // Verify test exists and belongs to this training
+    const test = await prisma.test.findFirst({
+      where: {
+        id: testId,
+        trainingId: trainingId,
+        isActive: true // Only allow starting active tests
+      }
     });
 
     if (!test) {
-      return NextResponse.json({ error: 'Test not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Test not found or not active' }, { status: 404 });
     }
 
-    // Check if there's an unfinished attempt
-    const existingAttempt = await (prisma as any).testAttempt.findFirst({
+    // Check if there's an unfinished attempt for this specific test
+    const existingAttempt = await prisma.testAttempt.findFirst({
       where: {
-        testId: test.id,
+        testId: testId,
         userId: parseInt(session.user.id),
         completedAt: null
       }
@@ -34,14 +49,15 @@ export async function POST(
     if (existingAttempt) {
       return NextResponse.json({
         attemptId: existingAttempt.id,
+        testId: testId,
         message: 'Continuing existing test attempt'
       });
     }
 
     // Create new test attempt
-    const newAttempt = await (prisma as any).testAttempt.create({
+    const newAttempt = await prisma.testAttempt.create({
       data: {
-        testId: test.id,
+        testId: testId,
         userId: parseInt(session.user.id),
         employeeCode: session.user.code || null,
         employeeName: session.user.name,
@@ -51,6 +67,7 @@ export async function POST(
 
     return NextResponse.json({
       attemptId: newAttempt.id,
+      testId: testId,
       message: 'Test started successfully'
     });
   } catch (error) {

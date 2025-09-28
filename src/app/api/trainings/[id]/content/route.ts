@@ -14,7 +14,7 @@ export async function GET(
     }
 
     const { id } = await params;
-    const training = await (prisma as any).training.findUnique({
+    const training = await prisma.training.findUnique({
       where: { id: parseInt(id) }
     });
 

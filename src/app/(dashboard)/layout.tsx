@@ -18,7 +18,9 @@ export default async function DashboardLayout({
 }) {
   // Persisting the sidebar state in the cookie.
   const cookieStore = await cookies();
-  const defaultOpen = cookieStore.get("sidebar_state")?.value === "true"
+  const sidebarState = cookieStore.get("sidebar_state")?.value;
+  // Výchozí stav je otevřený (true), pokud cookie neexistuje
+  const defaultOpen = sidebarState === undefined ? true : sidebarState === "true";
   return (
     <KBar>
       <SidebarProvider defaultOpen={defaultOpen}>

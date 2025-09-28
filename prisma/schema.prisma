@@ -8,10 +8,15 @@ datasource db {
 }
 
 model User {
-  id                                              Int           @id @default(autoincrement()) @map("UserID")
-  code                                            Int?          @unique
+  id                                              Int                   @id @default(autoincrement()) @map("UserID")
+  code                                            Int?                  @unique
   name                                            String
-  createdAt                                       DateTime      @default(now())
+  role                                            String                @default("WORKER")
+  createdAt                                       DateTime              @default(now())
+  email                                           String?               @unique
+  password                                        String?
+  updatedAt                                       DateTime              @updatedAt
+
   CMMDatumPosl                                    DateTime?
   CMMDatumPristi                                  DateTime?
   CMMPozadovano                                   Boolean       @default(false)
@@ -99,21 +104,21 @@ model User {
   ZnaceniDatumPosl                                DateTime?
   ZnaceniDatumPristi                              DateTime?
   ZnaceniPozadovano                               Boolean       @default(false)
-  email                                           String?       @unique
-  password                                        String?
-  updatedAt                                       DateTime      @default(now()) @updatedAt
+
   testAttempts                                    TestAttempt[]
+  trainingAssignments                             TrainingAssignment[]
 }
 
 model Training {
-  id          Int      @id @default(autoincrement())
-  code        String   @unique
-  name        String
-  description String?  @db.NVarChar(Max)
-  content     String?  @db.NVarChar(Max)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  tests       Test[]
+  id                  Int                   @id @default(autoincrement())
+  code                String                @unique
+  name                String
+  description         String?               @db.NVarChar(Max)
+  content             String?               @db.NVarChar(Max)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  tests               Test[]
+  trainingAssignments TrainingAssignment[]
 }
 
 model Test {
@@ -121,6 +126,9 @@ model Test {
   trainingId   Int
   title        String
   description  String?       @db.NVarChar(Max)
+  isActive     Boolean       @default(true)
+  validFrom    DateTime?
+  validTo      DateTime?
   passingScore Int           @default(80)
   timeLimit    Int?
   createdAt    DateTime      @default(now())
@@ -165,4 +173,17 @@ model TestAttempt {
   updatedAt     DateTime  @updatedAt
   test          Test      @relation(fields: [testId], references: [id])
   user          User      @relation(fields: [userId], references: [id])
+}
+
+model TrainingAssignment {
+  id         Int      @id @default(autoincrement())
+  trainerId  Int
+  trainingId Int
+  assignedAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  trainer    User     @relation(fields: [trainerId], references: [id])
+  training   Training @relation(fields: [trainingId], references: [id])
+
+  @@unique([trainerId, trainingId])
 }

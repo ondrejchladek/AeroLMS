@@ -2,6 +2,7 @@
 'use client';
 
 import * as React from 'react';
+import { ROLES, isAdmin, isTrainer } from '@/types/roles';
 import {
   Collapsible,
   CollapsibleContent,
@@ -79,10 +80,13 @@ export default function AppSidebar() {
   // State pro dynamické menu items
   const [navItems, setNavItems] = React.useState<NavItem[]>(staticNavItems);
   const [adminNavItems, setAdminNavItems] = React.useState<NavItem[]>([]);
+  const [trainerNavItems, setTrainerNavItems] = React.useState<NavItem[]>([]);
   const [isLoadingTrainings, setIsLoadingTrainings] = React.useState(true);
-  
-  // Check if user is admin
-  const isAdmin = user?.email === 'test@test.cz';
+
+  // Check user role
+  const userRole = session?.user?.role || ROLES.WORKER;
+  const hasAdminAccess = isAdmin(userRole);
+  const hasTrainerAccess = isTrainer(userRole);
 
   const handleSwitchTenant = (_tenantId: string) => {
     /* implementace tenant switchingu */
@@ -113,7 +117,7 @@ export default function AppSidebar() {
           ];
           
           // Vytvoř admin menu items pouze pro admina
-          if (user?.email === 'test@test.cz') {
+          if (hasAdminAccess) {
             const adminItems: NavItem[] = [
               {
                 title: 'Admin přehled',
@@ -128,9 +132,44 @@ export default function AppSidebar() {
                 icon: 'add',
                 isActive: false,
                 items: []
+              },
+              {
+                title: 'Správa přiřazení',
+                url: '/admin/assignments',
+                icon: 'user',
+                isActive: false,
+                items: []
+              },
+              {
+                title: 'Synchronizace',
+                url: '/admin/synchronizace',
+                icon: 'refresh',
+                isActive: false,
+                items: []
               }
             ];
             setAdminNavItems(adminItems);
+          }
+
+          // Vytvoř trainer menu items pro školitele
+          if (hasTrainerAccess) {
+            const trainerItems: NavItem[] = [
+              {
+                title: 'Moje školení',
+                url: '/trainer',
+                icon: 'page',
+                isActive: false,
+                items: []
+              },
+              {
+                title: 'Výsledky testů',
+                url: '/trainer/results',
+                icon: 'check',
+                isActive: false,
+                items: []
+              }
+            ];
+            setTrainerNavItems(trainerItems);
           }
 
           setNavItems(dynamicNavItems);
@@ -143,7 +182,7 @@ export default function AppSidebar() {
     };
 
     fetchTrainings();
-  }, [session]);
+  }, [session, hasAdminAccess, hasTrainerAccess]);
 
   React.useEffect(() => {
     /* případné side-effects na otevření/ zavření sidebaru */
@@ -168,6 +207,32 @@ export default function AppSidebar() {
             <SidebarGroupLabel>Admin Menu</SidebarGroupLabel>
             <SidebarMenu>
               {adminNavItems.map((item) => {
+                const Icon = item.icon ? Icons[item.icon] : Icons.logo;
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.title}
+                      isActive={pathname === item.url}
+                    >
+                      <Link href={item.url}>
+                        <Icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroup>
+        )}
+
+        {/* Trainer Menu - zobrazí se jen pro školitele */}
+        {trainerNavItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Školitel Menu</SidebarGroupLabel>
+            <SidebarMenu>
+              {trainerNavItems.map((item) => {
                 const Icon = item.icon ? Icons[item.icon] : Icons.logo;
                 return (
                   <SidebarMenuItem key={item.title}>

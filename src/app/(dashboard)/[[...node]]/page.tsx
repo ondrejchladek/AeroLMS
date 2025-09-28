@@ -24,7 +24,7 @@ export default async function DynamicPage({ params }: PageProps) {
   const node = resolvedParams.node || [];
 
   // Načti všechna školení z databáze pro použití v celé aplikaci
-  const dbTrainings = await (prisma as any).training.findMany({
+  const dbTrainings = await prisma.training.findMany({
     orderBy: {
       name: 'asc'
     }
@@ -41,11 +41,11 @@ export default async function DynamicPage({ params }: PageProps) {
     // Načti data přihlášeného uživatele
     let user;
     if (session!.user?.code) {
-      user = await (prisma as any).user.findUnique({
+      user = await prisma.user.findUnique({
         where: { code: session!.user.code }
       });
     } else if (session!.user?.email) {
-      user = await (prisma as any).user.findUnique({
+      user = await prisma.user.findUnique({
         where: { email: session!.user.email }
       });
     }
@@ -193,14 +193,14 @@ export default async function DynamicPage({ params }: PageProps) {
 
   if (session!.user?.code) {
     // Uživatel přihlášen kódem
-    user = await (prisma as any).user.findUnique({
+    user = await prisma.user.findUnique({
       where: {
         code: session!.user.code
       }
     });
   } else if (session!.user?.email) {
     // Uživatel přihlášen emailem
-    user = await (prisma as any).user.findUnique({
+    user = await prisma.user.findUnique({
       where: {
         email: session!.user.email
       }
@@ -220,7 +220,7 @@ export default async function DynamicPage({ params }: PageProps) {
   };
 
   // Načti detaily školení včetně testů
-  const trainingWithTests = await (prisma as any).training.findUnique({
+  const trainingWithTests = await prisma.training.findUnique({
     where: { code: training.code },
     include: {
       tests: {
@@ -269,7 +269,7 @@ export async function generateMetadata({ params }: { params: Promise<{ node?: st
   
   // Načti školení z databáze pro získání názvu
   // SQL Server automaticky dělá case-insensitive porovnání
-  const training = await (prisma as any).training.findFirst({
+  const training = await prisma.training.findFirst({
     where: {
       code: slug.toUpperCase() // Převeď na uppercase pro SQL Server
     }

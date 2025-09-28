@@ -18,7 +18,7 @@ export async function GET(
     const { slug } = await context.params;
     
     // First try to find by direct code match
-    const trainingByCode = await (prisma as any).training.findUnique({
+    const trainingByCode = await prisma.training.findUnique({
       where: { code: slug.toUpperCase() },
       select: { 
         id: true,
@@ -33,7 +33,7 @@ export async function GET(
     }
 
     // If not found by code, load all trainings and compare slugs
-    const allTrainings = await (prisma as any).training.findMany({
+    const allTrainings = await prisma.training.findMany({
       select: { 
         id: true,
         name: true, 
@@ -76,7 +76,7 @@ export async function GET(
 
     const mappedCode = commonMappings[slug];
     if (mappedCode) {
-      const trainingByMappedCode = await (prisma as any).training.findUnique({
+      const trainingByMappedCode = await prisma.training.findUnique({
         where: { code: mappedCode },
         select: { 
           id: true,

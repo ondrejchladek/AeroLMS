@@ -22,6 +22,16 @@ export async function register() {
     if (process.env.NEXT_RUNTIME === 'nodejs') {
       // Node.js Sentry configuration
       Sentry.init(sentryOptions);
+
+      // Initialize trainings from database columns
+      try {
+        const { initializeTrainings } = await import('@/lib/init-trainings');
+        await initializeTrainings();
+        console.log('[Server] Training initialization complete');
+      } catch (error) {
+        console.error('[Server] Failed to initialize trainings:', error);
+        // Continue starting the app even if training init fails
+      }
     }
 
     if (process.env.NEXT_RUNTIME === 'edge') {
