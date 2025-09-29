@@ -30,11 +30,91 @@ export async function POST(
         id: testId,
         trainingId: trainingId,
         isActive: true // Only allow starting active tests
+      },
+      include: {
+        training: true
       }
     });
 
     if (!test) {
       return NextResponse.json({ error: 'Test not found or not active' }, { status: 404 });
+    }
+
+    // Get user data with training-specific fields
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(session.user.id) }
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Only apply restrictions for WORKER role
+    if (user.role === 'WORKER') {
+      const trainingCode = test.training.code;
+
+      // Build dynamic field names based on training code
+      const datumPoslField = `${trainingCode}DatumPosl`;
+      const datumPristiField = `${trainingCode}DatumPristi`;
+      const pozadovanoField = `${trainingCode}Pozadovano`;
+
+      // Check if training is required
+      const isRequired = (user as any)[pozadovanoField] === true;
+
+      if (isRequired) {
+        // Check if this is the first test (no previous completion date)
+        const lastCompletionDate = (user as any)[datumPoslField];
+
+        if (!lastCompletionDate) {
+          // First test must be taken in person
+          return NextResponse.json({
+            error: 'První test musí být absolvován osobně se školitelem',
+            errorCode: 'FIRST_TEST_REQUIRED',
+            requiresInPerson: true
+          }, { status: 403 });
+        }
+
+        // Check if user can retake test (one month before expiration)
+        const nextDueDate = (user as any)[datumPristiField];
+
+        if (nextDueDate) {
+          const today = new Date();
+          const dueDate = new Date(nextDueDate);
+          const oneMonthBefore = new Date(dueDate);
+          oneMonthBefore.setMonth(oneMonthBefore.getMonth() - 1);
+
+          // Check if we're within the allowed retake period
+          if (today < oneMonthBefore) {
+            const daysUntilAllowed = Math.ceil((oneMonthBefore.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+            return NextResponse.json({
+              error: `Test můžete opakovat až měsíc před vypršením platnosti (za ${daysUntilAllowed} dní)`,
+              errorCode: 'TOO_EARLY_TO_RETAKE',
+              nextAllowedDate: oneMonthBefore.toISOString(),
+              daysUntilAllowed
+            }, { status: 403 });
+          }
+        }
+
+        // Check number of failed attempts
+        const failedAttempts = await prisma.testAttempt.findMany({
+          where: {
+            testId: testId,
+            userId: parseInt(session.user.id),
+            passed: false,
+            completedAt: { not: null }
+          }
+        });
+
+        if (failedAttempts.length >= 2) {
+          // After 2 failed attempts, must take test in person
+          return NextResponse.json({
+            error: 'Po dvou neúspěšných pokusech musíte absolvovat test osobně se školitelem',
+            errorCode: 'MAX_ATTEMPTS_REACHED',
+            requiresInPerson: true,
+            failedAttempts: failedAttempts.length
+          }, { status: 403 });
+        }
+      }
     }
 
     // Check if there's an unfinished attempt for this specific test

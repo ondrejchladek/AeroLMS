@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import PageContainer from '@/components/layout/page-container';
+import { getRoleLabel } from '@/types/roles';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,21 +79,6 @@ interface EditingUser {
   UserID: number;
   changes: Record<string, any>;
 }
-
-
-// Role labels
-const getRoleLabel = (role: string) => {
-  switch (role) {
-    case 'ADMIN':
-      return 'Administrátor';
-    case 'TRAINER':
-      return 'Školitel';
-    case 'WORKER':
-      return 'Pracovník';
-    default:
-      return role;
-  }
-};
 
 export default function AdminPrehledClient() {
   const [trainings, setTrainings] = useState<Training[]>([]);

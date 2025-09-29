@@ -22,9 +22,9 @@ npx prisma db seed         # Seed test data (optional)
 # 4. Start development
 npm run dev  # http://localhost:3000
 
-# 5. Login with employee code
-# Admin: test@test.cz
-# Worker: code 123456
+# 5. Login with credentials
+# Admin/Trainer: email + password (test@test.cz)
+# Worker: personal code + password (123456)
 
 # 6. Open Prisma Studio (správně pro lokál)
 npx dotenv -e .env.local -- prisma studio
@@ -53,6 +53,8 @@ The system implements three user roles with distinct permissions:
   - Manage trainers and training assignments
   - Create/edit/delete all trainings and tests
   - Access admin dashboard and synchronization tools
+  - Can manually enter test results for workers
+  - View all test variants
   - Example user: `test@test.cz`
 
 - **TRAINER** 👨‍🏫
@@ -60,13 +62,19 @@ The system implements three user roles with distinct permissions:
   - Create and manage tests for assigned trainings
   - View training statistics and test results
   - Can override training names from database codes
+  - Can manually enter test results for first-time tests
+  - View all test variants and activate/deactivate them
+  - Manage multiple test variants per training
 
 - **WORKER** 👷
   - View required trainings
-  - Take tests and assessments
+  - Take tests and assessments (only active tests visible)
   - View training materials and progress
   - Must complete ALL active tests for each training
-  - Example user: code `123456`
+  - Can retake test only 1 month before expiration
+  - Maximum 2 attempts, then must take test in person
+  - First test must be taken in person with trainer
+  - Login: personal code + password (example: code `123456` + password)
 
 ## 🔄 Automatic Training Synchronization
 
@@ -95,19 +103,35 @@ For each training, the system looks for three columns in User table:
 
 Example: `CMMDatumPosl`, `CMMDatumPristi`, `CMMPozadovano` → Creates training with code "CMM"
 
-## 📚 Multiple Tests Support
+## 📚 Advanced Testing System
 
-Each training can have multiple tests:
+### Test Configuration
+- **Multiple Test Variants**: Each training can have multiple test variants
+- **Visibility Control**: Workers see only active test, trainers/admins see all
+- **Default Settings**:
+  - Passing score: 75%
+  - Time limit: 15 minutes (configurable by trainer)
+- **Question Types**:
+  - Single choice
+  - Multiple choice (with partial scoring)
+  - Yes/No
+  - Text (keyword matching or exact match)
 
-### Test Features
-- **Multiple Tests per Training**: Unlimited number of tests
-- **Test Management**: Trainers can create, edit, activate/deactivate tests
-- **Worker Requirements**: Must pass ALL active tests to complete training
-- **Test Configuration**:
-  - Passing score (percentage)
-  - Time limit (optional)
-  - Active/inactive status
-  - Questions with various types (single choice, multiple choice, etc.)
+### Testing Rules for Workers
+1. **First Test**: Must be taken in person with trainer
+2. **Retake Policy**: Can retake test only 1 month before expiration (DatumPristi)
+3. **Attempt Limit**: Maximum 2 failed attempts, then must take in person
+4. **Scoring System**:
+   - Each question can have multiple correct answers
+   - Partial points for multiple choice questions
+   - Penalty for incorrect selections
+   - Must achieve 75% to pass
+
+### Certificate Generation
+- Automatic PDF certificate upon successful test completion
+- Unique certificate number (format: CERT-YYYY-XXXXX)
+- Valid for 1 year from issue date
+- Stored in database with training and test attempt reference
 
 ## Available MCP Servers
 
@@ -205,17 +229,23 @@ npm run prepare          # Setup Husky pre-commit hooks
 
 ### Dashboard Pages
 - **Overview** (`/`): Main dashboard with real-time statistics from database
-  - Required, completed, expired, and upcoming trainings counters
+  - Statistics cards with emoji indicators (🔵🟢🔴🟡) and user-friendly labels
   - Bar chart showing upcoming trainings by month
   - Recent completions list with last 5 trainings
-  - Full training table with database-driven data
+  - Full training table with columns:
+    - Název školení (Training name)
+    - Požadováno (Required: Yes/No)
+    - Poslední absolvování (Last completion date)
+    - Platnost do (Valid until date)
+    - Status (Visual status with icons: ✅ Platné, ⚠️ Brzy vyprší, ❌ Prošlé, ⏳ Čeká na první absolvování)
+    - Akce (Actions: Open button)
 - **Dynamic Training Routes** (`[[...node]]`): Handles training modules with dynamic path segments
   - Training overview with continuous content display (no collapsible sections)
   - PDF export functionality for training content
   - Test mode with assessment capabilities
   - Results display with scoring
-- **Profil** (`/profil`): User profile management page  
-- **Login** (`/login`): Employee code-based authentication
+- **Profil** (`/profil`): User profile management page
+- **Login** (`/login`): Universal login form with email or personal code + password
 
 ### UI Components Library (shadcn/ui)
 All components are in `src/components/ui/`:
@@ -243,10 +273,15 @@ Components currently in the project:
 ## Architecture
 
 ### Authentication Flow
-- NextAuth with JWT strategy using employee codes (not email/password)
+- NextAuth with JWT strategy using email or personal code + password
+- **Login form**: Single universal field "E-mail / Osobní číslo" + password
+  - Admins/Trainers: Use email (e.g., test@test.cz) + password
+  - Workers: Use personal code (e.g., 123456) + password
+- System automatically detects if identifier is email or code (by presence of '@')
+- All users must have password in database
 - Protected routes: `/dashboard/*` and `/api/*`
 - Sign-in page: `/login`
-- Session data includes `user.id` and `user.code`
+- Session data includes `user.id`, `user.code`, `user.email`, and `user.role`
 - Middleware protection in `src/middleware.ts`
 
 ### Database Architecture
@@ -286,7 +321,9 @@ Components currently in the project:
   - `/admin/synchronizace` - Manual training synchronization
   - `/admin/users` - User management
 - Trainer routes:
-  - `/trainer` - Trainer dashboard
+  - `/trainer` - Trainer dashboard (My trainings overview)
+  - `/trainer/prvni-testy` - First tests page (Manual test result entry for in-person tests)
+  - `/trainer/vysledky` - Results page (View all test results by employee)
   - `/trainer/training/[code]/edit` - Edit training details
   - `/trainer/training/[code]/tests` - Manage tests for training
   - `/trainer/test/[id]/edit` - Edit test details
@@ -352,6 +389,8 @@ src/features/     # Feature-based modules
 
 ### Test Attempts
 - **POST /api/test-attempts/[id]/submit** - Submit test answers and calculate score
+- **POST /api/test-attempts/manual** - Create manual test attempt (trainers/admins only, for in-person tests)
+- **GET /api/test-attempts/manual** - Get manual test attempts for a user (trainers/admins only)
 
 ### User Management
 - **GET /api/users** - List all users (admin only)
@@ -664,6 +703,21 @@ npm install --save-dev @playwright/test
 - **Coverage report**: `npm test -- --coverage`
 
 ## Recent Changes & Fixes
+
+### UI & Authentication Improvements (January 2025)
+1. **Unified Login System**:
+   - Simplified login form with single "E-mail / Osobní číslo" field + password
+   - Removed tabs, now one universal form for all user roles
+   - System auto-detects email vs. personal code (by presence of '@')
+   - All users (admin, trainer, worker) now require password authentication
+2. **Dashboard Enhancements**:
+   - Statistics cards updated with emoji indicators (🔵🟢🔴🟡)
+   - Training table columns renamed for better clarity
+   - New Status column with visual icons (✅ Platné, ⚠️ Brzy vyprší, ❌ Prošlé, ⏳ Čeká)
+3. **Trainer Features**:
+   - New "První testy" page (`/trainer/prvni-testy`) for manual test result entry
+   - New "Výsledky" page (`/trainer/vysledky`) for viewing all test results
+   - Menu updated with new trainer pages
 
 ### Deployment Simplification (December 2024)
 1. **Two separate environments**:

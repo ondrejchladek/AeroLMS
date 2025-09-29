@@ -110,6 +110,7 @@ model User {
 
   testAttempts        TestAttempt[]
   trainingAssignments TrainingAssignment[]
+  certificates        Certificate[]
 }
 
 model Training {
@@ -122,6 +123,7 @@ model Training {
   updatedAt           DateTime             @updatedAt
   tests               Test[]
   trainingAssignments TrainingAssignment[]
+  certificates        Certificate[]
 }
 
 model Test {
@@ -132,8 +134,8 @@ model Test {
   isActive     Boolean       @default(true)
   validFrom    DateTime?
   validTo      DateTime?
-  passingScore Int           @default(80)
-  timeLimit    Int?
+  passingScore Int           @default(75)
+  timeLimit    Int?          @default(15)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   questions    Question[]
@@ -175,7 +177,25 @@ model TestAttempt {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   test          Test      @relation(fields: [testId], references: [id])
-  user          User      @relation(fields: [userId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
+  certificates  Certificate[]
+}
+
+model Certificate {
+  id                Int          @id @default(autoincrement())
+  userId            Int
+  trainingId        Int
+  testAttemptId     Int          @unique
+  certificateNumber String       @unique
+  issuedAt          DateTime     @default(now())
+  validUntil        DateTime
+  pdfData           String?      @db.Text
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  user              User         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  training          Training     @relation(fields: [trainingId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  testAttempt       TestAttempt  @relation(fields: [testAttemptId], references: [id], onDelete: Cascade)
 }
 
 model TrainingAssignment {

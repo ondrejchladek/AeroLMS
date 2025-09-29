@@ -10,7 +10,6 @@ import { buttonVariants } from '@/components/ui/button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
@@ -19,14 +18,10 @@ import { IconStar, IconMail, IconIdBadge, IconAlertCircle } from '@tabler/icons-
 import Link from 'next/link';
 
 export default function SignInViewPage() {
-  // State pro email/heslo formulář
-  const [email, setEmail] = useState('');
+  // State pro univerzální formulář
+  const [identifier, setIdentifier] = useState(''); // email nebo osobní číslo
   const [password, setPassword] = useState('');
-  const [emailError, setEmailError] = useState('');
-
-  // State pro kód formulář
-  const [code, setCode] = useState('');
-  const [codeError, setCodeError] = useState('');
+  const [loginError, setLoginError] = useState('');
 
   // State pro obecné chyby
   const [generalError, setGeneralError] = useState('');
@@ -53,64 +48,37 @@ export default function SignInViewPage() {
     }
   }, [error]);
 
-  // Submit pro email/heslo
-  async function handleEmailSubmit(e: FormEvent) {
+  // Submit pro univerzální formulář
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setEmailError('');
+    setLoginError('');
     setIsLoading(true);
 
     try {
+      // Detekuj, zda je identifier email nebo osobní číslo
+      const isEmail = identifier.includes('@');
+      const loginType = isEmail ? 'email' : 'code';
+
       const res = await signIn('credentials', {
-        email,
+        ...(isEmail ? { email: identifier } : { code: identifier }),
         password,
-        loginType: 'email',
+        loginType,
         redirect: false,
         callbackUrl: callbackUrl
       });
 
-      console.log('[LOGIN] Email signin response:', res);
+      console.log('[LOGIN] Signin response:', res);
 
       if (res?.error) {
-        console.error('[LOGIN] Email signin error:', res.error);
-        setEmailError('Neplatný email nebo heslo');
+        console.error('[LOGIN] Signin error:', res.error);
+        setLoginError('Neplatné přihlašovací údaje');
       } else if (res?.ok) {
-        console.log('[LOGIN] Email signin success, redirecting to:', callbackUrl);
+        console.log('[LOGIN] Signin success, redirecting to:', callbackUrl);
         router.push(callbackUrl);
       }
     } catch (error) {
-      console.error('[LOGIN] Email signin exception:', error);
-      setEmailError('Chyba při přihlašování');
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
-  // Submit pro kód
-  async function handleCodeSubmit(e: FormEvent) {
-    e.preventDefault();
-    setCodeError('');
-    setIsLoading(true);
-
-    try {
-      const res = await signIn('credentials', {
-        code,
-        loginType: 'code',
-        redirect: false,
-        callbackUrl: callbackUrl
-      });
-
-      console.log('[LOGIN] Code signin response:', res);
-
-      if (res?.error) {
-        console.error('[LOGIN] Code signin error:', res.error);
-        setCodeError('Neplatný kód zaměstnance');
-      } else if (res?.ok) {
-        console.log('[LOGIN] Code signin success, redirecting to:', callbackUrl);
-        router.push(callbackUrl);
-      }
-    } catch (error) {
-      console.error('[LOGIN] Code signin exception:', error);
-      setCodeError('Chyba při přihlašování');
+      console.error('[LOGIN] Signin exception:', error);
+      setLoginError('Chyba při přihlašování');
     } finally {
       setIsLoading(false);
     }
@@ -177,82 +145,55 @@ export default function SignInViewPage() {
             </Alert>
           )}
 
-          {/* TABS s formuláři */}
-          <Tabs defaultValue='code' className='w-full space-y-4'>
-            <TabsList className='grid w-full grid-cols-2'>
-              <TabsTrigger value='code' className='gap-2'>
-                <IconIdBadge className='h-4 w-4' />
-                Kód zaměstnance
-              </TabsTrigger>
-              <TabsTrigger value='email' className='gap-2'>
-                <IconMail className='h-4 w-4' />
-                Email a heslo
-              </TabsTrigger>
-            </TabsList>
+          {/* Univerzální přihlašovací formulář */}
+          <div className='w-full space-y-6'>
+            <div className='text-center space-y-2'>
+              <h1 className='text-2xl font-semibold tracking-tight'>
+                Přihlášení
+              </h1>
+              <p className='text-sm text-muted-foreground'>
+                Použijte svůj email nebo osobní číslo
+              </p>
+            </div>
 
-            {/* Formulář pro kód zaměstnance */}
-            <TabsContent value='code' className='space-y-4'>
-              <form onSubmit={handleCodeSubmit} className='space-y-5'>
-                <div className='space-y-2'>
-                  <Label htmlFor='code'>Kód zaměstnance</Label>
-                  <Input
-                    id='code'
-                    type='text'
-                    placeholder='123456'
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    disabled={isLoading}
-                    autoComplete='username'
-                    required
-                  />
-                </div>
-                {codeError && (
-                  <p className='text-sm text-destructive'>{codeError}</p>
-                )}
-                <Button type='submit' className='w-full' disabled={isLoading}>
-                  {isLoading ? 'Přihlašování...' : 'Vstoupit'}
-                </Button>
-              </form>
-            </TabsContent>
-
-            {/* Formulář pro email/heslo */}
-            <TabsContent value='email' className='space-y-4'>
-              <form onSubmit={handleEmailSubmit} className='space-y-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='email'>Email</Label>
-                  <Input
-                    id='email'
-                    type='email'
-                    placeholder='vas@email.cz'
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading}
-                    autoComplete='email'
-                    required
-                  />
-                </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='password'>Heslo</Label>
-                  <Input
-                    id='password'
-                    type='password'
-                    placeholder='••••••'
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading}
-                    autoComplete='current-password'
-                    required
-                  />
-                </div>
-                {emailError && (
-                  <p className='text-sm text-destructive'>{emailError}</p>
-                )}
-                <Button type='submit' className='w-full' disabled={isLoading}>
-                  {isLoading ? 'Přihlašování...' : 'Přihlásit se'}
-                </Button>
-              </form>
-            </TabsContent>
-          </Tabs>
+            <form onSubmit={handleSubmit} className='space-y-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='identifier'>E-mail / Osobní číslo</Label>
+                <Input
+                  id='identifier'
+                  type='text'
+                  placeholder='email@example.cz nebo 123456'
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  disabled={isLoading}
+                  autoComplete='username'
+                  required
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label htmlFor='password'>Heslo</Label>
+                <Input
+                  id='password'
+                  type='password'
+                  placeholder='••••••'
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                  autoComplete='current-password'
+                  required
+                />
+              </div>
+              {loginError && (
+                <Alert variant='destructive'>
+                  <IconAlertCircle className='h-4 w-4' />
+                  <AlertDescription>{loginError}</AlertDescription>
+                </Alert>
+              )}
+              <Button type='submit' className='w-full' disabled={isLoading}>
+                {isLoading ? 'Přihlašování...' : 'Přihlásit se'}
+              </Button>
+            </form>
+          </div>
 
           <p className='text-muted-foreground px-8 text-center text-sm'>
             © 2025 Aerotech Czech s.r.o. Všechna práva vyhrazena.

@@ -162,8 +162,15 @@ export default function AppSidebar() {
                 items: []
               },
               {
+                title: 'První testy',
+                url: '/trainer/prvni-testy',
+                icon: 'add',
+                isActive: false,
+                items: []
+              },
+              {
                 title: 'Výsledky testů',
-                url: '/trainer/results',
+                url: '/trainer/vysledky',
                 icon: 'check',
                 isActive: false,
                 items: []

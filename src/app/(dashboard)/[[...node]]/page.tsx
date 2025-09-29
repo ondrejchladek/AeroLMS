@@ -102,7 +102,8 @@ export default async function DynamicPage({ params }: PageProps) {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-lg border bg-card p-6">
               <div className="flex flex-col space-y-1.5">
-                <h3 className="text-sm font-medium text-muted-foreground">
+                <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="text-blue-500">🔵</span>
                   Požadovaná školení
                 </h3>
                 <p className="text-2xl font-bold">{requiredTrainings}</p>
@@ -111,17 +112,19 @@ export default async function DynamicPage({ params }: PageProps) {
 
             <div className="rounded-lg border bg-card p-6">
               <div className="flex flex-col space-y-1.5">
-                <h3 className="text-sm font-medium text-muted-foreground">
-                  Splněná školení (počet datum poslední)
+                <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="text-green-500">🟢</span>
+                  Dokončená školení
                 </h3>
-                <p className="text-2xl font-bold">{completedTrainings}</p>
+                <p className="text-2xl font-bold text-green-600">{completedTrainings}</p>
               </div>
             </div>
 
             <div className="rounded-lg border bg-card p-6">
               <div className="flex flex-col space-y-1.5">
-                <h3 className="text-sm font-medium text-muted-foreground">
-                  Vypršelá školení (školení po datu příští)
+                <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="text-red-500">🔴</span>
+                  Prošlá školení
                 </h3>
                 <p className={`text-2xl font-bold ${expiredTrainings > 0 ? 'text-red-600' : ''}`}>
                   {expiredTrainings}
@@ -131,8 +134,9 @@ export default async function DynamicPage({ params }: PageProps) {
 
             <div className="rounded-lg border bg-card p-6">
               <div className="flex flex-col space-y-1.5">
-                <h3 className="text-sm font-medium text-muted-foreground">
-                  Blížící se termíny (školení s datem přístí do 30 dní)
+                <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <span className="text-yellow-500">🟡</span>
+                  Blíží se konec platnosti
                 </h3>
                 <p className={`text-2xl font-bold ${upcomingTrainings > 0 ? 'text-orange-600' : ''}`}>
                   {upcomingTrainings}

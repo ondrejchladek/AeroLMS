@@ -25,11 +25,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid training ID' }, { status: 400 });
     }
 
-    // Získej všechny testy pro dané školení
+    // Get user to check role
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(session.user.id) },
+      select: { role: true }
+    });
+
+    // WORKER sees only active test, others see all tests
+    const whereClause = user?.role === 'WORKER'
+      ? {
+          trainingId: trainingId,
+          isActive: true
+        }
+      : {
+          trainingId: trainingId
+        };
+
+    // Získej testy podle role
     const tests = await prisma.test.findMany({
-      where: {
-        trainingId: trainingId
-      },
+      where: whereClause,
       include: {
         questions: {
           orderBy: { order: 'asc' }

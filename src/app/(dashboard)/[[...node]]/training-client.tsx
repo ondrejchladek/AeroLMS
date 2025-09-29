@@ -58,20 +58,54 @@ export function TrainingClient({ trainingData, training, displayName }: Training
     if (!training?.id) return;
 
     try {
-      // Fetch test data
-      const testResponse = await fetch(`/api/trainings/${training.id}/test`);
-      if (!testResponse.ok) throw new Error('Failed to fetch test');
-      const testData = await testResponse.json();
-      setTest(testData);
+      // First fetch available tests
+      const testsResponse = await fetch(`/api/trainings/${training.id}/tests`);
+      if (!testsResponse.ok) throw new Error('Failed to fetch tests');
+      const testsData = await testsResponse.json();
 
-      // Start test attempt
+      if (!testsData.tests || testsData.tests.length === 0) {
+        toast.error('Pro toto školení není k dispozici žádný test');
+        return;
+      }
+
+      // Get the first (and only for WORKER) active test
+      const activeTest = testsData.tests[0];
+
+      // Try to start test attempt
       const startResponse = await fetch(`/api/trainings/${training.id}/test/start`, {
-        method: 'POST'
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testId: activeTest.id })
       });
-      if (!startResponse.ok) throw new Error('Failed to start test');
-      const { attemptId } = await startResponse.json();
-      setAttemptId(attemptId);
 
+      const startData = await startResponse.json();
+
+      if (!startResponse.ok) {
+        // Handle specific error codes
+        if (startData.errorCode === 'FIRST_TEST_REQUIRED') {
+          toast.error(startData.error, {
+            duration: 5000,
+            description: 'Kontaktujte svého školitele pro absolvování prvního testu.'
+          });
+          return;
+        } else if (startData.errorCode === 'TOO_EARLY_TO_RETAKE') {
+          toast.error(startData.error, {
+            duration: 5000,
+            description: `Můžete opakovat test od: ${new Date(startData.nextAllowedDate).toLocaleDateString('cs-CZ')}`
+          });
+          return;
+        } else if (startData.errorCode === 'MAX_ATTEMPTS_REACHED') {
+          toast.error(startData.error, {
+            duration: 5000,
+            description: 'Kontaktujte svého školitele pro další pokus.'
+          });
+          return;
+        }
+        throw new Error(startData.error || 'Failed to start test');
+      }
+
+      setTest(activeTest);
+      setAttemptId(startData.attemptId);
       setViewMode('test');
       toast.success('Test byl úspěšně spuštěn');
     } catch (error) {

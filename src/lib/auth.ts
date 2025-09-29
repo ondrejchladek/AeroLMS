@@ -63,16 +63,24 @@ export const authOptions: NextAuthOptions = {
             role: user.role
           } satisfies User;
         } else if (credentials.loginType === 'code') {
-          // Přihlášení kódem zaměstnance (původní implementace)
+          // Přihlášení osobním číslem a heslem (worker)
           const code = Number(credentials.code?.trim());
-          if (!code || isNaN(code)) {
+          const password = credentials.password;
+
+          if (!code || isNaN(code) || !password) {
             return null;
           }
 
           try {
             const user = await prisma.user.findUnique({ where: { code } });
 
-            if (!user) {
+            if (!user || !user.password) {
+              return null;
+            }
+
+            // Ověření hesla
+            const isValidPassword = await bcrypt.compare(password, user.password);
+            if (!isValidPassword) {
               return null;
             }
 

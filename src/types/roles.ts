@@ -35,7 +35,7 @@ export const getRoleLabel = (role: string | null | undefined): string => {
     case ROLES.TRAINER:
       return 'Školitel';
     case ROLES.WORKER:
-      return 'Pracovník';
+      return 'Zaměstnanec';
     default:
       return 'Neznámá role';
   }
