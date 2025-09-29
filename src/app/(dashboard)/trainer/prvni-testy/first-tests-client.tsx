@@ -59,7 +59,9 @@ export function FirstTestsClient() {
         const response = await fetch('/api/users');
         if (response.ok) {
           const data = await response.json();
-          setUsers(data.users || []);
+          // Filtrovat pouze WORKER uživatele na klientu
+          const workers = (data.users || []).filter((user: any) => user.role === 'WORKER');
+          setUsers(workers);
         }
       } catch (error) {
         console.error('Error fetching users:', error);
@@ -72,7 +74,7 @@ export function FirstTestsClient() {
   useEffect(() => {
     const fetchTrainings = async () => {
       try {
-        const response = await fetch('/api/trainings');
+        const response = await fetch('/api/trainings?admin=true');
         if (response.ok) {
           const data = await response.json();
           setTrainings(data.trainings || []);

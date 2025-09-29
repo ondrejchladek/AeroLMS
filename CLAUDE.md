@@ -88,7 +88,8 @@ The system dynamically generates training content based on database columns:
    - Preserves existing training data
 
 2. **Manual Synchronization**:
-   - Admin page: `/admin/synchronizace`
+   - Admin page: `/admin/prehled` (integrated into admin dashboard)
+   - Button: "Spustit manuální synchronizaci"
    - API endpoint: `POST /api/admin/sync-trainings`
 
 3. **Debug Tools** (not part of application):
@@ -318,8 +319,8 @@ Components currently in the project:
   - `app/(dashboard)/trainer/` - Trainer dashboard and management
   - `app/login/` - Authentication page with sign-in-view component
 - Admin routes:
-  - `/admin/synchronizace` - Manual training synchronization
-  - `/admin/users` - User management
+  - `/admin/prehled` - Admin dashboard (includes synchronization, user management, training management)
+  - `/admin/assignments` - Training assignments for workers
 - Trainer routes:
   - `/trainer` - Trainer dashboard (My trainings overview)
   - `/trainer/prvni-testy` - First tests page (Manual test result entry for in-person tests)
@@ -372,7 +373,6 @@ src/features/     # Feature-based modules
 
 ### Training APIs
 - **GET /api/trainings** - List trainings (role-based: admin/trainer gets all, workers get their assigned)
-- **POST /api/trainings** - Create new training (admin/trainer only)
 - **GET /api/trainings/[id]/content** - Get training content sections
 - **PUT /api/trainings/[id]** - Update training (name, description, content) - trainer/admin only
 - **GET /api/trainings/[id]/tests** - Get all tests for a training (multiple test support)
@@ -650,6 +650,7 @@ npm install --save-dev cypress
 ### Development Dependencies
 - **@faker-js/faker v9**: Mock data generation
 - **@prisma/client v6**: Database client
+- **bcryptjs v3**: Password hashing (Note: Using bcryptjs not bcrypt)
 - **TypeScript ESLint Plugin**: Type-aware linting
 - **Husky v9**: Git hooks management
 - **lint-staged v15**: Run linters on staged files
@@ -718,6 +719,11 @@ npm install --save-dev @playwright/test
    - New "První testy" page (`/trainer/prvni-testy`) for manual test result entry
    - New "Výsledky" page (`/trainer/vysledky`) for viewing all test results
    - Menu updated with new trainer pages
+4. **Admin Dashboard Consolidation**:
+   - Synchronization moved from `/admin/synchronizace` to `/admin/prehled`
+   - Removed `/admin/nove-skoleni` page (trainings now created only via auto sync)
+   - Integrated synchronization UI with manual sync button in admin dashboard
+   - Training creation only through database column pattern (no manual creation)
 
 ### Deployment Simplification (December 2024)
 1. **Two separate environments**:
@@ -733,6 +739,7 @@ npm install --save-dev @playwright/test
 1. **Date serialization in assignments**: Convert Date to ISO string for client components
 2. **Prisma relation names**: Use `trainingAssignments` not `assignments`
 3. **Icons setup**: Added `refresh` icon for admin synchronization
+4. **bcrypt import fix**: Changed from `bcrypt` to `bcryptjs` for compatibility
 
 ### RBAC System Implementation
 - Added role field to User model (ADMIN/TRAINER/WORKER)

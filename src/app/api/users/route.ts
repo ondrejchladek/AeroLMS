@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { isAdmin } from '@/types/roles';
+import { isAdmin, isTrainer, ROLES } from '@/types/roles';
 
 export async function GET(request: NextRequest) {
   try {
-    // Ověření přihlášení a admin práv
+    // Ověření přihlášení
     const session = await getServerSession(authOptions);
-    
+
     if (!session || !session.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -16,16 +16,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Kontrola admin práv pomocí role
-    if (!isAdmin(session.user.role)) {
+    // Kontrola oprávnění - admin nebo školitel
+    const canViewUsers = isAdmin(session.user.role) || isTrainer(session.user.role);
+
+    if (!canViewUsers) {
       return NextResponse.json(
-        { error: 'Forbidden - Admin access required' },
+        { error: 'Forbidden - Admin or Trainer access required' },
         { status: 403 }
       );
     }
 
-    // Načíst všechny uživatele
+    // Načíst uživatele - školitelé vidí pouze zaměstnance
+    const whereClause = isTrainer(session.user.role)
+      ? { role: ROLES.WORKER }
+      : {};
+
     const users = await prisma.user.findMany({
+      where: whereClause,
       orderBy: {
         code: 'asc'
       }
