@@ -73,8 +73,24 @@ export default function SignInViewPage() {
         console.error('[LOGIN] Signin error:', res.error);
         setLoginError('Neplatné přihlašovací údaje');
       } else if (res?.ok) {
-        console.log('[LOGIN] Signin success, redirecting to:', callbackUrl);
-        router.push(callbackUrl);
+        // Získat session pro určení role
+        const { getSession } = await import('next-auth/react');
+        const session = await getSession();
+
+        // Přesměrovat podle role
+        let redirectPath = callbackUrl;
+        if (callbackUrl === '/') {
+          // Pokud je callbackUrl root, přesměrujeme podle role
+          if (session?.user?.role === 'ADMIN') {
+            redirectPath = '/admin/prehled';
+          } else if (session?.user?.role === 'TRAINER') {
+            redirectPath = '/trainer';
+          }
+          // WORKER zůstane na '/'
+        }
+
+        console.log('[LOGIN] Signin success, redirecting to:', redirectPath);
+        router.push(redirectPath);
       }
     } catch (error) {
       console.error('[LOGIN] Signin exception:', error);

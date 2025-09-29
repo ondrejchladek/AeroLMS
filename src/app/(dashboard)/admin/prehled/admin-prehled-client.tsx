@@ -6,9 +6,10 @@ import { getRoleLabel } from '@/types/roles';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { DatePickerInput } from '@/components/ui/date-picker-input';
 import {
   Table,
@@ -51,8 +52,20 @@ import {
   AlertCircle,
   CheckCircle,
   Check,
-  ChevronsUpDown
+  ChevronsUpDown,
+  UserCog,
+  RefreshCcw,
+  Loader2,
+  Info,
+  XCircle
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -67,7 +80,7 @@ interface Training {
 }
 
 interface User {
-  UserID: number;
+  id: number;
   code: number;
   name: string;
   email: string | null;
@@ -76,8 +89,24 @@ interface User {
 }
 
 interface EditingUser {
-  UserID: number;
+  id: number;
   changes: Record<string, any>;
+}
+
+interface GeneralUserEdit {
+  id: number;
+  code: number;
+  name: string;
+  email: string;
+  password: string;
+  role: string;
+}
+
+interface TrainingEdit {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
 }
 
 export default function AdminPrehledClient() {
@@ -91,6 +120,16 @@ export default function AdminPrehledClient() {
   const [selectedTraining, setSelectedTraining] = useState<string>('');
   const [openCombobox, setOpenCombobox] = useState(false);
   const [trainingDisplayNames, setTrainingDisplayNames] = useState<Record<string, string>>({});
+  const [generalUserEdit, setGeneralUserEdit] = useState<GeneralUserEdit | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [savingGeneralUser, setSavingGeneralUser] = useState(false);
+  const [trainingEdit, setTrainingEdit] = useState<TrainingEdit | null>(null);
+  const [isTrainingEditDialogOpen, setIsTrainingEditDialogOpen] = useState(false);
+  const [savingTraining, setSavingTraining] = useState(false);
+  // State pro synchronizaci
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<any>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -135,9 +174,9 @@ export default function AdminPrehledClient() {
     const fieldName = `${training}${field}`;
 
     // Pokud ještě není v režimu editace, inicializuj editingUser
-    if (!editingUser || editingUser.UserID !== user.UserID) {
+    if (!editingUser || editingUser.id !== user.id) {
       setEditingUser({
-        UserID: user.UserID,
+        id: user.id,
         changes: {
           [fieldName]: value
         }
@@ -155,7 +194,7 @@ export default function AdminPrehledClient() {
   };
 
   const handleSaveUser = async (userId: number) => {
-    if (!editingUser || editingUser.UserID !== userId) return;
+    if (!editingUser || editingUser.id !== userId) return;
 
     setSavingUser(userId);
     setError(null);
@@ -172,12 +211,16 @@ export default function AdminPrehledClient() {
         throw new Error('Nepodařilo se uložit změny');
       }
 
-      // Aktualizovat lokální data
-      setUsers(users.map(u =>
-        u.UserID === userId
-          ? { ...u, ...editingUser.changes }
-          : u
-      ));
+      const data = await response.json();
+
+      // Aktualizovat lokální data - pouze pro konkrétního uživatele
+      setUsers(prevUsers =>
+        prevUsers.map(u =>
+          u.UserID === userId
+            ? { ...u, ...editingUser.changes }
+            : u
+        )
+      );
 
       setEditingUser(null);
       setSuccess('Změny byly úspěšně uloženy');
@@ -187,6 +230,159 @@ export default function AdminPrehledClient() {
       setError(error instanceof Error ? error.message : 'Chyba při ukládání');
     } finally {
       setSavingUser(null);
+    }
+  };
+
+  const handleOpenTrainingEditDialog = (training: Training) => {
+    setTrainingEdit({
+      id: training.id,
+      code: training.code,
+      name: training.name,
+      description: training.description
+    });
+    setIsTrainingEditDialogOpen(true);
+  };
+
+  const handleSaveTraining = async () => {
+    if (!trainingEdit) return;
+
+    setSavingTraining(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const response = await fetch(`/api/trainings/${trainingEdit.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: trainingEdit.name,
+          description: trainingEdit.description
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Nepodařilo se uložit změny');
+      }
+
+      const data = await response.json();
+
+      // Aktualizovat lokální data
+      setTrainings(prevTrainings =>
+        prevTrainings.map(t =>
+          t.id === trainingEdit.id
+            ? { ...t, name: trainingEdit.name, description: trainingEdit.description }
+            : t
+        )
+      );
+
+      // Aktualizovat také display names
+      setTrainingDisplayNames(prev => ({
+        ...prev,
+        [trainingEdit.code]: trainingEdit.name
+      }));
+
+      setIsTrainingEditDialogOpen(false);
+      setTrainingEdit(null);
+      setSuccess('Školení bylo úspěšně aktualizováno');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('Error saving training:', error);
+      setError(error instanceof Error ? error.message : 'Chyba při ukládání');
+    } finally {
+      setSavingTraining(false);
+    }
+  };
+
+  const handleOpenGeneralEditDialog = (user: User) => {
+    setGeneralUserEdit({
+      id: user.id,
+      code: user.code,
+      name: user.name,
+      email: user.email || '',
+      password: '', // Prázdné heslo = nebude změněno
+      role: user.role
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveGeneralUser = async () => {
+    if (!generalUserEdit) return;
+
+    setSavingGeneralUser(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const updateData: any = {
+        code: generalUserEdit.code,
+        name: generalUserEdit.name,
+        email: generalUserEdit.email,
+        role: generalUserEdit.role
+      };
+
+      // Pouze pokud je vyplněno heslo, přidej ho do update
+      if (generalUserEdit.password && generalUserEdit.password.trim() !== '') {
+        updateData.password = generalUserEdit.password;
+      }
+
+      const response = await fetch(`/api/users/${generalUserEdit.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData)
+      });
+
+      if (!response.ok) {
+        throw new Error('Nepodařilo se uložit změny');
+      }
+
+      // Aktualizovat lokální data
+      setUsers(users.map(u =>
+        u.id === generalUserEdit.id
+          ? { ...u, code: generalUserEdit.code, name: generalUserEdit.name, email: generalUserEdit.email, role: generalUserEdit.role }
+          : u
+      ));
+
+      setIsEditDialogOpen(false);
+      setGeneralUserEdit(null);
+      setSuccess('Uživatel byl úspěšně aktualizován');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('Error saving user:', error);
+      setError(error instanceof Error ? error.message : 'Chyba při ukládání');
+    } finally {
+      setSavingGeneralUser(false);
+    }
+  };
+
+  const handleSync = async () => {
+    setIsSyncing(true);
+    setSyncResult(null);
+    setSyncError(null);
+
+    try {
+      const response = await fetch('/api/admin/sync-trainings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Synchronizace selhala');
+      }
+
+      const data = await response.json();
+      setSyncResult(data);
+
+      // Pokud byly vytvořeny nové školení, znovu načti data
+      if (data.result?.created > 0) {
+        await fetchData();
+      }
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : 'Neznámá chyba');
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -231,6 +427,130 @@ export default function AdminPrehledClient() {
           </Alert>
         )}
 
+        {/* Synchronizace školení */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Automatická synchronizace školení</CardTitle>
+            <CardDescription>
+              Systém automaticky synchronizuje školení při každém spuštění aplikace
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertTitle>Informace</AlertTitle>
+              <AlertDescription>
+                Synchronizace probíhá automaticky při každém startu aplikace.
+                Systém detekuje všechny sloupce ve formátu {'{code}'}DatumPosl, {'{code}'}DatumPristi a {'{code}'}Pozadovano
+                v tabulce User a vytvoří odpovídající záznamy v tabulce Training.
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={handleSync}
+                disabled={isSyncing}
+                className="flex items-center gap-2"
+              >
+                {isSyncing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Synchronizuji...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCcw className="h-4 w-4" />
+                    Spustit manuální synchronizaci
+                  </>
+                )}
+              </Button>
+
+              {!isSyncing && !syncResult && !syncError && (
+                <p className="text-sm text-muted-foreground">
+                  Klikněte pro ruční spuštění synchronizace
+                </p>
+              )}
+            </div>
+
+            {syncError && (
+              <Alert variant="destructive">
+                <XCircle className="h-4 w-4" />
+                <AlertTitle>Chyba</AlertTitle>
+                <AlertDescription>{syncError}</AlertDescription>
+              </Alert>
+            )}
+
+            {syncResult && (
+              <div className="mt-4 p-4 bg-muted rounded-lg">
+                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  Synchronizace dokončena
+                </h4>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Detekovaná školení</p>
+                    <p className="text-lg font-semibold">{syncResult.result?.detected || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Nově vytvořená</p>
+                    <p className="text-lg font-semibold text-green-600">{syncResult.result?.created || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Již existující</p>
+                    <p className="text-lg font-semibold text-blue-600">{syncResult.result?.existing || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Chyby</p>
+                    <p className="text-lg font-semibold text-red-600">{syncResult.result?.errors || 0}</p>
+                  </div>
+                </div>
+
+                {syncResult.result?.details?.created && syncResult.result.details.created.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium mb-2">Nově vytvořená školení:</p>
+                    <div className="bg-background rounded p-2">
+                      <ul className="list-disc list-inside space-y-1">
+                        {syncResult.result.details.created.map((code: string) => (
+                          <li key={code} className="text-sm">{code}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+
+                {syncResult.result?.details?.errors && syncResult.result.details.errors.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-sm font-medium mb-2 text-red-600">Chyby při vytváření:</p>
+                    <div className="bg-red-50 dark:bg-red-950 rounded p-2">
+                      <ul className="list-disc list-inside space-y-1">
+                        {syncResult.result.details.errors.map((code: string) => (
+                          <li key={code} className="text-sm text-red-700 dark:text-red-400">{code}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Jak funguje synchronizace */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Jak funguje synchronizace?</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+              <li>Systém prohledá tabulku User a najde všechny sloupce odpovídající vzoru školení</li>
+              <li>Pro každé školení hledá trojici sloupců: {'{code}'}DatumPosl, {'{code}'}DatumPristi, {'{code}'}Pozadovano</li>
+              <li>Školení s kompletní trojicí sloupců se porovnají s existujícími záznamy v tabulce Training</li>
+              <li>Chybějící školení se automaticky přenesou z tabulky User do tabulky Training a přidají do UI tabulky Školení v databázi s kódem jako názvem</li>
+              <li>Existující školení zůstanou nedotčena</li>
+            </ol>
+          </CardContent>
+        </Card>
+
         {/* Tabulka školení */}
         <Card>
           <CardHeader>
@@ -252,12 +572,13 @@ export default function AdminPrehledClient() {
                   <TableHead>Testy</TableHead>
                   <TableHead>Vytvořeno</TableHead>
                   <TableHead>Aktualizováno</TableHead>
+                  <TableHead>Akce</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {trainings.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                       Žádná školení v databázi
                     </TableCell>
                   </TableRow>
@@ -274,6 +595,16 @@ export default function AdminPrehledClient() {
                       </TableCell>
                       <TableCell>{formatDate(training.createdAt)}</TableCell>
                       <TableCell>{formatDate(training.updatedAt)}</TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenTrainingEditDialog(training)}
+                          className="cursor-pointer"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
                     </TableRow>
                   ))
                 )}
@@ -282,15 +613,75 @@ export default function AdminPrehledClient() {
           </CardContent>
         </Card>
 
-        {/* Tabulka uživatelů */}
+        {/* Nová obecná tabulka správy uživatelů */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <UserCog className="h-5 w-5" />
+              Správa uživatelů
+            </CardTitle>
+            <CardDescription>
+              Správa základních údajů uživatelů - kód, jméno, email, heslo, role
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Kód</TableHead>
+                  <TableHead>Jméno</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Heslo</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Akce</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                      Žádní uživatelé
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  users.map(user => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-mono">{user.code}</TableCell>
+                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell>{user.email || '-'}</TableCell>
+                      <TableCell className="font-mono text-muted-foreground">••••••••</TableCell>
+                      <TableCell>
+                        <Badge variant={user.role === 'ADMIN' ? 'destructive' : user.role === 'TRAINER' ? 'default' : 'secondary'}>
+                          {getRoleLabel(user.role)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenGeneralEditDialog(user)}
+                          className="cursor-pointer"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
+        {/* Tabulka přiřazení školení pracovníkům */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="h-5 w-5" />
-              Správa uživatelů
+              Správa přiřazení požadovaných školení pracovníkům
             </CardTitle>
             <CardDescription>
-              Editace školení, termínů a rolí pro jednotlivé uživatele
+              Editace požadavků na školení a termínů pro jednotlivé uživatele
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -356,15 +747,15 @@ export default function AdminPrehledClient() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.length === 0 ? (
+                  {users.filter(u => u.role === 'WORKER').length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={8} className="text-center text-muted-foreground">
-                        Žádní uživatelé
+                        Žádní pracovníci
                       </TableCell>
                     </TableRow>
                   ) : (
-                    users.map(user => {
-                      const isEditing = editingUser?.UserID === user.UserID;
+                    users.filter(u => u.role === 'WORKER').map(user => {
+                      const isEditing = editingUser?.id === user.id;
                       const training = selectedTraining;
 
                       // Získat hodnoty pro vybrané školení
@@ -381,7 +772,7 @@ export default function AdminPrehledClient() {
                         : user[`${training}DatumPristi`];
 
                       return (
-                        <TableRow key={user.UserID}>
+                        <TableRow key={user.id}>
                           <TableCell className="font-mono">
                             {user.code}
                           </TableCell>
@@ -426,11 +817,11 @@ export default function AdminPrehledClient() {
                               <div className="flex gap-2">
                                 <Button
                                   size="sm"
-                                  onClick={() => handleSaveUser(user.UserID)}
-                                  disabled={savingUser === user.UserID}
+                                  onClick={() => handleSaveUser(user.id)}
+                                  disabled={savingUser === user.id}
                                   className="cursor-pointer"
                                 >
-                                  {savingUser === user.UserID ? (
+                                  {savingUser === user.id ? (
                                     'Ukládání...'
                                   ) : (
                                     <Save className="h-4 w-4" />
@@ -440,7 +831,7 @@ export default function AdminPrehledClient() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => setEditingUser(null)}
-                                  disabled={savingUser === user.UserID}
+                                  disabled={savingUser === user.id}
                                   className="cursor-pointer"
                                 >
                                   <X className="h-4 w-4" />
@@ -450,7 +841,7 @@ export default function AdminPrehledClient() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => setEditingUser({ UserID: user.UserID, changes: {} })}
+                                onClick={() => setEditingUser({ id: user.id, changes: {} })}
                                 className="cursor-pointer"
                               >
                                 <Edit className="h-4 w-4" />
@@ -466,6 +857,203 @@ export default function AdminPrehledClient() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Dialog pro editaci obecných údajů uživatele */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Upravit uživatele</DialogTitle>
+              <DialogDescription>
+                Upravte základní údaje uživatele. Pokud heslo necháte prázdné, nebude změněno.
+              </DialogDescription>
+            </DialogHeader>
+            {generalUserEdit && (
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-code" className="text-right">
+                    Kód
+                  </Label>
+                  <Input
+                    id="edit-code"
+                    type="number"
+                    value={generalUserEdit.code}
+                    onChange={(e) =>
+                      setGeneralUserEdit({
+                        ...generalUserEdit,
+                        code: Number(e.target.value)
+                      })
+                    }
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-name" className="text-right">
+                    Jméno
+                  </Label>
+                  <Input
+                    id="edit-name"
+                    value={generalUserEdit.name}
+                    onChange={(e) =>
+                      setGeneralUserEdit({
+                        ...generalUserEdit,
+                        name: e.target.value
+                      })
+                    }
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-email" className="text-right">
+                    Email
+                  </Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={generalUserEdit.email}
+                    onChange={(e) =>
+                      setGeneralUserEdit({
+                        ...generalUserEdit,
+                        email: e.target.value
+                      })
+                    }
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-password" className="text-right">
+                    Heslo
+                  </Label>
+                  <Input
+                    id="edit-password"
+                    type="password"
+                    value={generalUserEdit.password}
+                    onChange={(e) =>
+                      setGeneralUserEdit({
+                        ...generalUserEdit,
+                        password: e.target.value
+                      })
+                    }
+                    placeholder="Ponechte prázdné pro zachování"
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-role" className="text-right">
+                    Role
+                  </Label>
+                  <Select
+                    value={generalUserEdit.role}
+                    onValueChange={(value) =>
+                      setGeneralUserEdit({
+                        ...generalUserEdit,
+                        role: value
+                      })
+                    }
+                  >
+                    <SelectTrigger className="col-span-3">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ADMIN">Admin</SelectItem>
+                      <SelectItem value="TRAINER">Školitel</SelectItem>
+                      <SelectItem value="WORKER">Pracovník</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                disabled={savingGeneralUser}
+              >
+                Zrušit
+              </Button>
+              <Button
+                onClick={handleSaveGeneralUser}
+                disabled={savingGeneralUser}
+              >
+                {savingGeneralUser ? 'Ukládání...' : 'Uložit změny'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog pro editaci školení */}
+        <Dialog open={isTrainingEditDialogOpen} onOpenChange={setIsTrainingEditDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Upravit školení</DialogTitle>
+              <DialogDescription>
+                Upravte název a popis školení. Kód nelze měnit.
+              </DialogDescription>
+            </DialogHeader>
+            {trainingEdit && (
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-training-code" className="text-right">
+                    Kód
+                  </Label>
+                  <Input
+                    id="edit-training-code"
+                    value={trainingEdit.code}
+                    disabled
+                    className="col-span-3 bg-muted"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-training-name" className="text-right">
+                    Název
+                  </Label>
+                  <Input
+                    id="edit-training-name"
+                    value={trainingEdit.name}
+                    onChange={(e) =>
+                      setTrainingEdit({
+                        ...trainingEdit,
+                        name: e.target.value
+                      })
+                    }
+                    className="col-span-3"
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-training-description" className="text-right">
+                    Popis
+                  </Label>
+                  <Textarea
+                    id="edit-training-description"
+                    value={trainingEdit.description || ''}
+                    onChange={(e) =>
+                      setTrainingEdit({
+                        ...trainingEdit,
+                        description: e.target.value
+                      })
+                    }
+                    className="col-span-3"
+                    rows={4}
+                  />
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsTrainingEditDialogOpen(false)}
+                disabled={savingTraining}
+              >
+                Zrušit
+              </Button>
+              <Button
+                onClick={handleSaveTraining}
+                disabled={savingTraining}
+              >
+                {savingTraining ? 'Ukládání...' : 'Uložit změny'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </PageContainer>
   );

@@ -63,6 +63,16 @@ export async function middleware(request: NextRequest) {
   // Role-based access control
   const userRole = token.role || ROLES.WORKER;
 
+  // Role-based homepage redirection
+  if (pathname === '/') {
+    if (userRole === ROLES.ADMIN) {
+      return NextResponse.redirect(new URL('/admin/prehled', request.url));
+    } else if (userRole === ROLES.TRAINER) {
+      return NextResponse.redirect(new URL('/trainer', request.url));
+    }
+    // WORKER zůstává na '/'
+  }
+
   // Admin routes
   if (normalizedPath.startsWith('/admin')) {
     if (userRole !== ROLES.ADMIN) {

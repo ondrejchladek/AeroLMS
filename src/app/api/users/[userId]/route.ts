@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isAdmin } from '@/types/roles';
+import bcrypt from 'bcrypt';
 
 interface Props {
   params: Promise<{
@@ -42,15 +43,19 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
     // Získat data z požadavku
     const data = await request.json();
-    
+
     // Připravit data pro aktualizaci
     const updateData: any = {};
-    
+
     // Zpracovat všechny předané hodnoty
     for (const [key, value] of Object.entries(data)) {
       // Pokud je hodnota datum, převést na Date objekt
       if (key.includes('Datum') && value) {
         updateData[key] = new Date(value as string);
+      } else if (key === 'password' && value && typeof value === 'string' && value.trim() !== '') {
+        // Hash hesla pomocí bcrypt
+        const hashedPassword = await bcrypt.hash(value, 10);
+        updateData[key] = hashedPassword;
       } else {
         updateData[key] = value;
       }

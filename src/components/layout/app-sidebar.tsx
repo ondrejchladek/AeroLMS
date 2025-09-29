@@ -127,23 +127,9 @@ export default function AppSidebar() {
                 items: []
               },
               {
-                title: 'Nové školení',
-                url: '/admin/nove-skoleni',
-                icon: 'add',
-                isActive: false,
-                items: []
-              },
-              {
                 title: 'Správa přiřazení',
                 url: '/admin/assignments',
                 icon: 'user',
-                isActive: false,
-                items: []
-              },
-              {
-                title: 'Synchronizace',
-                url: '/admin/synchronizace',
-                icon: 'refresh',
                 isActive: false,
                 items: []
               }

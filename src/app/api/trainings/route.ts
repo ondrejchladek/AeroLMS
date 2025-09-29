@@ -4,41 +4,12 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isAdmin, isTrainer } from '@/types/roles';
 
-export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // Check if user is admin or trainer
-  if (!isAdmin(session.user.role) && !isTrainer(session.user.role)) {
-    return NextResponse.json({ error: 'Forbidden - Admin or Trainer access required' }, { status: 403 });
-  }
-
-  try {
-    const body = await request.json();
-    const { code, name, description, content } = body;
-
-    // Create the training in database
-    const training = await prisma.training.create({
-      data: {
-        code: code || name.toUpperCase().replace(/\s+/g, '_'),
-        name,
-        description,
-        content
-      }
-    });
-
-    return NextResponse.json({ training });
-  } catch (error) {
-    console.error('Error creating training:', error);
-    return NextResponse.json(
-      { error: 'Failed to create training' },
-      { status: 500 }
-    );
-  }
-}
+// POST method removed - trainings are created only through automatic synchronization
+// New trainings are added by adding three columns to User table:
+// - {code}DatumPosl - Last completion date
+// - {code}DatumPristi - Next due date
+// - {code}Pozadovano - Required flag
+// The app automatically detects these columns and creates Training records on startup or manual sync
 
 export async function GET(request: Request) {
   const session = await getServerSession(authOptions);
