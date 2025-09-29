@@ -13,19 +13,20 @@ if (process.env.DB_PROVIDER === 'neon') {
     stdio: 'inherit'
   });
 
-  console.log('🔄 Applying database migrations...');
+  console.log('🔄 Synchronizing database schema...');
   try {
-    execSync('npx prisma migrate deploy --schema=./prisma/schema.neon.prisma', {
+    // Pro Neon použijeme db push - jednodušší a spolehlivější
+    execSync('npx prisma db push --schema=./prisma/schema.neon.prisma', {
       stdio: 'inherit',
       env: {
         ...process.env,
         DATABASE_URL: process.env.DATABASE_URL_NEON
       }
     });
-    console.log('✅ Migrations applied successfully!');
+    console.log('✅ Database schema synchronized!');
   } catch (error) {
-    console.log('⚠️ Migration failed or no migrations to apply');
-    console.log('You may need to run migrations manually after deployment');
+    console.log('⚠️ Database sync warning - app will continue');
+    console.log('Manual sync may be needed after deployment');
   }
 
   console.log('📦 Building Next.js application...');

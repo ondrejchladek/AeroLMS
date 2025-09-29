@@ -9,25 +9,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```bash
 # 1. Setup project
 cd AeroLMS
-npm install
+npm install  # Automatically runs postinstall.js → generates Prisma client
 
 # 2. Environment variables
 cp .env.example .env.local
-# Edit .env.local with database connection
+# Edit .env.local with SQL Server connection string
 
 # 3. Database setup (SQL Server local)
-npx prisma generate
-npx prisma migrate dev
-npx prisma db seed  # Optional
+npx prisma migrate dev     # Apply migrations
+npx prisma db seed         # Seed test data (optional)
 
 # 4. Start development
 npm run dev  # http://localhost:3000
 
 # 5. Login with employee code
-# Check seed data for test codes
+# Admin: test@test.cz
+# Worker: code 123456
 
-# 6. Open Prisma Studio (správně)
+# 6. Open Prisma Studio (správně pro lokál)
 npx dotenv -e .env.local -- prisma studio
+
+# 7. For Vercel deployment
+# Set environment variables in Vercel dashboard:
+# - DB_PROVIDER=neon
+# - DATABASE_URL_NEON=postgresql://...
+# - NEXTAUTH_URL, NEXTAUTH_SECRET
 ```
 
 ## Project Overview
@@ -64,17 +70,22 @@ The system implements three user roles with distinct permissions:
 
 ## 🔄 Automatic Training Synchronization
 
-The system automatically detects and synchronizes trainings from database columns:
+The system dynamically generates training content based on database columns:
 
 ### How It Works
 1. **On Application Start** (`src/instrumentation.ts`):
+   - Calls `initializeTrainings()` from `lib/init-trainings.ts`
    - Scans User table for training columns pattern: `{code}DatumPosl`, `{code}DatumPristi`, `{code}Pozadovano`
-   - Creates missing Training records automatically
+   - Creates missing Training records automatically via `lib/training-sync.ts`
    - Preserves existing training data
 
 2. **Manual Synchronization**:
    - Admin page: `/admin/synchronizace`
    - API endpoint: `POST /api/admin/sync-trainings`
+
+3. **Debug Tools** (not part of application):
+   - `prisma/check-columns.js` - Manual script for database analysis
+   - Run with: `node prisma/check-columns.js`
 
 ### Training Detection Pattern
 For each training, the system looks for three columns in User table:
@@ -120,15 +131,17 @@ These servers enhance development capabilities and are available immediately in 
   - shadcn/ui (full suite of Radix UI components)
   - Tailwind CSS v4.0.0 with tailwindcss-animate
   - Lucide React & Tabler Icons for iconography
-- **Database (Hybridní systém)**:
+- **Database (Oddělená prostředí)**:
   - **Lokální vývoj**: Microsoft SQL Server Express 2019 (localhost:1433)
     - Schema: `prisma/schema.prisma`
     - Environment: `.env.local` s `DATABASE_URL`
+    - Migrace: `prisma/migrations/`
   - **Produkce (Vercel)**: Neon PostgreSQL
     - Schema: `prisma/schema.neon.prisma`
-    - Environment: `.env` s `DATABASE_URL_NEON`
+    - Environment: Vercel env variables s `DATABASE_URL_NEON`
+    - Synchronizace: `prisma db push` při buildu
   - Prisma ORM v6.11.1 as database abstraction layer
-  - Database migrations in `prisma/migrations/`
+  - **Důležité**: Lokál a produkce jsou zcela oddělené, bez sdílených migrací
 - **Authentication**: NextAuth v4.24.11 with JWT strategy (employee code-based)
 - **State Management**:
   - Zustand v5.0.2 for client state
@@ -466,13 +479,20 @@ src/
 - Module resolution: Node
 
 ### Prisma Configuration
-- Database: Microsoft SQL Server Express 2019 (local)
+**Local Development (SQL Server)**:
+- Database: Microsoft SQL Server Express 2019
 - Port: 1433 (default SQL Server port)
 - Database name: AeroLMS
 - Authentication: Windows Integrated Security
 - Schema: `prisma/schema.prisma`
-- Seed script: `prisma/seed.js`
-- Migrations tracked in `prisma/migrations/`
+- Migrations: `prisma/migrations/`
+- Seed: `prisma/seed.js`
+
+**Production (Neon PostgreSQL)**:
+- Schema: `prisma/schema.neon.prisma`
+- Migrations: `prisma/migrations-neon/` (if needed)
+- Sync: `prisma db push` (preferred)
+- Seed: `prisma/seed-roles-neon.js`
 
 ### Tailwind Configuration
 - Version 4.0 with PostCSS
@@ -481,6 +501,7 @@ src/
 
 ## Environment Variables
 
+### Local Development
 Required in `.env.local`:
 ```
 # Database - Microsoft SQL Server Express 2019
@@ -495,6 +516,21 @@ NEXT_PUBLIC_SENTRY_DSN=         # Sentry DSN for error tracking
 NEXT_PUBLIC_SENTRY_ORG=         # Sentry organization
 NEXT_PUBLIC_SENTRY_PROJECT=     # Sentry project name
 NEXT_PUBLIC_SENTRY_DISABLED=    # Set to "true" to disable Sentry
+```
+
+### Vercel Production
+Required in Vercel Environment Variables:
+```
+# Database - Neon PostgreSQL
+DB_PROVIDER=neon                # Triggers Neon build process
+DATABASE_URL_NEON=postgresql://user:password@host/database?sslmode=require
+
+# Authentication
+NEXTAUTH_URL=https://your-app.vercel.app
+NEXTAUTH_SECRET=                 # Generate secure secret
+
+# Sentry (Optional)
+NEXT_PUBLIC_SENTRY_DSN=         # Production Sentry DSN
 ```
 
 ## Custom Hooks Available
@@ -626,6 +662,30 @@ npm install --save-dev @playwright/test
 - **Run specific test by name**: `npm test -- -t "test name pattern"`
 - **Debug tests**: `npm run test:watch` then press `p` to filter
 - **Coverage report**: `npm test -- --coverage`
+
+## Recent Changes & Fixes
+
+### Deployment Simplification (December 2024)
+1. **Two separate environments**:
+   - Local = SQL Server Express (always)
+   - Vercel = Neon PostgreSQL (always)
+   - No shared migrations or complex switching
+2. **Simplified scripts**:
+   - `postinstall.js` - 6 lines, just generates Prisma client
+   - `build.js` - Simple conditional for Vercel vs local
+3. **Database sync**: Using `db push` instead of complex migrations
+
+### TypeScript Fixes (December 2024)
+1. **Date serialization in assignments**: Convert Date to ISO string for client components
+2. **Prisma relation names**: Use `trainingAssignments` not `assignments`
+3. **Icons setup**: Added `refresh` icon for admin synchronization
+
+### RBAC System Implementation
+- Added role field to User model (ADMIN/TRAINER/WORKER)
+- Created TrainingAssignment model for trainer assignments
+- Automatic training synchronization from database columns
+- Multiple tests per training support
+- Dynamic content generation based on User table columns
 
 ## Common Pitfalls to Avoid
 
@@ -808,24 +868,47 @@ export function InteractiveComponent() {
 - Automatic date tracking for training compliance
 - Real-time statistics widgets on dashboard
 
-## 🔄 Neon Database Migration (Production)
+## 🚀 Deployment Architecture
 
-### Migration Files
-- **Schema**: `prisma/schema.neon.prisma` - Updated with RBAC
-- **SQL Script**: `prisma/migrations/neon/001_add_roles.sql`
-- **Guide**: `NEON_MIGRATION.md` - Complete migration instructions
+### Simplified Two-Environment Setup
+- **Local Development**: Always SQL Server Express 2019
+- **Production (Vercel)**: Always Neon PostgreSQL
+- **No shared migrations or complex switching**
 
-### Key Changes for Production
-1. **User table**: Added `role` field (ADMIN/TRAINER/WORKER)
-2. **Test table**: Added `isActive`, `validFrom`, `validTo` fields
-3. **New table**: `TrainingAssignment` for trainer-training relationships
+### Build & Deploy Scripts
 
-### Quick Migration Command
-```bash
-# Apply to Neon production
-export DATABASE_URL=$DATABASE_URL_NEON
-npx prisma migrate deploy --schema=./prisma/schema.neon.prisma
+#### `scripts/postinstall.js` (6 lines)
+```javascript
+// Always generates Prisma client for local SQL Server
+execSync('prisma generate', { stdio: 'inherit' });
 ```
+
+#### `scripts/build.js`
+- **Local build**: Just runs `next build`
+- **Vercel build** (when `DB_PROVIDER=neon`):
+  1. Generates Prisma client from `schema.neon.prisma`
+  2. Synchronizes database with `prisma db push`
+  3. Builds Next.js application
+
+### Vercel Deployment Process
+1. **Automatic on push to main**:
+   - Detects `DB_PROVIDER=neon` in environment
+   - Runs `scripts/build.js` which handles everything
+   - Database sync via `db push` (no complex migrations)
+
+2. **Required Vercel Environment Variables**:
+   ```
+   DB_PROVIDER=neon
+   DATABASE_URL_NEON=postgresql://...
+   NEXTAUTH_URL=https://your-app.vercel.app
+   NEXTAUTH_SECRET=...
+   ```
+
+3. **Post-deployment** (manual if needed):
+   ```bash
+   # Assign roles via seed script
+   node prisma/seed-roles-neon.js
+   ```
 
 ## Deployment Strategy
 
