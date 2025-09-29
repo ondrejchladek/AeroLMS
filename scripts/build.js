@@ -15,8 +15,9 @@ if (process.env.DB_PROVIDER === 'neon') {
 
   console.log('🔄 Synchronizing database schema...');
   try {
-    // Pro Neon použijeme db push - jednodušší a spolehlivější
-    execSync('npx prisma db push --schema=./prisma/schema.neon.prisma', {
+    // Pro Neon použijeme db push s accept-data-loss
+    // POZOR: Toto může změnit strukturu databáze!
+    execSync('npx prisma db push --schema=./prisma/schema.neon.prisma --accept-data-loss', {
       stdio: 'inherit',
       env: {
         ...process.env,
@@ -24,6 +25,7 @@ if (process.env.DB_PROVIDER === 'neon') {
       }
     });
     console.log('✅ Database schema synchronized!');
+    console.log('⚠️ IMPORTANT: Re-run seed script after deployment to restore data');
   } catch (error) {
     console.log('⚠️ Database sync warning - app will continue');
     console.log('Manual sync may be needed after deployment');
