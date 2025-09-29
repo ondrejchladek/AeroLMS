@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isAdmin } from '@/types/roles';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 interface Props {
   params: Promise<{
