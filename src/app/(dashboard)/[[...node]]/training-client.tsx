@@ -44,9 +44,10 @@ interface TrainingClientProps {
     testId?: number;
   } | null;
   displayName: string;
+  userRole: string;
 }
 
-export function TrainingClient({ trainingData, training, displayName }: TrainingClientProps) {
+export function TrainingClient({ trainingData, training, displayName, userRole }: TrainingClientProps) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [test, setTest] = useState<any>(null);
@@ -217,6 +218,27 @@ export function TrainingClient({ trainingData, training, displayName }: Training
   const [isExpired, setIsExpired] = useState(false);
   const isCompleted = trainingData.datumPosl !== null;
 
+  // Vypočítej, zda může uživatel spustit test
+  const canStartTest = () => {
+    // Admin a Trainer mohou vždy
+    if (userRole !== 'WORKER') return true;
+
+    // Worker specifické podmínky
+    if (!isCompleted) return false; // První test musí být osobně
+
+    // Zkontroluj, zda je měsíc před vypršením
+    if (trainingData.datumPristi) {
+      const today = new Date();
+      const dueDate = new Date(trainingData.datumPristi);
+      const oneMonthBefore = new Date(dueDate);
+      oneMonthBefore.setMonth(oneMonthBefore.getMonth() - 1);
+
+      return today >= oneMonthBefore;
+    }
+
+    return false;
+  };
+
   useEffect(() => {
     if (trainingData.datumPristi) {
       setIsExpired(new Date(trainingData.datumPristi) < new Date());
@@ -367,6 +389,52 @@ export function TrainingClient({ trainingData, training, displayName }: Training
         </Card>
       )}
 
+      {/* Info for Worker about test availability */}
+      {userRole === 'WORKER' && training?.hasTest && (
+        <div>
+          {!isCompleted && (
+            <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 mb-4">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-blue-900 dark:text-blue-100">
+                      První test musí být absolvován osobně
+                    </p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                      Kontaktujte svého školitele pro absolvování prvního testu.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {isCompleted && trainingData.datumPristi && !canStartTest() && (
+            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 mb-4">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <Clock className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-amber-900 dark:text-amber-100">
+                      Test bude dostupný měsíc před vypršením
+                    </p>
+                    <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
+                      Test můžete spustit od: {(() => {
+                        const dueDate = new Date(trainingData.datumPristi);
+                        const oneMonthBefore = new Date(dueDate);
+                        oneMonthBefore.setMonth(oneMonthBefore.getMonth() - 1);
+                        return oneMonthBefore.toLocaleDateString('cs-CZ');
+                      })()}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
       {/* Action Buttons */}
       {training && (
         <div className="flex gap-4">
@@ -384,11 +452,13 @@ export function TrainingClient({ trainingData, training, displayName }: Training
           <Button
             size="lg"
             onClick={handleStartTest}
-            disabled={!training.hasTest}
+            disabled={!training.hasTest || !canStartTest()}
             className="gap-2 cursor-pointer px-8 py-6 text-base"
           >
             <FileText className="h-6 w-6" />
-            Spustit test
+            {!canStartTest() && userRole === 'WORKER' ?
+              (isCompleted ? 'Test zatím nedostupný' : 'První test osobně') :
+              'Spustit test'}
           </Button>
         </div>
       )}

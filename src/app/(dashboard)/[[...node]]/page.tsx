@@ -252,6 +252,7 @@ export default async function DynamicPage({ params }: PageProps) {
         trainingData={trainingData}
         training={trainingForClient}
         displayName={training.name} // Použij name z databáze
+        userRole={user.role || 'WORKER'} // Předej roli uživatele
       />
     </PageContainer>
   );
