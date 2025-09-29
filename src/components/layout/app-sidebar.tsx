@@ -259,8 +259,9 @@ export default function AppSidebar() {
             </SidebarMenu>
           </SidebarGroup>
         )}
-        
-        {/* Běžné Menu */}
+
+        {/* Běžné Menu - zobrazí se jen pro workery (ne pro adminy a trenéry) */}
+        {!hasAdminAccess && !hasTrainerAccess && (
         <SidebarGroup>
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarMenu>
@@ -319,6 +320,7 @@ export default function AppSidebar() {
             })}
           </SidebarMenu>
         </SidebarGroup>
+        )}
       </SidebarContent>
 
       {/* ---------- FOOTER ---------- */}
