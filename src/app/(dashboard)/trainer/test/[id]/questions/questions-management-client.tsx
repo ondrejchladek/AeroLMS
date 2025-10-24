@@ -51,7 +51,7 @@ interface QuestionsManagementClientProps {
   test: any;
 }
 
-type QuestionType = 'single' | 'multiple' | 'yesno' | 'text';
+type QuestionType = 'single' | 'multiple';
 
 interface Question {
   id?: number;
@@ -189,9 +189,7 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
   const getQuestionTypeLabel = (type: QuestionType) => {
     const labels = {
       single: 'Jedna odpověď',
-      multiple: 'Více odpovědí',
-      yesno: 'Ano/Ne',
-      text: 'Textová odpověď'
+      multiple: 'Více odpovědí'
     };
     return labels[type];
   };
@@ -340,8 +338,6 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
                   <SelectContent>
                     <SelectItem value="single">Jedna odpověď</SelectItem>
                     <SelectItem value="multiple">Více odpovědí</SelectItem>
-                    <SelectItem value="yesno">Ano/Ne</SelectItem>
-                    <SelectItem value="text">Textová odpověď</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -407,44 +403,6 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
                       )}
                     </div>
                   ))}
-                </div>
-              )}
-
-              {/* Yes/No options */}
-              {currentQuestion.type === 'yesno' && (
-                <div className="grid gap-2">
-                  <Label>Správná odpověď</Label>
-                  <RadioGroup
-                    value={currentQuestion.correctAnswer}
-                    onValueChange={(value) =>
-                      setCurrentQuestion({ ...currentQuestion, correctAnswer: value })
-                    }
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="true" id="yes" />
-                      <Label htmlFor="yes">Ano</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="false" id="no" />
-                      <Label htmlFor="no">Ne</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              )}
-
-              {/* Text answer keywords */}
-              {currentQuestion.type === 'text' && (
-                <div className="grid gap-2">
-                  <Label htmlFor="keywords">Klíčová slova (oddělená čárkou)</Label>
-                  <Input
-                    id="keywords"
-                    value={currentQuestion.correctAnswer}
-                    onChange={(e) => setCurrentQuestion({
-                      ...currentQuestion,
-                      correctAnswer: `keywords:${e.target.value}`
-                    })}
-                    placeholder="např. React, komponenta, props"
-                  />
                 </div>
               )}
 

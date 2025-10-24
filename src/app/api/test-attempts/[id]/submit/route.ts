@@ -63,7 +63,7 @@ export async function POST(
 
       const correctAnswer = question.correctAnswer ? JSON.parse(question.correctAnswer) : null;
 
-      if (question.type === 'single' || question.type === 'yesno') {
+      if (question.type === 'single') {
         // Single choice - full points if correct
         if (userAnswer === correctAnswer) {
           earnedPoints += question.points;
@@ -103,22 +103,6 @@ export async function POST(
             earnedPoints += Math.round(finalScore * 100) / 100; // Round to 2 decimal places
           }
         }
-      } else if (question.type === 'text') {
-        // For text questions, check if answer contains keywords
-        if (correctAnswer && correctAnswer.startsWith('keywords:')) {
-          const keywords = correctAnswer.replace('keywords:', '').split(',');
-          const answerLower = userAnswer.toLowerCase();
-          const hasAllKeywords = keywords.every((keyword: string) =>
-            answerLower.includes(keyword.toLowerCase())
-          );
-
-          if (hasAllKeywords) {
-            earnedPoints += question.points;
-          }
-        } else if (userAnswer.toLowerCase().trim() === correctAnswer?.toLowerCase().trim()) {
-          // Exact match (case-insensitive)
-          earnedPoints += question.points;
-        }
       }
     }
 
@@ -146,14 +130,13 @@ export async function POST(
       const trainingCode = attempt.test.training.code;
 
       // Update user's training completion date dynamically based on training code
+      // DatumPristi is automatically calculated by the database from DatumPosl
       const datumPoslField = `${trainingCode}DatumPosl`;
-      const datumPristiField = `${trainingCode}DatumPristi`;
 
       await prisma.user.update({
         where: { id: parseInt(session.user.id) },
         data: {
-          [datumPoslField]: new Date(),
-          [datumPristiField]: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // +1 year
+          [datumPoslField]: new Date()
         }
       });
 

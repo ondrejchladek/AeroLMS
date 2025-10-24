@@ -12,6 +12,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Save, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
+import { TiptapEditor } from '@/components/editor/TiptapEditor';
 
 interface TrainingEditClientProps {
   training: any;
@@ -25,17 +26,7 @@ export default function TrainingEditClient({ training }: TrainingEditClientProps
   // Form state
   const [name, setName] = useState(training.name || training.code);
   const [description, setDescription] = useState(training.description || '');
-  const [content, setContent] = useState(() => {
-    if (training.content) {
-      try {
-        const parsed = JSON.parse(training.content);
-        return JSON.stringify(parsed, null, 2);
-      } catch {
-        return training.content;
-      }
-    }
-    return '';
-  });
+  const [content, setContent] = useState(training.content || '');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,19 +34,6 @@ export default function TrainingEditClient({ training }: TrainingEditClientProps
     setSuccess(false);
 
     try {
-      // Validate content if provided
-      let contentToSend = content;
-      if (content.trim()) {
-        try {
-          // Try to parse as JSON
-          const parsed = JSON.parse(content);
-          contentToSend = JSON.stringify(parsed);
-        } catch {
-          // If not valid JSON, send as string
-          contentToSend = content;
-        }
-      }
-
       const response = await fetch(`/api/trainings/${training.id}`, {
         method: 'PUT',
         headers: {
@@ -64,7 +42,7 @@ export default function TrainingEditClient({ training }: TrainingEditClientProps
         body: JSON.stringify({
           name,
           description,
-          content: contentToSend
+          content: content.trim() || null
         })
       });
 
@@ -155,27 +133,20 @@ export default function TrainingEditClient({ training }: TrainingEditClientProps
                 />
               </div>
 
-              {/* Content (JSON) */}
+              {/* Content (Rich Text Editor) */}
               <div className="space-y-2">
                 <Label htmlFor="content">
-                  Obsah školení (JSON formát)
+                  Obsah školení
                   <span className="text-sm text-muted-foreground ml-2">Volitelné</span>
                 </Label>
-                <Textarea
-                  id="content"
+                <TiptapEditor
                   value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder={`{
-  "introduction": "Úvod do školení",
-  "keyPoints": ["Bod 1", "Bod 2"],
-  "rules": ["Pravidlo 1", "Pravidlo 2"]
-}`}
-                  rows={12}
-                  disabled={isLoading}
-                  className="font-mono text-sm"
+                  onChange={(value) => setContent(value)}
+                  placeholder="Začněte psát obsah školení... Můžete použít formátování, nadpisy, seznamy a další."
+                  editable={!isLoading}
                 />
                 <p className="text-sm text-muted-foreground">
-                  Strukturovaný obsah ve formátu JSON. Ponechte prázdné, pokud nechcete obsah upravovat.
+                  Použijte toolbar pro formátování textu, vkládání obrázků, tabulek a dalších prvků.
                 </p>
               </div>
 

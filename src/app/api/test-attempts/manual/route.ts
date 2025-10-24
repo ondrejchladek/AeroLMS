@@ -106,14 +106,13 @@ export async function POST(request: NextRequest) {
     if (passed) {
       const trainingCode = test.training.code;
       const datumPoslField = `${trainingCode}DatumPosl`;
-      const datumPristiField = `${trainingCode}DatumPristi`;
 
-      // Update user's training completion dates
+      // Update user's training completion date
+      // DatumPristi is automatically calculated by the database from DatumPosl
       await prisma.user.update({
         where: { id: userId },
         data: {
-          [datumPoslField]: new Date(),
-          [datumPristiField]: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000) // +1 year
+          [datumPoslField]: new Date()
         }
       });
 

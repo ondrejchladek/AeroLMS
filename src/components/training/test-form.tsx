@@ -29,7 +29,7 @@ import { useSession } from 'next-auth/react';
 interface Question {
   id: number;
   order: number;
-  type: 'single' | 'multiple' | 'text' | 'yesno';
+  type: 'single' | 'multiple';
   question: string;
   options: string[] | null;
   points: number;
@@ -141,7 +141,6 @@ export function TestForm({ test, attemptId, onSubmit }: TestFormProps) {
   const renderQuestion = (question: Question) => {
     switch (question.type) {
       case 'single':
-      case 'yesno':
         return (
           <RadioGroup
             value={answers[question.id] || ''}
@@ -178,16 +177,6 @@ export function TestForm({ test, attemptId, onSubmit }: TestFormProps) {
               </div>
             ))}
           </div>
-        );
-
-      case 'text':
-        return (
-          <Textarea
-            value={answers[question.id] || ''}
-            onChange={(e) => handleAnswerChange(question.id, e.target.value)}
-            placeholder="Napište svou odpověď..."
-            className="min-h-[100px]"
-          />
         );
 
       default:

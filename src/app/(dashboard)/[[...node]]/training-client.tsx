@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TestForm } from '@/components/training/test-form';
 import { TestResults } from '@/components/training/test-results';
+import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import {
   BookOpen,
   FileText,
@@ -45,6 +46,19 @@ interface TrainingClientProps {
   } | null;
   displayName: string;
   userRole: string;
+}
+
+// Helper function to check if content is in Tiptap JSON format
+function isTiptapFormat(content: any): boolean {
+  if (typeof content === 'string') {
+    try {
+      const parsed = JSON.parse(content);
+      return parsed.type === 'doc' && Array.isArray(parsed.content);
+    } catch {
+      return false;
+    }
+  }
+  return content?.type === 'doc' && Array.isArray(content?.content);
 }
 
 export function TrainingClient({ trainingData, training, displayName, userRole }: TrainingClientProps) {
@@ -474,7 +488,14 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
           </CardHeader>
           <CardContent>
             <div className="max-w-[1200px] mx-auto space-y-8">
-              {training.content.sections ? (
+              {isTiptapFormat(training.content) ? (
+                // New Tiptap format - render with read-only editor
+                <TiptapEditor
+                  value={typeof training.content === 'string' ? training.content : JSON.stringify(training.content)}
+                  editable={false}
+                />
+              ) : training.content.sections ? (
+                // Legacy format - render with old structure
                 training.content.sections.map((section: any, index: number) => {
                   const content = section.content;
 

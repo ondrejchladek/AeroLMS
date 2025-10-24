@@ -1,0 +1,282 @@
+/* Tiptap Editor Styling */
+
+/* Base editor styles */
+.ProseMirror {
+  outline: none;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: hsl(var(--muted-foreground));
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Headings */
+.ProseMirror h1 {
+  font-size: 2em;
+  font-weight: 700;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  line-height: 1.2;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  margin-top: 0.83em;
+  margin-bottom: 0.5em;
+  line-height: 1.3;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin-top: 0.75em;
+  margin-bottom: 0.5em;
+  line-height: 1.4;
+}
+
+/* Paragraphs */
+.ProseMirror p {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+  line-height: 1.6;
+}
+
+/* Lists */
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5em;
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+
+.ProseMirror ul {
+  list-style-type: disc;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal;
+}
+
+.ProseMirror li {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+.ProseMirror li p {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+/* Nested lists */
+.ProseMirror ul ul,
+.ProseMirror ol ol,
+.ProseMirror ul ol,
+.ProseMirror ol ul {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+}
+
+/* Blockquote */
+.ProseMirror blockquote {
+  border-left: 4px solid hsl(var(--primary));
+  padding-left: 1em;
+  margin-left: 0;
+  margin-right: 0;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  font-style: italic;
+  color: hsl(var(--muted-foreground));
+}
+
+/* Code */
+.ProseMirror code {
+  background-color: hsl(var(--muted));
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.25rem;
+  font-size: 0.875em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.ProseMirror pre {
+  background-color: hsl(var(--muted));
+  border-radius: 0.5rem;
+  padding: 1em;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  overflow-x: auto;
+}
+
+.ProseMirror pre code {
+  background-color: transparent;
+  padding: 0;
+  font-size: 0.875em;
+}
+
+/* Links */
+.ProseMirror a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.ProseMirror a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Images */
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  display: block;
+}
+
+.ProseMirror img.ProseMirror-selectednode {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Tables */
+.ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  overflow: hidden;
+  border-radius: 0.5rem;
+}
+
+.ProseMirror td,
+.ProseMirror th {
+  min-width: 1em;
+  border: 1px solid hsl(var(--border));
+  padding: 0.5em;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.ProseMirror th {
+  font-weight: 700;
+  text-align: left;
+  background-color: hsl(var(--muted));
+}
+
+.ProseMirror .selectedCell {
+  background-color: hsl(var(--accent));
+}
+
+/* Column resize handle */
+.ProseMirror .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: hsl(var(--primary));
+  pointer-events: none;
+}
+
+.ProseMirror.resize-cursor {
+  cursor: col-resize;
+}
+
+/* Horizontal rule */
+.ProseMirror hr {
+  border: none;
+  border-top: 2px solid hsl(var(--border));
+  margin: 2em 0;
+}
+
+/* Text highlighting */
+.ProseMirror mark {
+  background-color: hsl(var(--primary) / 0.2);
+  padding: 0.125rem 0;
+  border-radius: 0.125rem;
+}
+
+/* Text alignment */
+.ProseMirror [data-text-align="left"] {
+  text-align: left;
+}
+
+.ProseMirror [data-text-align="center"] {
+  text-align: center;
+}
+
+.ProseMirror [data-text-align="right"] {
+  text-align: right;
+}
+
+.ProseMirror [data-text-align="justify"] {
+  text-align: justify;
+}
+
+/* Selection */
+.ProseMirror ::selection {
+  background-color: hsl(var(--primary) / 0.3);
+}
+
+/* Focus */
+.ProseMirror:focus {
+  outline: none;
+}
+
+/* Hard break */
+.ProseMirror br {
+  display: block;
+  content: "";
+  margin-top: 0.5em;
+}
+
+/* Gapcursor (shows cursor position between blocks) */
+.ProseMirror .ProseMirror-gapcursor {
+  display: block;
+  pointer-events: none;
+  position: relative;
+}
+
+.ProseMirror .ProseMirror-gapcursor:after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: -2px;
+  width: 20px;
+  border-top: 1px solid hsl(var(--foreground));
+  animation: ProseMirror-cursor-blink 1.1s steps(2, start) infinite;
+}
+
+@keyframes ProseMirror-cursor-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* Drag handle placeholder */
+.ProseMirror .ProseMirror-yjs-cursor {
+  position: absolute;
+  border-left: 1px solid hsl(var(--primary));
+  border-right: 1px solid hsl(var(--primary));
+  margin-left: -1px;
+  margin-right: -1px;
+  pointer-events: none;
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .ProseMirror code {
+    background-color: hsl(var(--muted));
+  }
+
+  .ProseMirror pre {
+    background-color: hsl(var(--muted));
+  }
+}

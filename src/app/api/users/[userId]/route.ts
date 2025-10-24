@@ -49,6 +49,11 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
     // Zpracovat všechny předané hodnoty
     for (const [key, value] of Object.entries(data)) {
+      // DatumPristi fields are computed by database, skip them
+      if (key.includes('DatumPristi')) {
+        continue; // Skip computed fields
+      }
+
       // Pokud je hodnota datum, převést na Date objekt
       if (key.includes('Datum') && value) {
         updateData[key] = new Date(value as string);

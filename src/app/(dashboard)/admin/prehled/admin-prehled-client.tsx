@@ -804,13 +804,12 @@ export default function AdminPrehledClient() {
                             />
                           </TableCell>
                           <TableCell>
-                            <DatePickerInput
-                              value={datumPristi}
-                              onChange={(date) =>
-                                handleEditUser(user, training, 'DatumPristi', date)
-                              }
-                              className="w-[130px]"
-                            />
+                            <div className="text-sm text-muted-foreground italic">
+                              {datumPristi
+                                ? new Date(datumPristi).toLocaleDateString('cs-CZ')
+                                : 'Neurčeno'}
+                              <span className="text-xs ml-1">(počítáno)</span>
+                            </div>
                           </TableCell>
                           <TableCell>
                             {isEditing ? (
