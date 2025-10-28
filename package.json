@@ -16,9 +16,6 @@
     "format": "prettier --write .",
     "format:check": "prettier -c -w .",
     "prepare": "husky",
-    "prisma:generate:neon": "prisma generate --schema=./prisma/schema.neon.prisma",
-    "prisma:push:neon": "prisma db push --schema=./prisma/schema.neon.prisma --accept-data-loss",
-    "dev:neon": "cross-env DB_PROVIDER=neon DATABASE_URL=\"$DATABASE_URL_NEON\" next dev --turbopack",
     "postinstall": "node scripts/postinstall.js"
   },
   "prisma": {
