@@ -541,36 +541,43 @@ src/
 ### Local Development
 Required in `.env.local`:
 ```
+# Database Provider
+DB_PROVIDER="sqlserver"
+
 # Database - Microsoft SQL Server Express 2019
 DATABASE_URL="sqlserver://localhost:1433;database=AeroLMS;trustServerCertificate=true;encrypt=true;integratedSecurity=true"
 
-# Authentication
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=                 # Generate with: openssl rand -base64 32
+# Node Environment
+NODE_ENV=development
+PORT=3000
 
-# Sentry (Optional)
-NEXT_PUBLIC_SENTRY_DSN=         # Sentry DSN for error tracking
-NEXT_PUBLIC_SENTRY_ORG=         # Sentry organization
-NEXT_PUBLIC_SENTRY_PROJECT=     # Sentry project name
-NEXT_PUBLIC_SENTRY_DISABLED=    # Set to "true" to disable Sentry
+# Sentry (Disabled for local development)
+NEXT_PUBLIC_SENTRY_DISABLED=true
+
+# Authentication
+NEXTAUTH_SECRET=                 # Generate with: openssl rand -base64 32
+NEXTAUTH_URL=http://localhost:3000
 ```
 
 ### Corporate Server Production
 Required in `.env.production` on production server:
 ```
+# Database Provider
+DB_PROVIDER="sqlserver"
+
 # Database - Microsoft SQL Server (corporate network)
 DATABASE_URL="sqlserver://10.235.1.8:1433;database=Helios003;user=AeroLMS;password=***;encrypt=true;trustServerCertificate=true"
-
-# Authentication
-NEXTAUTH_URL=http://10.235.1.8
-NEXTAUTH_SECRET=                 # Generate secure secret
 
 # Node Environment
 NODE_ENV=production
 PORT=3000
 
-# Sentry (Optional - can be disabled on corporate server)
+# Sentry (Disabled on corporate server)
 NEXT_PUBLIC_SENTRY_DISABLED=true
+
+# Authentication
+NEXTAUTH_SECRET=                 # Generate secure secret
+NEXTAUTH_URL=http://10.235.1.8
 ```
 
 ## Custom Hooks Available
