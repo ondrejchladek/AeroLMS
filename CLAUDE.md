@@ -2,37 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 🚀 Claude Code Session Start
-
-## 🔥 Quick Start Checklist
-
-```bash
-# 1. Setup project
-cd AeroLMS
-npm install  # Automatically runs postinstall.js → generates Prisma client
-
-# 2. Environment variables
-cp .env.example .env.local
-# Edit .env.local with SQL Server connection string
-
-# 3. Database setup (SQL Server local)
-npx prisma migrate dev     # Apply migrations
-npx prisma db seed         # Seed test data (optional)
-
-# 4. Start development
-npm run dev  # http://localhost:3000
-
-# 5. Login with credentials
-# Admin/Trainer: email + password (test@test.cz)
-# Worker: personal code + password (123456)
-
-# 6. Open Prisma Studio (správně pro lokál)
-npx dotenv -e .env.local -- prisma studio
-```
-
 ## Project Overview
 
-**AeroLMS v1.0.0** - Employee Training System (Systém školení zaměstnanců)
+**AeroLMS v1.0.1** - Employee Training System (Systém školení zaměstnanců)
 
 A production-ready learning management system featuring employee training modules, assessment capabilities, and comprehensive progress tracking. Built with Next.js 15, React 19, and Microsoft SQL Server.
 
@@ -133,10 +105,8 @@ Example: `CMMDatumPosl`, `CMMDatumPristi`, `CMMPozadovano` → Creates training 
 Claude Code has access to these MCP servers (configured globally):
 
 - **Playwright** (`mcp__playwright__`) - Browser automation, E2E testing, web scraping
-- **Magic** (`mcp__magic__`) - UI component generation with `/ui` and `/21` commands, logo search with `/logo`
 - **Sequential Thinking** (`mcp__sequential-thinking__`) - Step-by-step problem solving and analysis
 - **Context7** (`mcp__context7__`) - Library documentation lookup for any framework/library
-- **IDE** (`mcp__ide__`) - VS Code integration for diagnostics and code execution
 - **Basic Memory** (`mcp__basic-memory`) - Persistent knowledge base for storing project insights and solutions
 - **Shadcn** (`mcp__shadcn__`) - Direct access to shadcn/ui component source code and demos
 
@@ -294,15 +264,27 @@ Components currently in the project:
   - Role field (ADMIN, TRAINER, WORKER)
   - Multiple training date tracking fields (DatumPosl/DatumPristi/Pozadovano pattern)
   - Each training module tracks: last completion, next due date, required flag
+  - Index on `role` for role-based filtering
 - **Training**: Training modules with code, name, description, and content
   - Code: Database column identifier (e.g., "CMM", "EDM")
   - Name: Display name (can be overridden by trainers)
+  - Unique constraint on `code` (automatic index)
 - **Test**: Assessment tests linked to trainings with passing score and time limits
   - Multiple tests per training support
   - Active/inactive status for test management
+  - Indexes: `trainingId`, `isActive`, composite `trainingId+isActive`
 - **Question**: Test questions with types, options, correct answers, and points
-- **TestAttempt**: User test attempts with scores, completion status, and signature data
+  - Indexes: `testId`, composite `testId+order` for ordered retrieval
+- **TestAttempt**: User test attempts with scores and completion status
+  - Indexes: `userId`, `testId`, `completedAt`, `createdAt` (DESC), composite `userId+testId`
+  - Optimized for user history queries and filtering by completion status
+  - Employee data accessed via `userId` foreign key to User table (normalized)
+- **Certificate**: PDF certificates for completed trainings
+  - Indexes: `userId`, `trainingId`, `certificateNumber`, `validUntil`
+  - Optimized for certificate lookups and expiration queries
 - **TrainingAssignment**: Many-to-many relationship between trainers and trainings
+  - Indexes: `trainerId`, `trainingId`
+  - Unique constraint on `trainerId+trainingId` combination
 
 ### Routing Structure
 - **App Router** with Next.js 15
@@ -395,6 +377,38 @@ src/features/     # Feature-based modules
 
 ### Data Import (Legacy)
 - **POST /api/excel-data** - Import data from Excel (kept for future use)
+
+## Security & Validation
+
+### Input Validation (Zod Schemas)
+All API endpoints use centralized validation schemas in `src/lib/validation-schemas.ts`:
+
+- **Training Codes Whitelist**: 33 valid training codes (CMM, EDM, EleZnaceni, etc.)
+  - `VALID_TRAINING_CODES` constant with all allowed codes
+  - `validateTrainingCode()` function for runtime validation
+  - Prevents SQL injection in dynamic column access
+
+- **API Request Validation**:
+  - `CreateTestSchema` - Test creation with questions (max 100 questions)
+  - `SubmitTestSchema` - Test answer submission with signature data
+  - `UpdateTrainingSchema` - Training updates (name, description, content)
+  - `ManualTestAttemptSchema` - Manual test result entry by trainers
+
+- **Helper Functions**:
+  - `validateRequestBody()` - Async request body validation with error handling
+  - `safeJsonParse()` - Safe JSON parsing with fallback to null
+
+### SQL Injection Prevention
+- **training-sync.ts**: All functions using `$queryRawUnsafe` or `$executeRawUnsafe` validate training codes against whitelist
+  - `getUserTrainingData()` - Protected
+  - `updateUserTrainingData()` - Protected
+  - Shared database (Helios003) requires strict validation
+
+### Security Best Practices
+- **Shared Database**: Production database (Helios003) contains other systems
+- **Validation First**: All user input validated before database operations
+- **Parameterized Queries**: Use Prisma's parameterized queries (`@p0`, `@p1`) for user data
+- **Role-Based Access**: Admin/Trainer/Worker permissions enforced at API level
 
 ## Key Implementation Patterns
 
@@ -541,43 +555,39 @@ src/
 ### Local Development
 Required in `.env.local`:
 ```
-# Database Provider
-DB_PROVIDER="sqlserver"
-
 # Database - Microsoft SQL Server Express 2019
 DATABASE_URL="sqlserver://localhost:1433;database=AeroLMS;trustServerCertificate=true;encrypt=true;integratedSecurity=true"
 
-# Node Environment
-NODE_ENV=development
-PORT=3000
-
-# Sentry (Disabled for local development)
-NEXT_PUBLIC_SENTRY_DISABLED=true
-
 # Authentication
-NEXTAUTH_SECRET=                 # Generate with: openssl rand -base64 32
 NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=                 # Generate with: openssl rand -base64 32
+
+# Sentry (Optional)
+NEXT_PUBLIC_SENTRY_DSN=         # Sentry DSN for error tracking
+NEXT_PUBLIC_SENTRY_ORG=         # Sentry organization
+NEXT_PUBLIC_SENTRY_PROJECT=     # Sentry project name
+NEXT_PUBLIC_SENTRY_DISABLED=    # Set to "true" to disable Sentry
 ```
 
 ### Corporate Server Production
 Required in `.env.production` on production server:
 ```
-# Database Provider
+# Database Provider - Set this FIRST
 DB_PROVIDER="sqlserver"
 
 # Database - Microsoft SQL Server (corporate network)
 DATABASE_URL="sqlserver://10.235.1.8:1433;database=Helios003;user=AeroLMS;password=***;encrypt=true;trustServerCertificate=true"
 
+# Authentication
+NEXTAUTH_URL=http://10.235.1.8
+NEXTAUTH_SECRET=                 # Generate secure secret
+
 # Node Environment
 NODE_ENV=production
 PORT=3000
 
-# Sentry (Disabled on corporate server)
+# Sentry (Optional - can be disabled on corporate server)
 NEXT_PUBLIC_SENTRY_DISABLED=true
-
-# Authentication
-NEXTAUTH_SECRET=                 # Generate secure secret
-NEXTAUTH_URL=http://10.235.1.8
 ```
 
 ## Custom Hooks Available
@@ -592,29 +602,6 @@ The project includes several custom hooks in `src/hooks/`:
 - `use-media-query.ts` - Responsive design hooks
 - `use-mobile.tsx` - Mobile device detection
 - `use-multistep-form.tsx` - Multi-step form navigation
-
-## Testing Approach
-
-Currently no test scripts configured. To add testing:
-```bash
-# Unit/Integration testing
-npm install --save-dev jest @testing-library/react @testing-library/jest-dom
-npm install --save-dev @testing-library/user-event jest-environment-jsdom
-
-# E2E testing with Playwright (MCP server available)
-npm install --save-dev @playwright/test
-# or
-npm install --save-dev cypress
-```
-
-### Testing Patterns
-- **Unit tests**: Co-locate with components as `*.test.ts(x)`
-- **API tests**: In `app/api/**/*.test.ts`
-- **E2E tests**: Use Playwright MCP for browser automation
-- **Run single test file**: `npm test -- path/to/test.test.ts`
-- **Run specific test by name**: `npm test -- -t "test name pattern"`
-- **Debug tests**: `npm run test:watch` then press `p` to filter
-- **Coverage report**: `npm test -- --coverage`
 
 ## Important Conventions
 
@@ -713,25 +700,31 @@ npm install --save-dev @playwright/test
 
 ## Recent Changes & Fixes
 
-### UI & Authentication Improvements (January 2025)
-1. **Unified Login System**:
-   - Simplified login form with single "E-mail / Osobní číslo" field + password
-   - Removed tabs, now one universal form for all user roles
-   - System auto-detects email vs. personal code (by presence of '@')
-   - All users (admin, trainer, worker) now require password authentication
-2. **Dashboard Enhancements**:
-   - Statistics cards updated with emoji indicators (🔵🟢🔴🟡)
-   - Training table columns renamed for better clarity
-   - New Status column with visual icons (✅ Platné, ⚠️ Brzy vyprší, ❌ Prošlé, ⏳ Čeká)
-3. **Trainer Features**:
-   - New "První testy" page (`/trainer/prvni-testy`) for manual test result entry
-   - New "Výsledky" page (`/trainer/vysledky`) for viewing all test results
-   - Menu updated with new trainer pages
-4. **Admin Dashboard Consolidation**:
-   - Synchronization moved from `/admin/synchronizace` to `/admin/prehled`
-   - Removed `/admin/nove-skoleni` page (trainings now created only via auto sync)
-   - Integrated synchronization UI with manual sync button in admin dashboard
-   - Training creation only through database column pattern (no manual creation)
+### Security Hardening (January 2025)
+1. **SQL Injection Fixes**:
+   - Added whitelist validation for training codes (33 valid codes)
+   - Protected `training-sync.ts` functions using `$queryRawUnsafe`
+   - Created `src/lib/validation-schemas.ts` with centralized validation
+   - Critical for shared database (Helios003) containing other systems
+
+2. **Input Validation Implementation**:
+   - Zod schemas for all API endpoints
+   - `validateRequestBody()` helper for consistent validation
+   - `safeJsonParse()` for safe JSON parsing
+   - Updated 4 critical API routes:
+     - `/api/trainings/[id]/tests` (test creation)
+     - `/api/test-attempts/[id]/submit` (answer submission)
+     - `/api/trainings/[id]` (training updates)
+     - `/api/test-attempts/manual` (manual test entry)
+
+3. **Database Performance Optimization**:
+   - Added 11 indexes across 5 tables in Prisma schema
+   - Updated `deployment/sql/04_create_indexes.sql` with new indexes
+   - Key indexes:
+     - TestAttempt: `createdAt` (DESC) for recent attempts
+     - Certificate: `certificateNumber` for fast lookups
+     - Composite indexes for common queries (userId+testId)
+   - Expected 50-80% performance improvement for common queries
 
 ### Deployment Simplification (January 2025)
 1. **Two environments with same database technology**:
@@ -746,12 +739,6 @@ npm install --save-dev @playwright/test
    - Schema changes **ONLY via manual SQL commands** (security requirement)
    - No automatic Prisma migrations on production
 
-### TypeScript Fixes (December 2024)
-1. **Date serialization in assignments**: Convert Date to ISO string for client components
-2. **Prisma relation names**: Use `trainingAssignments` not `assignments`
-3. **Icons setup**: Added `refresh` icon for admin synchronization
-4. **bcrypt import fix**: Changed from `bcrypt` to `bcryptjs` for compatibility
-
 ### RBAC System Implementation
 - Added role field to User model (ADMIN/TRAINER/WORKER)
 - Created TrainingAssignment model for trainer assignments
@@ -761,41 +748,30 @@ npm install --save-dev @playwright/test
 
 ## Common Pitfalls to Avoid
 
-1. Don't modify global Next.js config without understanding implications
-2. SQL Server specific considerations:
+1. **Configuration Changes**: Don't modify global Next.js config without understanding implications
+2. **SQL Server Considerations**:
    - Uses Windows Authentication (Integrated Security)
    - Requires SQL Server Express 2019 running on localhost:1433
    - Database name must be "AeroLMS"
    - Remember T-SQL syntax when writing raw queries
-3. Parallel routes in overview need independent error handling
-4. Employee code authentication is number-based, not string
-5. Zustand stores persist locally - consider privacy implications
-6. React 19 is used - some libraries may have compatibility issues
-7. Tailwind v4 uses different config format than v3
+   - **CRITICAL**: Production DB (Helios003) contains other systems - always validate input!
+3. **Security & Validation**:
+   - Always use Zod validation for user input
+   - Training codes must be in `VALID_TRAINING_CODES` whitelist
+   - Never use string interpolation with `$queryRawUnsafe` without validation
+   - Import validation schemas from `@/lib/validation-schemas`
+4. **Database Operations**:
+   - Run `npx prisma generate` after schema changes
+   - Use `npx dotenv -e .env.local -- prisma studio` for Prisma Studio
+   - Check indexes exist before adding duplicates
+5. **Parallel routes** in overview need independent error handling
+6. **Employee code** authentication is number-based, not string
+7. **Zustand stores** persist locally - consider privacy implications
+8. **React 19** is used - some libraries may have compatibility issues
+9. **Tailwind v4** uses different config format than v3
 
-## 🔧 Recent Code Changes & Fixes
 
-### Prisma Type Casting Removal (December 2024)
-Removed `prisma as any` type casting from the following files to improve type safety:
-
-**Files modified:**
-1. `src/app/api/trainings/route.ts` - 4 instances
-2. `src/app/api/users/[userId]/route.ts` - 1 instance
-3. `src/app/api/users/route.ts` - 1 instance
-4. `src/app/api/trainings/slug/[slug]/route.ts` - 3 instances
-5. `src/app/api/trainings/by-code/[code]/route.ts` - 2 instances
-6. `src/app/api/trainings/[id]/pdf/route.ts` - 3 instances
-7. `src/app/api/trainings/[id]/content/route.ts` - 1 instance
-8. `src/app/api/test-attempts/[id]/submit/route.ts` - 3 instances
-9. `src/app/(dashboard)/[[...node]]/page.tsx` - 7 instances
-10. `src/components/server-breadcrumbs.tsx` - 2 instances
-
-**Note**: If TypeScript type checking fails after these changes, you may need to:
-1. Run `npx prisma generate` to regenerate the Prisma client
-2. Or temporarily revert by adding `as any` back to the affected lines
-3. The type casting was originally used due to SQL Server case sensitivity issues
-
-## Quick Component Examples
+## Quick Component Examples And Patterns
 
 ### Using shadcn/ui Button
 ```tsx
@@ -824,6 +800,38 @@ export default async function ProtectedPage() {
   const session = await getServerSession(authOptions)
   if (!session) redirect("/login")
   // ...
+}
+```
+
+### API Route Structure
+```typescript
+// app/api/[endpoint]/route.ts
+export async function GET/POST(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  // Implementation
+}
+```
+
+### Server Component Pattern
+```typescript
+// Default - runs on server
+export default async function Page() {
+  const data = await fetch('...', { cache: 'force-cache' });
+  return <div>{/* UI */}</div>;
+}
+```
+
+### Client Component Pattern
+```typescript
+'use client';
+import { useState } from 'react';
+
+export function InteractiveComponent() {
+  const [state, setState] = useState();
+  // Client-side logic
 }
 ```
 
@@ -863,39 +871,6 @@ If Prisma cannot connect to SQL Server:
   - UPPER_SNAKE_CASE for constants
 - **Components**: Server Components by default, add `"use client"` only when needed
 
-## Common Patterns
-
-### API Route Structure
-```typescript
-// app/api/[endpoint]/route.ts
-export async function GET/POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  // Implementation
-}
-```
-
-### Server Component Pattern
-```typescript
-// Default - runs on server
-export default async function Page() {
-  const data = await fetch('...', { cache: 'force-cache' });
-  return <div>{/* UI */}</div>;
-}
-```
-
-### Client Component Pattern
-```typescript
-'use client';
-import { useState } from 'react';
-
-export function InteractiveComponent() {
-  const [state, setState] = useState();
-  // Client-side logic
-}
-```
 
 ## Debugging Tips
 
@@ -940,9 +915,6 @@ export function InteractiveComponent() {
 - Automatic date tracking for training compliance
 - Real-time statistics widgets on dashboard
 
-## Manual Deployment to Corporate Server (PM2 + IIS)
-
-For detailed step-by-step deployment instructions, see `deployment/SIMPLE_SETUP.md`.
 
 ### Quick Deployment Overview
 
@@ -959,7 +931,7 @@ For detailed step-by-step deployment instructions, see `deployment/SIMPLE_SETUP.
 1. **Clone Repository**
    ```powershell
    cd C:\inetpub\wwwroot
-   git clone https://github.com/your-org/AeroLMS.git
+   git clone https://github.com/ondrejchladek/AeroLMS.git
    cd AeroLMS
    ```
 
@@ -1019,6 +991,7 @@ npx next build
 
 # Restart
 pm2 restart aerolms
+pm2 status
 ```
 
 #### ⚠️ Important Production Notes
@@ -1063,16 +1036,9 @@ pm2 restart aerolms
 - **Use MCP tools** when available:
   - Context7 for library documentation
   - Playwright for browser testing
-  - Magic for UI component generation
   - Sequential Thinking for complex problem solving
   - Shadcn for getting latest shadcn/ui component source code and demos
   - Basic Memory for persistent knowledge storage
 - **Check existing patterns** before implementing new ones
 - **Follow project conventions** for imports, naming, and structure
 - **Run linting** after significant changes: `npm run lint:fix`
-- **Test authentication** flow when modifying auth-related code
-# important-instruction-reminders
-Do what has been asked; nothing more, nothing less.
-NEVER create files unless they're absolutely necessary for achieving your goal.
-ALWAYS prefer editing an existing file to creating a new one.
-NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

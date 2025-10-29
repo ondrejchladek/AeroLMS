@@ -15,7 +15,9 @@ const generateSecret = () => {
   console.log('3. Nastavte nebo aktualizujte řádek:');
   console.log(`   NEXTAUTH_SECRET=${secret}`);
   console.log('4. Restartujte development server');
-  console.log('5. Vymažte cookies ve prohlížeči (F12 -> Application -> Cookies)');
+  console.log(
+    '5. Vymažte cookies ve prohlížeči (F12 -> Application -> Cookies)'
+  );
   console.log('=================================\n');
 };
 

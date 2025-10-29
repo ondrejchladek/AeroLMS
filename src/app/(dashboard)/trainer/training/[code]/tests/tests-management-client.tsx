@@ -3,7 +3,13 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import PageContainer from '@/components/layout/page-container';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -13,7 +19,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from '@/components/ui/table';
 import {
   Dialog,
@@ -22,7 +28,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogTrigger
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -47,7 +53,9 @@ interface TestsManagementClientProps {
   training: any;
 }
 
-export default function TestsManagementClient({ training }: TestsManagementClientProps) {
+export default function TestsManagementClient({
+  training
+}: TestsManagementClientProps) {
   const router = useRouter();
   const [tests, setTests] = useState(training.tests);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -69,7 +77,7 @@ export default function TestsManagementClient({ training }: TestsManagementClien
       const response = await fetch(`/api/trainings/${training.id}/tests`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           ...newTest,
@@ -94,10 +102,11 @@ export default function TestsManagementClient({ training }: TestsManagementClien
         passingScore: 70,
         timeLimit: 0
       });
-
     } catch (error) {
       console.error('Create test error:', error);
-      toast.error(error instanceof Error ? error.message : 'Chyba při vytváření testu');
+      toast.error(
+        error instanceof Error ? error.message : 'Chyba při vytváření testu'
+      );
     } finally {
       setIsCreating(false);
     }
@@ -108,7 +117,7 @@ export default function TestsManagementClient({ training }: TestsManagementClien
       const response = await fetch(`/api/tests/${testId}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           isActive: !currentState
@@ -120,12 +129,15 @@ export default function TestsManagementClient({ training }: TestsManagementClien
         throw new Error(error.error || 'Chyba při změně stavu');
       }
 
-      toast.success(currentState ? 'Test byl deaktivován' : 'Test byl aktivován');
+      toast.success(
+        currentState ? 'Test byl deaktivován' : 'Test byl aktivován'
+      );
       router.refresh();
-
     } catch (error) {
       console.error('Toggle active error:', error);
-      toast.error(error instanceof Error ? error.message : 'Chyba při změně stavu testu');
+      toast.error(
+        error instanceof Error ? error.message : 'Chyba při změně stavu testu'
+      );
     }
   };
 
@@ -148,10 +160,11 @@ export default function TestsManagementClient({ training }: TestsManagementClien
 
       toast.success('Test byl úspěšně smazán');
       router.refresh();
-
     } catch (error) {
       console.error('Delete test error:', error);
-      toast.error(error instanceof Error ? error.message : 'Chyba při mazání testu');
+      toast.error(
+        error instanceof Error ? error.message : 'Chyba při mazání testu'
+      );
     } finally {
       setIsDeleting(null);
     }
@@ -168,85 +181,102 @@ export default function TestsManagementClient({ training }: TestsManagementClien
 
   return (
     <PageContainer>
-      <div className="space-y-6">
+      <div className='space-y-6'>
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className='flex items-center justify-between'>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Správa testů</h1>
-            <p className="text-muted-foreground">
-              Školení: <span className="font-semibold">{training.name}</span> ({training.code})
+            <h1 className='text-3xl font-bold tracking-tight'>Správa testů</h1>
+            <p className='text-muted-foreground'>
+              Školení: <span className='font-semibold'>{training.name}</span> (
+              {training.code})
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" asChild>
-              <Link href="/trainer">
-                <ArrowLeft className="h-4 w-4 mr-2" />
+          <div className='flex gap-2'>
+            <Button variant='outline' asChild>
+              <Link href='/trainer'>
+                <ArrowLeft className='mr-2 h-4 w-4' />
                 Zpět na přehled
               </Link>
             </Button>
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
                 <Button>
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className='mr-2 h-4 w-4' />
                   Nový test
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className='max-w-2xl'>
                 <DialogHeader>
                   <DialogTitle>Vytvořit nový test</DialogTitle>
                   <DialogDescription>
                     Vytvořte nový test pro školení {training.name}
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="title">Název testu</Label>
+                <div className='grid gap-4 py-4'>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='title'>Název testu</Label>
                     <Input
-                      id="title"
+                      id='title'
                       value={newTest.title}
-                      onChange={(e) => setNewTest({ ...newTest, title: e.target.value })}
-                      placeholder="Např. Závěrečný test"
+                      onChange={(e) =>
+                        setNewTest({ ...newTest, title: e.target.value })
+                      }
+                      placeholder='Např. Závěrečný test'
                       required
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="description">Popis testu</Label>
+                  <div className='grid gap-2'>
+                    <Label htmlFor='description'>Popis testu</Label>
                     <Textarea
-                      id="description"
+                      id='description'
                       value={newTest.description}
-                      onChange={(e) => setNewTest({ ...newTest, description: e.target.value })}
-                      placeholder="Popis účelu a obsahu testu"
+                      onChange={(e) =>
+                        setNewTest({ ...newTest, description: e.target.value })
+                      }
+                      placeholder='Popis účelu a obsahu testu'
                       rows={3}
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="passingScore">Minimální úspěšnost (%)</Label>
+                  <div className='grid grid-cols-2 gap-4'>
+                    <div className='grid gap-2'>
+                      <Label htmlFor='passingScore'>
+                        Minimální úspěšnost (%)
+                      </Label>
                       <Input
-                        id="passingScore"
-                        type="number"
-                        min="0"
-                        max="100"
+                        id='passingScore'
+                        type='number'
+                        min='0'
+                        max='100'
                         value={newTest.passingScore}
-                        onChange={(e) => setNewTest({ ...newTest, passingScore: parseInt(e.target.value) || 70 })}
+                        onChange={(e) =>
+                          setNewTest({
+                            ...newTest,
+                            passingScore: parseInt(e.target.value) || 70
+                          })
+                        }
                       />
                     </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="timeLimit">Časový limit (minuty)</Label>
+                    <div className='grid gap-2'>
+                      <Label htmlFor='timeLimit'>Časový limit (minuty)</Label>
                       <Input
-                        id="timeLimit"
-                        type="number"
-                        min="0"
+                        id='timeLimit'
+                        type='number'
+                        min='0'
                         value={newTest.timeLimit}
-                        onChange={(e) => setNewTest({ ...newTest, timeLimit: parseInt(e.target.value) || 0 })}
-                        placeholder="0 = bez limitu"
+                        onChange={(e) =>
+                          setNewTest({
+                            ...newTest,
+                            timeLimit: parseInt(e.target.value) || 0
+                          })
+                        }
+                        placeholder='0 = bez limitu'
                       />
                     </div>
                   </div>
                 </div>
                 <DialogFooter>
                   <Button
-                    variant="outline"
+                    variant='outline'
                     onClick={() => setIsCreateOpen(false)}
                     disabled={isCreating}
                   >
@@ -258,7 +288,7 @@ export default function TestsManagementClient({ training }: TestsManagementClien
                   >
                     {isCreating ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                         Vytvářím...
                       </>
                     ) : (
@@ -275,13 +305,11 @@ export default function TestsManagementClient({ training }: TestsManagementClien
         <Card>
           <CardHeader>
             <CardTitle>Seznam testů</CardTitle>
-            <CardDescription>
-              Všechny testy pro toto školení
-            </CardDescription>
+            <CardDescription>Všechny testy pro toto školení</CardDescription>
           </CardHeader>
           <CardContent>
             {tests.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className='text-muted-foreground py-8 text-center'>
                 Zatím nejsou vytvořeny žádné testy
               </div>
             ) : (
@@ -302,65 +330,53 @@ export default function TestsManagementClient({ training }: TestsManagementClien
                 <TableBody>
                   {tests.map((test: any) => (
                     <TableRow key={test.id}>
-                      <TableCell className="font-medium">
+                      <TableCell className='font-medium'>
                         {test.title}
                       </TableCell>
+                      <TableCell>{test.description || '-'}</TableCell>
+                      <TableCell>{test.passingScore}%</TableCell>
                       <TableCell>
-                        {test.description || '-'}
+                        {test.timeLimit
+                          ? `${test.timeLimit} min`
+                          : 'Bez limitu'}
                       </TableCell>
                       <TableCell>
-                        {test.passingScore}%
-                      </TableCell>
-                      <TableCell>
-                        {test.timeLimit ? `${test.timeLimit} min` : 'Bez limitu'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
+                        <Badge variant='secondary'>
                           {test._count.questions}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        {test._count.testAttempts}
-                      </TableCell>
+                      <TableCell>{test._count.testAttempts}</TableCell>
                       <TableCell>
                         <Switch
                           checked={test.isActive}
-                          onCheckedChange={() => handleToggleActive(test.id, test.isActive)}
+                          onCheckedChange={() =>
+                            handleToggleActive(test.id, test.isActive)
+                          }
                         />
                       </TableCell>
+                      <TableCell>{formatDate(test.createdAt)}</TableCell>
                       <TableCell>
-                        {formatDate(test.createdAt)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            asChild
-                          >
+                        <div className='flex gap-1'>
+                          <Button size='sm' variant='ghost' asChild>
                             <Link href={`/trainer/test/${test.id}/edit`}>
-                              <Edit className="h-4 w-4" />
+                              <Edit className='h-4 w-4' />
                             </Link>
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            asChild
-                          >
+                          <Button size='sm' variant='ghost' asChild>
                             <Link href={`/trainer/test/${test.id}/questions`}>
-                              <FileText className="h-4 w-4" />
+                              <FileText className='h-4 w-4' />
                             </Link>
                           </Button>
                           <Button
-                            size="sm"
-                            variant="ghost"
+                            size='sm'
+                            variant='ghost'
                             onClick={() => handleDeleteTest(test.id)}
                             disabled={isDeleting === test.id}
                           >
                             {isDeleting === test.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
+                              <Loader2 className='h-4 w-4 animate-spin' />
                             ) : (
-                              <Trash2 className="h-4 w-4 text-red-500" />
+                              <Trash2 className='h-4 w-4 text-red-500' />
                             )}
                           </Button>
                         </div>
@@ -378,17 +394,18 @@ export default function TestsManagementClient({ training }: TestsManagementClien
           <CardHeader>
             <CardTitle>Informace o testech</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm text-muted-foreground">
+          <CardContent className='space-y-2'>
+            <p className='text-muted-foreground text-sm'>
               • Každé školení může mít libovolný počet testů
             </p>
-            <p className="text-sm text-muted-foreground">
-              • Zaměstnanci musí splnit <strong>všechny aktivní testy</strong> pro dokončení školení
+            <p className='text-muted-foreground text-sm'>
+              • Zaměstnanci musí splnit <strong>všechny aktivní testy</strong>{' '}
+              pro dokončení školení
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className='text-muted-foreground text-sm'>
               • Deaktivované testy se nezobrazují zaměstnancům
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className='text-muted-foreground text-sm'>
               • Po vytvoření testu nezapomeňte přidat otázky
             </p>
           </CardContent>

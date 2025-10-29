@@ -7,7 +7,7 @@ export default async function ProfileViewPage() {
   const user = session?.user;
 
   return (
-    <div className='flex w-full flex-col p-4 space-y-4'>
+    <div className='flex w-full flex-col space-y-4 p-4'>
       <h1 className='text-2xl font-semibold'>Profil uživatele</h1>
 
       {user ? (
@@ -16,7 +16,7 @@ export default async function ProfileViewPage() {
             <span className='font-medium'>Jméno:</span> {user.name}
           </p>
           <p>
-            <span className='font-medium'>Kód  zaměstnance:</span> {user.code}
+            <span className='font-medium'>Kód zaměstnance:</span> {user.code}
           </p>
         </div>
       ) : (

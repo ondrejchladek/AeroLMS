@@ -2,7 +2,13 @@
 
 import React, { useState } from 'react';
 import PageContainer from '@/components/layout/page-container';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -12,7 +18,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from '@/components/ui/table';
 import {
   Dialog,
@@ -20,14 +26,14 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import {
@@ -84,7 +90,8 @@ export default function AssignmentsClient({
   trainings,
   initialAssignments
 }: AssignmentsClientProps) {
-  const [assignments, setAssignments] = useState<Assignment[]>(initialAssignments);
+  const [assignments, setAssignments] =
+    useState<Assignment[]>(initialAssignments);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -134,7 +141,9 @@ export default function AssignmentsClient({
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
       console.error('Error creating assignment:', error);
-      setError(error instanceof Error ? error.message : 'Chyba při vytváření přiřazení');
+      setError(
+        error instanceof Error ? error.message : 'Chyba při vytváření přiřazení'
+      );
     } finally {
       setLoading(false);
     }
@@ -149,98 +158,112 @@ export default function AssignmentsClient({
     setError(null);
 
     try {
-      const response = await fetch(`/api/admin/assignments?id=${assignmentId}`, {
-        method: 'DELETE'
-      });
+      const response = await fetch(
+        `/api/admin/assignments?id=${assignmentId}`,
+        {
+          method: 'DELETE'
+        }
+      );
 
       if (!response.ok) {
         throw new Error('Nepodařilo se odstranit přiřazení');
       }
 
-      setAssignments(assignments.filter(a => a.id !== assignmentId));
+      setAssignments(assignments.filter((a) => a.id !== assignmentId));
       setSuccess('Přiřazení bylo úspěšně odstraněno');
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
       console.error('Error deleting assignment:', error);
-      setError(error instanceof Error ? error.message : 'Chyba při odstraňování přiřazení');
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'Chyba při odstraňování přiřazení'
+      );
     } finally {
       setLoading(false);
     }
   };
 
   // Group assignments by trainer
-  const assignmentsByTrainer = assignments.reduce((acc, assignment) => {
-    const trainerId = assignment.trainerId;
-    if (!acc[trainerId]) {
-      acc[trainerId] = {
-        trainer: assignment.trainer,
-        trainings: []
-      };
-    }
-    acc[trainerId].trainings.push(assignment.training);
-    return acc;
-  }, {} as Record<number, { trainer: any; trainings: any[] }>);
+  const assignmentsByTrainer = assignments.reduce(
+    (acc, assignment) => {
+      const trainerId = assignment.trainerId;
+      if (!acc[trainerId]) {
+        acc[trainerId] = {
+          trainer: assignment.trainer,
+          trainings: []
+        };
+      }
+      acc[trainerId].trainings.push(assignment.training);
+      return acc;
+    },
+    {} as Record<number, { trainer: any; trainings: any[] }>
+  );
 
   return (
     <PageContainer>
-      <div className="w-full space-y-6">
-        <div className="flex justify-between items-center">
+      <div className='w-full space-y-6'>
+        <div className='flex items-center justify-between'>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Správa přiřazení</h1>
-            <p className="text-muted-foreground">Přiřazování školení školitelům</p>
+            <h1 className='text-3xl font-bold tracking-tight'>
+              Správa přiřazení
+            </h1>
+            <p className='text-muted-foreground'>
+              Přiřazování školení školitelům
+            </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)} className="gap-2">
-            <Plus className="h-4 w-4" />
+          <Button onClick={() => setDialogOpen(true)} className='gap-2'>
+            <Plus className='h-4 w-4' />
             Nové přiřazení
           </Button>
         </div>
 
         {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+          <Alert variant='destructive'>
+            <AlertCircle className='h-4 w-4' />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
         {success && (
           <Alert>
-            <CheckCircle className="h-4 w-4" />
+            <CheckCircle className='h-4 w-4' />
             <AlertDescription>{success}</AlertDescription>
           </Alert>
         )}
 
         {/* Přehled školitelů */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className='pb-2'>
+              <CardTitle className='text-muted-foreground text-sm font-medium'>
                 Celkem školitelů
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{trainers.length}</div>
+              <div className='text-2xl font-bold'>{trainers.length}</div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className='pb-2'>
+              <CardTitle className='text-muted-foreground text-sm font-medium'>
                 Celkem školení
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{trainings.length}</div>
+              <div className='text-2xl font-bold'>{trainings.length}</div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className='pb-2'>
+              <CardTitle className='text-muted-foreground text-sm font-medium'>
                 Aktivních přiřazení
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{assignments.length}</div>
+              <div className='text-2xl font-bold'>{assignments.length}</div>
             </CardContent>
           </Card>
         </div>
@@ -248,8 +271,8 @@ export default function AssignmentsClient({
         {/* Tabulka přiřazení */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
+            <CardTitle className='flex items-center gap-2'>
+              <Users className='h-5 w-5' />
               Přiřazení školení
             </CardTitle>
             <CardDescription>
@@ -270,29 +293,33 @@ export default function AssignmentsClient({
               <TableBody>
                 {assignments.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={5}
+                      className='text-muted-foreground text-center'
+                    >
                       Žádná přiřazení
                     </TableCell>
                   </TableRow>
                 ) : (
-                  assignments.map(assignment => (
+                  assignments.map((assignment) => (
                     <TableRow key={assignment.id}>
-                      <TableCell className="font-medium">
+                      <TableCell className='font-medium'>
                         {assignment.trainer.name}
                         {assignment.trainer.code && (
-                          <span className="text-muted-foreground ml-2">
+                          <span className='text-muted-foreground ml-2'>
                             ({assignment.trainer.code})
                           </span>
                         )}
                       </TableCell>
                       <TableCell>{assignment.trainer.email || '-'}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <BookOpen className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">
-                            {assignment.training.name || assignment.training.code}
+                        <div className='flex items-center gap-2'>
+                          <BookOpen className='text-muted-foreground h-4 w-4' />
+                          <span className='font-medium'>
+                            {assignment.training.name ||
+                              assignment.training.code}
                           </span>
-                          <Badge variant="outline" className="ml-2">
+                          <Badge variant='outline' className='ml-2'>
                             {assignment.training.code}
                           </Badge>
                         </div>
@@ -300,12 +327,12 @@ export default function AssignmentsClient({
                       <TableCell>{formatDate(assignment.assignedAt)}</TableCell>
                       <TableCell>
                         <Button
-                          size="sm"
-                          variant="ghost"
+                          size='sm'
+                          variant='ghost'
                           onClick={() => handleDeleteAssignment(assignment.id)}
                           disabled={loading}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className='h-4 w-4' />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -325,16 +352,22 @@ export default function AssignmentsClient({
                 Přiřaďte školení vybranému školiteli
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="trainer">Školitel</Label>
-                <Select value={selectedTrainer} onValueChange={setSelectedTrainer}>
-                  <SelectTrigger id="trainer">
-                    <SelectValue placeholder="Vyberte školitele" />
+            <div className='space-y-4 py-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='trainer'>Školitel</Label>
+                <Select
+                  value={selectedTrainer}
+                  onValueChange={setSelectedTrainer}
+                >
+                  <SelectTrigger id='trainer'>
+                    <SelectValue placeholder='Vyberte školitele' />
                   </SelectTrigger>
                   <SelectContent>
-                    {trainers.map(trainer => (
-                      <SelectItem key={trainer.id} value={trainer.id.toString()}>
+                    {trainers.map((trainer) => (
+                      <SelectItem
+                        key={trainer.id}
+                        value={trainer.id.toString()}
+                      >
                         {trainer.name} {trainer.email && `(${trainer.email})`}
                       </SelectItem>
                     ))}
@@ -342,15 +375,21 @@ export default function AssignmentsClient({
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="training">Školení</Label>
-                <Select value={selectedTraining} onValueChange={setSelectedTraining}>
-                  <SelectTrigger id="training">
-                    <SelectValue placeholder="Vyberte školení" />
+              <div className='space-y-2'>
+                <Label htmlFor='training'>Školení</Label>
+                <Select
+                  value={selectedTraining}
+                  onValueChange={setSelectedTraining}
+                >
+                  <SelectTrigger id='training'>
+                    <SelectValue placeholder='Vyberte školení' />
                   </SelectTrigger>
                   <SelectContent>
-                    {trainings.map(training => (
-                      <SelectItem key={training.id} value={training.id.toString()}>
+                    {trainings.map((training) => (
+                      <SelectItem
+                        key={training.id}
+                        value={training.id.toString()}
+                      >
                         {training.name || training.code} ({training.code})
                       </SelectItem>
                     ))}
@@ -360,7 +399,7 @@ export default function AssignmentsClient({
             </div>
             <DialogFooter>
               <Button
-                variant="outline"
+                variant='outline'
                 onClick={() => {
                   setDialogOpen(false);
                   setSelectedTrainer('');

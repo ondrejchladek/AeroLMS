@@ -2,7 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -35,11 +41,11 @@ export default function TestPage() {
       try {
         setIsLoading(true);
         const response = await fetch('/api/excel-data');
-        
+
         if (!response.ok) {
           throw new Error('Failed to fetch data');
         }
-        
+
         const data = await response.json();
         setChartData(data);
       } catch (err) {
@@ -51,7 +57,6 @@ export default function TestPage() {
 
     fetchData();
   }, []);
-
 
   const chartOptions: any = {
     chart: {
@@ -139,24 +144,28 @@ export default function TestPage() {
     legend: {
       show: false
     },
-    colors: chartData?.timelineData.map(d => d.fillColor) || [],
+    colors: chartData?.timelineData.map((d) => d.fillColor) || [],
     dataLabels: {
       enabled: false
     },
     tooltip: {
-      custom: function({ series, seriesIndex, dataPointIndex, w }: any) {
+      custom: function ({ series, seriesIndex, dataPointIndex, w }: any) {
         const data = chartData?.timelineData[dataPointIndex];
         if (!data) return '';
-        
+
         const startTime = new Date(data.y[0]);
         const endTime = new Date(data.y[1]);
         const duration = (endTime.getTime() - startTime.getTime()) / 1000 / 60; // in minutes
-        
-        const statusLabel = data.status === 'ready' ? 'Ready/Idle' : 
-                           data.status === 'running' ? 'Running' : 'Offline';
-        
+
+        const statusLabel =
+          data.status === 'ready'
+            ? 'Ready/Idle'
+            : data.status === 'running'
+              ? 'Running'
+              : 'Offline';
+
         const valueInfo = data.value ? ` (${data.value}/899)` : '';
-        
+
         return `
           <div class="p-2 bg-white shadow-lg rounded border">
             <div class="font-semibold">${data.machineName}</div>
@@ -179,108 +188,113 @@ export default function TestPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8 px-4 max-w-7xl">
-        <div className="space-y-6">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-3xl font-bold">Excel Data Analysis</h1>
-            <p className="text-muted-foreground">
-              Timeline vizualizace stavu stroje pomocí ApexCharts Range Bar grafu
+    <div className='bg-background min-h-screen'>
+      <div className='container mx-auto max-w-7xl px-4 py-8'>
+        <div className='space-y-6'>
+          <div className='flex flex-col gap-2'>
+            <h1 className='text-3xl font-bold'>Excel Data Analysis</h1>
+            <p className='text-muted-foreground'>
+              Timeline vizualizace stavu stroje pomocí ApexCharts Range Bar
+              grafu
             </p>
           </div>
 
           <Card>
-        <CardHeader>
-          <CardTitle>Machine Status Timeline</CardTitle>
-          <CardDescription>
-            Vizualizace stavu stroje v čase po 15minutových intervalech
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              <Skeleton className="h-[120px] w-full" />
-              <div className="flex gap-2">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-4 w-20" />
-              </div>
-            </div>
-          ) : error ? (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Error loading data: {error}
-              </AlertDescription>
-            </Alert>
-          ) : chartData ? (
-            <div className="space-y-4">
-              <ApexChart
-                options={chartOptions}
-                series={[{ data: chartData.timelineData }]}
-                type="rangeBar"
-                height={120}
-              />
-              <div className="flex gap-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgb(255, 165, 0)' }}></div>
-                  <span>Ready/Idle</span>
+            <CardHeader>
+              <CardTitle>Machine Status Timeline</CardTitle>
+              <CardDescription>
+                Vizualizace stavu stroje v čase po 15minutových intervalech
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className='space-y-4'>
+                  <Skeleton className='h-[120px] w-full' />
+                  <div className='flex gap-2'>
+                    <Skeleton className='h-4 w-20' />
+                    <Skeleton className='h-4 w-20' />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-green-500 rounded"></div>
-                  <span>Running</span>
+              ) : error ? (
+                <Alert variant='destructive'>
+                  <AlertCircle className='h-4 w-4' />
+                  <AlertDescription>
+                    Error loading data: {error}
+                  </AlertDescription>
+                </Alert>
+              ) : chartData ? (
+                <div className='space-y-4'>
+                  <ApexChart
+                    options={chartOptions}
+                    series={[{ data: chartData.timelineData }]}
+                    type='rangeBar'
+                    height={120}
+                  />
+                  <div className='flex gap-4 text-sm'>
+                    <div className='flex items-center gap-2'>
+                      <div
+                        className='h-4 w-4 rounded'
+                        style={{ backgroundColor: 'rgb(255, 165, 0)' }}
+                      ></div>
+                      <span>Ready/Idle</span>
+                    </div>
+                    <div className='flex items-center gap-2'>
+                      <div className='h-4 w-4 rounded bg-green-500'></div>
+                      <span>Running</span>
+                    </div>
+                    <div className='flex items-center gap-2'>
+                      <div className='h-4 w-4 rounded bg-gray-500'></div>
+                      <span>Offline (mimo provoz)</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 bg-gray-500 rounded"></div>
-                  <span>Offline (mimo provoz)</span>
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+              ) : null}
+            </CardContent>
+          </Card>
 
-      {chartData?.rawData && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Raw Data</CardTitle>
-            <CardDescription>
-              Všechny záznamy z Excel souboru ({chartData.rawData.length} řádků)
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    {Object.keys(chartData.rawData[0] || {}).map((key) => (
-                      <th
-                        key={key}
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        {key}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {chartData.rawData.map((row, idx) => (
-                    <tr key={idx}>
-                      {Object.values(row).map((value: any, cellIdx) => (
-                        <td
-                          key={cellIdx}
-                          className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                        >
-                          {value?.toString() || '-'}
-                        </td>
+          {chartData?.rawData && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Raw Data</CardTitle>
+                <CardDescription>
+                  Všechny záznamy z Excel souboru ({chartData.rawData.length}{' '}
+                  řádků)
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className='overflow-x-auto'>
+                  <table className='min-w-full divide-y divide-gray-200'>
+                    <thead className='bg-gray-50'>
+                      <tr>
+                        {Object.keys(chartData.rawData[0] || {}).map((key) => (
+                          <th
+                            key={key}
+                            className='px-6 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase'
+                          >
+                            {key}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className='divide-y divide-gray-200 bg-white'>
+                      {chartData.rawData.map((row, idx) => (
+                        <tr key={idx}>
+                          {Object.values(row).map((value: any, cellIdx) => (
+                            <td
+                              key={cellIdx}
+                              className='px-6 py-4 text-sm whitespace-nowrap text-gray-900'
+                            >
+                              {value?.toString() || '-'}
+                            </td>
+                          ))}
+                        </tr>
                       ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

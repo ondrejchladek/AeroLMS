@@ -14,14 +14,18 @@ async function main() {
         role: 'ADMIN'
       }
     });
-    console.log(`✅ Updated ${adminUpdate.name} (${adminUpdate.email}) to ADMIN`);
+    console.log(
+      `✅ Updated ${adminUpdate.name} (${adminUpdate.email}) to ADMIN`
+    );
 
     // 2. Keep user with code 123456 as WORKER (already is)
     const workerUser = await prisma.user.findFirst({
       where: { code: 123456 }
     });
     if (workerUser) {
-      console.log(`ℹ️  ${workerUser.name} (code 123456) remains as ${workerUser.role}`);
+      console.log(
+        `ℹ️  ${workerUser.name} (code 123456) remains as ${workerUser.role}`
+      );
     }
 
     // 3. Get final summary
@@ -37,15 +41,19 @@ async function main() {
 
     console.log('\n📊 FINAL USER ROLES:');
     console.log('===================');
-    users.forEach(user => {
-      const roleLabel = user.role === 'ADMIN' ? '👑 ADMIN' :
-                        user.role === 'TRAINER' ? '👨‍🏫 TRAINER' :
-                        '👷 WORKER';
-      console.log(`${roleLabel} - ${user.name} (code: ${user.code || 'none'}, email: ${user.email || 'none'})`);
+    users.forEach((user) => {
+      const roleLabel =
+        user.role === 'ADMIN'
+          ? '👑 ADMIN'
+          : user.role === 'TRAINER'
+            ? '👨‍🏫 TRAINER'
+            : '👷 WORKER';
+      console.log(
+        `${roleLabel} - ${user.name} (code: ${user.code || 'none'}, email: ${user.email || 'none'})`
+      );
     });
 
     console.log('\n✅ Role assignment completed!');
-
   } catch (error) {
     console.error('❌ Error during role assignment:', error);
     throw error;

@@ -26,7 +26,6 @@ export function UserAvatarProfile({
       {showInfo && (
         <div className='grid flex-1 text-left text-sm leading-tight'>
           <span className='truncate font-semibold'>{user?.fullName || ''}</span>
-
         </div>
       )}
     </div>

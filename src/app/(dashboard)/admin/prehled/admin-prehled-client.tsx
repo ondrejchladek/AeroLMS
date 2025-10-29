@@ -3,7 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import PageContainer from '@/components/layout/page-container';
 import { getRoleLabel } from '@/types/roles';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,7 +23,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from '@/components/ui/table';
 import {
   Dialog,
@@ -26,23 +32,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogTrigger
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import {
   Popover,
   PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  PopoverTrigger
+} from '@/components/ui/popover';
 import {
   Command,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { cn } from "@/lib/utils";
+  CommandList
+} from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 import {
   Users,
   BookOpen,
@@ -64,8 +70,8 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  SelectValue
+} from '@/components/ui/select';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
 
@@ -119,12 +125,16 @@ export default function AdminPrehledClient() {
   const [success, setSuccess] = useState<string | null>(null);
   const [selectedTraining, setSelectedTraining] = useState<string>('');
   const [openCombobox, setOpenCombobox] = useState(false);
-  const [trainingDisplayNames, setTrainingDisplayNames] = useState<Record<string, string>>({});
-  const [generalUserEdit, setGeneralUserEdit] = useState<GeneralUserEdit | null>(null);
+  const [trainingDisplayNames, setTrainingDisplayNames] = useState<
+    Record<string, string>
+  >({});
+  const [generalUserEdit, setGeneralUserEdit] =
+    useState<GeneralUserEdit | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [savingGeneralUser, setSavingGeneralUser] = useState(false);
   const [trainingEdit, setTrainingEdit] = useState<TrainingEdit | null>(null);
-  const [isTrainingEditDialogOpen, setIsTrainingEditDialogOpen] = useState(false);
+  const [isTrainingEditDialogOpen, setIsTrainingEditDialogOpen] =
+    useState(false);
   const [savingTraining, setSavingTraining] = useState(false);
   // State pro synchronizaci
   const [isSyncing, setIsSyncing] = useState(false);
@@ -141,7 +151,8 @@ export default function AdminPrehledClient() {
     try {
       // Načíst školení z databáze (admin request)
       const trainingsResponse = await fetch('/api/trainings?admin=true');
-      if (!trainingsResponse.ok) throw new Error('Nepodařilo se načíst školení');
+      if (!trainingsResponse.ok)
+        throw new Error('Nepodařilo se načíst školení');
       const trainingsData = await trainingsResponse.json();
       setTrainings(trainingsData.trainings || []);
 
@@ -164,13 +175,20 @@ export default function AdminPrehledClient() {
       setUsers(usersData.users || []);
     } catch (error) {
       console.error('Error fetching data:', error);
-      setError(error instanceof Error ? error.message : 'Chyba při načítání dat');
+      setError(
+        error instanceof Error ? error.message : 'Chyba při načítání dat'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleEditUser = (user: User, training: string, field: string, value: any) => {
+  const handleEditUser = (
+    user: User,
+    training: string,
+    field: string,
+    value: any
+  ) => {
     const fieldName = `${training}${field}`;
 
     // Pokud ještě není v režimu editace, inicializuj editingUser
@@ -214,11 +232,9 @@ export default function AdminPrehledClient() {
       const data = await response.json();
 
       // Aktualizovat lokální data - pouze pro konkrétního uživatele
-      setUsers(prevUsers =>
-        prevUsers.map(u =>
-          u.UserID === userId
-            ? { ...u, ...editingUser.changes }
-            : u
+      setUsers((prevUsers) =>
+        prevUsers.map((u) =>
+          u.UserID === userId ? { ...u, ...editingUser.changes } : u
         )
       );
 
@@ -267,16 +283,20 @@ export default function AdminPrehledClient() {
       const data = await response.json();
 
       // Aktualizovat lokální data
-      setTrainings(prevTrainings =>
-        prevTrainings.map(t =>
+      setTrainings((prevTrainings) =>
+        prevTrainings.map((t) =>
           t.id === trainingEdit.id
-            ? { ...t, name: trainingEdit.name, description: trainingEdit.description }
+            ? {
+                ...t,
+                name: trainingEdit.name,
+                description: trainingEdit.description
+              }
             : t
         )
       );
 
       // Aktualizovat také display names
-      setTrainingDisplayNames(prev => ({
+      setTrainingDisplayNames((prev) => ({
         ...prev,
         [trainingEdit.code]: trainingEdit.name
       }));
@@ -336,11 +356,19 @@ export default function AdminPrehledClient() {
       }
 
       // Aktualizovat lokální data
-      setUsers(users.map(u =>
-        u.id === generalUserEdit.id
-          ? { ...u, code: generalUserEdit.code, name: generalUserEdit.name, email: generalUserEdit.email, role: generalUserEdit.role }
-          : u
-      ));
+      setUsers(
+        users.map((u) =>
+          u.id === generalUserEdit.id
+            ? {
+                ...u,
+                code: generalUserEdit.code,
+                name: generalUserEdit.name,
+                email: generalUserEdit.email,
+                role: generalUserEdit.role
+              }
+            : u
+        )
+      );
 
       setIsEditDialogOpen(false);
       setGeneralUserEdit(null);
@@ -363,8 +391,8 @@ export default function AdminPrehledClient() {
       const response = await fetch('/api/admin/sync-trainings', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-        },
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {
@@ -398,8 +426,8 @@ export default function AdminPrehledClient() {
   if (loading) {
     return (
       <PageContainer>
-        <div className="flex items-center justify-center h-[400px]">
-          <div className="text-muted-foreground">Načítání dat...</div>
+        <div className='flex h-[400px] items-center justify-center'>
+          <div className='text-muted-foreground'>Načítání dat...</div>
         </div>
       </PageContainer>
     );
@@ -407,22 +435,22 @@ export default function AdminPrehledClient() {
 
   return (
     <PageContainer>
-      <div className="w-full space-y-6">
+      <div className='w-full space-y-6'>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Admin přehled</h1>
-          <p className="text-muted-foreground">Správa školení a uživatelů</p>
+          <h1 className='text-3xl font-bold tracking-tight'>Admin přehled</h1>
+          <p className='text-muted-foreground'>Správa školení a uživatelů</p>
         </div>
 
         {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+          <Alert variant='destructive'>
+            <AlertCircle className='h-4 w-4' />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
         {success && (
           <Alert>
-            <CheckCircle className="h-4 w-4" />
+            <CheckCircle className='h-4 w-4' />
             <AlertDescription>{success}</AlertDescription>
           </Alert>
         )}
@@ -432,104 +460,137 @@ export default function AdminPrehledClient() {
           <CardHeader>
             <CardTitle>Automatická synchronizace školení</CardTitle>
             <CardDescription>
-              Systém automaticky synchronizuje školení při každém spuštění aplikace
+              Systém automaticky synchronizuje školení při každém spuštění
+              aplikace
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className='space-y-4'>
             <Alert>
-              <Info className="h-4 w-4" />
+              <Info className='h-4 w-4' />
               <AlertTitle>Informace</AlertTitle>
               <AlertDescription>
                 Synchronizace probíhá automaticky při každém startu aplikace.
-                Systém detekuje všechny sloupce ve formátu {'{code}'}DatumPosl, {'{code}'}DatumPristi a {'{code}'}Pozadovano
-                v tabulce User a vytvoří odpovídající záznamy v tabulce Training.
+                Systém detekuje všechny sloupce ve formátu {'{code}'}DatumPosl,{' '}
+                {'{code}'}DatumPristi a {'{code}'}Pozadovano v tabulce User a
+                vytvoří odpovídající záznamy v tabulce Training.
               </AlertDescription>
             </Alert>
 
-            <div className="flex items-center gap-4">
+            <div className='flex items-center gap-4'>
               <Button
                 onClick={handleSync}
                 disabled={isSyncing}
-                className="flex items-center gap-2"
+                className='flex items-center gap-2'
               >
                 {isSyncing ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className='h-4 w-4 animate-spin' />
                     Synchronizuji...
                   </>
                 ) : (
                   <>
-                    <RefreshCcw className="h-4 w-4" />
+                    <RefreshCcw className='h-4 w-4' />
                     Spustit manuální synchronizaci
                   </>
                 )}
               </Button>
 
               {!isSyncing && !syncResult && !syncError && (
-                <p className="text-sm text-muted-foreground">
+                <p className='text-muted-foreground text-sm'>
                   Klikněte pro ruční spuštění synchronizace
                 </p>
               )}
             </div>
 
             {syncError && (
-              <Alert variant="destructive">
-                <XCircle className="h-4 w-4" />
+              <Alert variant='destructive'>
+                <XCircle className='h-4 w-4' />
                 <AlertTitle>Chyba</AlertTitle>
                 <AlertDescription>{syncError}</AlertDescription>
               </Alert>
             )}
 
             {syncResult && (
-              <div className="mt-4 p-4 bg-muted rounded-lg">
-                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
+              <div className='bg-muted mt-4 rounded-lg p-4'>
+                <h4 className='mb-3 flex items-center gap-2 text-sm font-medium'>
+                  <CheckCircle className='h-4 w-4 text-green-500' />
                   Synchronizace dokončena
                 </h4>
-                <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className='mb-4 grid grid-cols-2 gap-4'>
                   <div>
-                    <p className="text-sm text-muted-foreground">Detekovaná školení</p>
-                    <p className="text-lg font-semibold">{syncResult.result?.detected || 0}</p>
+                    <p className='text-muted-foreground text-sm'>
+                      Detekovaná školení
+                    </p>
+                    <p className='text-lg font-semibold'>
+                      {syncResult.result?.detected || 0}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Nově vytvořená</p>
-                    <p className="text-lg font-semibold text-green-600">{syncResult.result?.created || 0}</p>
+                    <p className='text-muted-foreground text-sm'>
+                      Nově vytvořená
+                    </p>
+                    <p className='text-lg font-semibold text-green-600'>
+                      {syncResult.result?.created || 0}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Již existující</p>
-                    <p className="text-lg font-semibold text-blue-600">{syncResult.result?.existing || 0}</p>
+                    <p className='text-muted-foreground text-sm'>
+                      Již existující
+                    </p>
+                    <p className='text-lg font-semibold text-blue-600'>
+                      {syncResult.result?.existing || 0}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Chyby</p>
-                    <p className="text-lg font-semibold text-red-600">{syncResult.result?.errors || 0}</p>
+                    <p className='text-muted-foreground text-sm'>Chyby</p>
+                    <p className='text-lg font-semibold text-red-600'>
+                      {syncResult.result?.errors || 0}
+                    </p>
                   </div>
                 </div>
 
-                {syncResult.result?.details?.created && syncResult.result.details.created.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-sm font-medium mb-2">Nově vytvořená školení:</p>
-                    <div className="bg-background rounded p-2">
-                      <ul className="list-disc list-inside space-y-1">
-                        {syncResult.result.details.created.map((code: string) => (
-                          <li key={code} className="text-sm">{code}</li>
-                        ))}
-                      </ul>
+                {syncResult.result?.details?.created &&
+                  syncResult.result.details.created.length > 0 && (
+                    <div className='mt-3'>
+                      <p className='mb-2 text-sm font-medium'>
+                        Nově vytvořená školení:
+                      </p>
+                      <div className='bg-background rounded p-2'>
+                        <ul className='list-inside list-disc space-y-1'>
+                          {syncResult.result.details.created.map(
+                            (code: string) => (
+                              <li key={code} className='text-sm'>
+                                {code}
+                              </li>
+                            )
+                          )}
+                        </ul>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {syncResult.result?.details?.errors && syncResult.result.details.errors.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-sm font-medium mb-2 text-red-600">Chyby při vytváření:</p>
-                    <div className="bg-red-50 dark:bg-red-950 rounded p-2">
-                      <ul className="list-disc list-inside space-y-1">
-                        {syncResult.result.details.errors.map((code: string) => (
-                          <li key={code} className="text-sm text-red-700 dark:text-red-400">{code}</li>
-                        ))}
-                      </ul>
+                {syncResult.result?.details?.errors &&
+                  syncResult.result.details.errors.length > 0 && (
+                    <div className='mt-3'>
+                      <p className='mb-2 text-sm font-medium text-red-600'>
+                        Chyby při vytváření:
+                      </p>
+                      <div className='rounded bg-red-50 p-2 dark:bg-red-950'>
+                        <ul className='list-inside list-disc space-y-1'>
+                          {syncResult.result.details.errors.map(
+                            (code: string) => (
+                              <li
+                                key={code}
+                                className='text-sm text-red-700 dark:text-red-400'
+                              >
+                                {code}
+                              </li>
+                            )
+                          )}
+                        </ul>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
               </div>
             )}
           </CardContent>
@@ -541,11 +602,24 @@ export default function AdminPrehledClient() {
             <CardTitle>Jak funguje synchronizace?</CardTitle>
           </CardHeader>
           <CardContent>
-            <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-              <li>Systém prohledá tabulku User a najde všechny sloupce odpovídající vzoru školení</li>
-              <li>Pro každé školení hledá trojici sloupců: {'{code}'}DatumPosl, {'{code}'}DatumPristi, {'{code}'}Pozadovano</li>
-              <li>Školení s kompletní trojicí sloupců se porovnají s existujícími záznamy v tabulce Training</li>
-              <li>Chybějící školení se automaticky přenesou z tabulky User do tabulky Training a přidají do UI tabulky Školení v databázi s kódem jako názvem</li>
+            <ol className='text-muted-foreground list-inside list-decimal space-y-2 text-sm'>
+              <li>
+                Systém prohledá tabulku User a najde všechny sloupce
+                odpovídající vzoru školení
+              </li>
+              <li>
+                Pro každé školení hledá trojici sloupců: {'{code}'}DatumPosl,{' '}
+                {'{code}'}DatumPristi, {'{code}'}Pozadovano
+              </li>
+              <li>
+                Školení s kompletní trojicí sloupců se porovnají s existujícími
+                záznamy v tabulce Training
+              </li>
+              <li>
+                Chybějící školení se automaticky přenesou z tabulky User do
+                tabulky Training a přidají do UI tabulky Školení v databázi s
+                kódem jako názvem
+              </li>
               <li>Existující školení zůstanou nedotčena</li>
             </ol>
           </CardContent>
@@ -554,8 +628,8 @@ export default function AdminPrehledClient() {
         {/* Tabulka školení */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
+            <CardTitle className='flex items-center gap-2'>
+              <BookOpen className='h-5 w-5' />
               Školení v databázi
             </CardTitle>
             <CardDescription>
@@ -578,31 +652,43 @@ export default function AdminPrehledClient() {
               <TableBody>
                 {trainings.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={7}
+                      className='text-muted-foreground text-center'
+                    >
                       Žádná školení v databázi
                     </TableCell>
                   </TableRow>
                 ) : (
-                  trainings.map(training => (
+                  trainings.map((training) => (
                     <TableRow key={training.id}>
-                      <TableCell className="font-mono">{training.code}</TableCell>
-                      <TableCell className="font-medium">{training.name}</TableCell>
+                      <TableCell className='font-mono'>
+                        {training.code}
+                      </TableCell>
+                      <TableCell className='font-medium'>
+                        {training.name}
+                      </TableCell>
                       <TableCell>{training.description}</TableCell>
                       <TableCell>
-                        <Badge variant={training.testsCount > 0 ? "default" : "secondary"}>
-                          {training.testsCount} {training.testsCount === 1 ? 'test' : 'testů'}
+                        <Badge
+                          variant={
+                            training.testsCount > 0 ? 'default' : 'secondary'
+                          }
+                        >
+                          {training.testsCount}{' '}
+                          {training.testsCount === 1 ? 'test' : 'testů'}
                         </Badge>
                       </TableCell>
                       <TableCell>{formatDate(training.createdAt)}</TableCell>
                       <TableCell>{formatDate(training.updatedAt)}</TableCell>
                       <TableCell>
                         <Button
-                          size="sm"
-                          variant="outline"
+                          size='sm'
+                          variant='outline'
                           onClick={() => handleOpenTrainingEditDialog(training)}
-                          className="cursor-pointer"
+                          className='cursor-pointer'
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className='h-4 w-4' />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -616,8 +702,8 @@ export default function AdminPrehledClient() {
         {/* Nová obecná tabulka správy uživatelů */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <UserCog className="h-5 w-5" />
+            <CardTitle className='flex items-center gap-2'>
+              <UserCog className='h-5 w-5' />
               Správa uživatelů
             </CardTitle>
             <CardDescription>
@@ -639,30 +725,43 @@ export default function AdminPrehledClient() {
               <TableBody>
                 {users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={6}
+                      className='text-muted-foreground text-center'
+                    >
                       Žádní uživatelé
                     </TableCell>
                   </TableRow>
                 ) : (
-                  users.map(user => (
+                  users.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className="font-mono">{user.code}</TableCell>
-                      <TableCell className="font-medium">{user.name}</TableCell>
+                      <TableCell className='font-mono'>{user.code}</TableCell>
+                      <TableCell className='font-medium'>{user.name}</TableCell>
                       <TableCell>{user.email || '-'}</TableCell>
-                      <TableCell className="font-mono text-muted-foreground">••••••••</TableCell>
+                      <TableCell className='text-muted-foreground font-mono'>
+                        ••••••••
+                      </TableCell>
                       <TableCell>
-                        <Badge variant={user.role === 'ADMIN' ? 'destructive' : user.role === 'TRAINER' ? 'default' : 'secondary'}>
+                        <Badge
+                          variant={
+                            user.role === 'ADMIN'
+                              ? 'destructive'
+                              : user.role === 'TRAINER'
+                                ? 'default'
+                                : 'secondary'
+                          }
+                        >
                           {getRoleLabel(user.role)}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         <Button
-                          size="sm"
-                          variant="outline"
+                          size='sm'
+                          variant='outline'
                           onClick={() => handleOpenGeneralEditDialog(user)}
-                          className="cursor-pointer"
+                          className='cursor-pointer'
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className='h-4 w-4' />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -676,54 +775,58 @@ export default function AdminPrehledClient() {
         {/* Tabulka přiřazení školení pracovníkům */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
+            <CardTitle className='flex items-center gap-2'>
+              <Users className='h-5 w-5' />
               Správa přiřazení požadovaných školení pracovníkům
             </CardTitle>
             <CardDescription>
               Editace požadavků na školení a termínů pro jednotlivé uživatele
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className='space-y-4'>
             {/* Výběr školení */}
-            <div className="flex items-center gap-4 mb-4">
+            <div className='mb-4 flex items-center gap-4'>
               <Label>Školení:</Label>
               <Popover open={openCombobox} onOpenChange={setOpenCombobox}>
                 <PopoverTrigger asChild>
                   <Button
-                    variant="outline"
-                    role="combobox"
+                    variant='outline'
+                    role='combobox'
                     aria-expanded={openCombobox}
-                    className="w-[300px] justify-between"
+                    className='w-[300px] justify-between'
                   >
                     {trainingDisplayNames[selectedTraining]}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[300px] p-0">
+                <PopoverContent className='w-[300px] p-0'>
                   <Command>
-                    <CommandInput placeholder="Vyhledat školení..." />
+                    <CommandInput placeholder='Vyhledat školení...' />
                     <CommandList>
                       <CommandEmpty>Školení nenalezeno.</CommandEmpty>
                       <CommandGroup>
-                        {Object.entries(trainingDisplayNames).map(([key, name]) => (
-                          <CommandItem
-                            key={key}
-                            value={name}
-                            onSelect={() => {
-                              setSelectedTraining(key);
-                              setOpenCombobox(false);
-                            }}
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedTraining === key ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            {name}
-                          </CommandItem>
-                        ))}
+                        {Object.entries(trainingDisplayNames).map(
+                          ([key, name]) => (
+                            <CommandItem
+                              key={key}
+                              value={name}
+                              onSelect={() => {
+                                setSelectedTraining(key);
+                                setOpenCombobox(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  selectedTraining === key
+                                    ? 'opacity-100'
+                                    : 'opacity-0'
+                                )}
+                              />
+                              {name}
+                            </CommandItem>
+                          )
+                        )}
                       </CommandGroup>
                     </CommandList>
                   </Command>
@@ -732,7 +835,7 @@ export default function AdminPrehledClient() {
             </div>
 
             {/* Tabulka uživatelů pro vybrané školení */}
-            <div className="overflow-x-auto">
+            <div className='overflow-x-auto'>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -747,109 +850,145 @@ export default function AdminPrehledClient() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.filter(u => u.role === 'WORKER').length === 0 ? (
+                  {users.filter((u) => u.role === 'WORKER').length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground">
+                      <TableCell
+                        colSpan={8}
+                        className='text-muted-foreground text-center'
+                      >
                         Žádní pracovníci
                       </TableCell>
                     </TableRow>
                   ) : (
-                    users.filter(u => u.role === 'WORKER').map(user => {
-                      const isEditing = editingUser?.id === user.id;
-                      const training = selectedTraining;
+                    users
+                      .filter((u) => u.role === 'WORKER')
+                      .map((user) => {
+                        const isEditing = editingUser?.id === user.id;
+                        const training = selectedTraining;
 
-                      // Získat hodnoty pro vybrané školení
-                      const pozadovano = isEditing && editingUser && `${training}Pozadovano` in editingUser.changes
-                        ? editingUser.changes[`${training}Pozadovano`]
-                        : user[`${training}Pozadovano`];
+                        // Získat hodnoty pro vybrané školení
+                        const pozadovano =
+                          isEditing &&
+                          editingUser &&
+                          `${training}Pozadovano` in editingUser.changes
+                            ? editingUser.changes[`${training}Pozadovano`]
+                            : user[`${training}Pozadovano`];
 
-                      const datumPosl = isEditing && editingUser && `${training}DatumPosl` in editingUser.changes
-                        ? editingUser.changes[`${training}DatumPosl`]
-                        : user[`${training}DatumPosl`];
+                        const datumPosl =
+                          isEditing &&
+                          editingUser &&
+                          `${training}DatumPosl` in editingUser.changes
+                            ? editingUser.changes[`${training}DatumPosl`]
+                            : user[`${training}DatumPosl`];
 
-                      const datumPristi = isEditing && editingUser && `${training}DatumPristi` in editingUser.changes
-                        ? editingUser.changes[`${training}DatumPristi`]
-                        : user[`${training}DatumPristi`];
+                        const datumPristi =
+                          isEditing &&
+                          editingUser &&
+                          `${training}DatumPristi` in editingUser.changes
+                            ? editingUser.changes[`${training}DatumPristi`]
+                            : user[`${training}DatumPristi`];
 
-                      return (
-                        <TableRow key={user.id}>
-                          <TableCell className="font-mono">
-                            {user.code}
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            {user.name}
-                          </TableCell>
-                          <TableCell>{user.email || '-'}</TableCell>
-                          <TableCell>
-                            <Badge variant={user.role === 'ADMIN' ? 'destructive' : user.role === 'TRAINER' ? 'default' : 'secondary'}>
-                              {getRoleLabel(user.role)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Checkbox
-                              checked={Boolean(pozadovano)}
-                              onCheckedChange={(checked) =>
-                                handleEditUser(user, training, 'Pozadovano', checked)
-                              }
-                              className="cursor-pointer"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <DatePickerInput
-                              value={datumPosl}
-                              onChange={(date) =>
-                                handleEditUser(user, training, 'DatumPosl', date)
-                              }
-                              className="w-[130px]"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm text-muted-foreground italic">
-                              {datumPristi
-                                ? new Date(datumPristi).toLocaleDateString('cs-CZ')
-                                : 'Neurčeno'}
-                              <span className="text-xs ml-1">(počítáno)</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {isEditing ? (
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSaveUser(user.id)}
-                                  disabled={savingUser === user.id}
-                                  className="cursor-pointer"
-                                >
-                                  {savingUser === user.id ? (
-                                    'Ukládání...'
-                                  ) : (
-                                    <Save className="h-4 w-4" />
-                                  )}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => setEditingUser(null)}
-                                  disabled={savingUser === user.id}
-                                  className="cursor-pointer"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setEditingUser({ id: user.id, changes: {} })}
-                                className="cursor-pointer"
+                        return (
+                          <TableRow key={user.id}>
+                            <TableCell className='font-mono'>
+                              {user.code}
+                            </TableCell>
+                            <TableCell className='font-medium'>
+                              {user.name}
+                            </TableCell>
+                            <TableCell>{user.email || '-'}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  user.role === 'ADMIN'
+                                    ? 'destructive'
+                                    : user.role === 'TRAINER'
+                                      ? 'default'
+                                      : 'secondary'
+                                }
                               >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
+                                {getRoleLabel(user.role)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Checkbox
+                                checked={Boolean(pozadovano)}
+                                onCheckedChange={(checked) =>
+                                  handleEditUser(
+                                    user,
+                                    training,
+                                    'Pozadovano',
+                                    checked
+                                  )
+                                }
+                                className='cursor-pointer'
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <DatePickerInput
+                                value={datumPosl}
+                                onChange={(date) =>
+                                  handleEditUser(
+                                    user,
+                                    training,
+                                    'DatumPosl',
+                                    date
+                                  )
+                                }
+                                className='w-[130px]'
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className='text-muted-foreground text-sm italic'>
+                                {datumPristi
+                                  ? new Date(datumPristi).toLocaleDateString(
+                                      'cs-CZ'
+                                    )
+                                  : 'Neurčeno'}
+                                <span className='ml-1 text-xs'>(počítáno)</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {isEditing ? (
+                                <div className='flex gap-2'>
+                                  <Button
+                                    size='sm'
+                                    onClick={() => handleSaveUser(user.id)}
+                                    disabled={savingUser === user.id}
+                                    className='cursor-pointer'
+                                  >
+                                    {savingUser === user.id ? (
+                                      'Ukládání...'
+                                    ) : (
+                                      <Save className='h-4 w-4' />
+                                    )}
+                                  </Button>
+                                  <Button
+                                    size='sm'
+                                    variant='outline'
+                                    onClick={() => setEditingUser(null)}
+                                    disabled={savingUser === user.id}
+                                    className='cursor-pointer'
+                                  >
+                                    <X className='h-4 w-4' />
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Button
+                                  size='sm'
+                                  variant='outline'
+                                  onClick={() =>
+                                    setEditingUser({ id: user.id, changes: {} })
+                                  }
+                                  className='cursor-pointer'
+                                >
+                                  <Edit className='h-4 w-4' />
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
                   )}
                 </TableBody>
               </Table>
@@ -859,22 +998,23 @@ export default function AdminPrehledClient() {
 
         {/* Dialog pro editaci obecných údajů uživatele */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className='sm:max-w-[500px]'>
             <DialogHeader>
               <DialogTitle>Upravit uživatele</DialogTitle>
               <DialogDescription>
-                Upravte základní údaje uživatele. Pokud heslo necháte prázdné, nebude změněno.
+                Upravte základní údaje uživatele. Pokud heslo necháte prázdné,
+                nebude změněno.
               </DialogDescription>
             </DialogHeader>
             {generalUserEdit && (
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-code" className="text-right">
+              <div className='grid gap-4 py-4'>
+                <div className='grid grid-cols-4 items-center gap-4'>
+                  <Label htmlFor='edit-code' className='text-right'>
                     Kód
                   </Label>
                   <Input
-                    id="edit-code"
-                    type="number"
+                    id='edit-code'
+                    type='number'
                     value={generalUserEdit.code}
                     onChange={(e) =>
                       setGeneralUserEdit({
@@ -882,15 +1022,15 @@ export default function AdminPrehledClient() {
                         code: Number(e.target.value)
                       })
                     }
-                    className="col-span-3"
+                    className='col-span-3'
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-name" className="text-right">
+                <div className='grid grid-cols-4 items-center gap-4'>
+                  <Label htmlFor='edit-name' className='text-right'>
                     Jméno
                   </Label>
                   <Input
-                    id="edit-name"
+                    id='edit-name'
                     value={generalUserEdit.name}
                     onChange={(e) =>
                       setGeneralUserEdit({
@@ -898,16 +1038,16 @@ export default function AdminPrehledClient() {
                         name: e.target.value
                       })
                     }
-                    className="col-span-3"
+                    className='col-span-3'
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-email" className="text-right">
+                <div className='grid grid-cols-4 items-center gap-4'>
+                  <Label htmlFor='edit-email' className='text-right'>
                     Email
                   </Label>
                   <Input
-                    id="edit-email"
-                    type="email"
+                    id='edit-email'
+                    type='email'
                     value={generalUserEdit.email}
                     onChange={(e) =>
                       setGeneralUserEdit({
@@ -915,16 +1055,16 @@ export default function AdminPrehledClient() {
                         email: e.target.value
                       })
                     }
-                    className="col-span-3"
+                    className='col-span-3'
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-password" className="text-right">
+                <div className='grid grid-cols-4 items-center gap-4'>
+                  <Label htmlFor='edit-password' className='text-right'>
                     Heslo
                   </Label>
                   <Input
-                    id="edit-password"
-                    type="password"
+                    id='edit-password'
+                    type='password'
                     value={generalUserEdit.password}
                     onChange={(e) =>
                       setGeneralUserEdit({
@@ -932,12 +1072,12 @@ export default function AdminPrehledClient() {
                         password: e.target.value
                       })
                     }
-                    placeholder="Ponechte prázdné pro zachování"
-                    className="col-span-3"
+                    placeholder='Ponechte prázdné pro zachování'
+                    className='col-span-3'
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-role" className="text-right">
+                <div className='grid grid-cols-4 items-center gap-4'>
+                  <Label htmlFor='edit-role' className='text-right'>
                     Role
                   </Label>
                   <Select
@@ -949,13 +1089,13 @@ export default function AdminPrehledClient() {
                       })
                     }
                   >
-                    <SelectTrigger className="col-span-3">
+                    <SelectTrigger className='col-span-3'>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="ADMIN">Admin</SelectItem>
-                      <SelectItem value="TRAINER">Školitel</SelectItem>
-                      <SelectItem value="WORKER">Pracovník</SelectItem>
+                      <SelectItem value='ADMIN'>Admin</SelectItem>
+                      <SelectItem value='TRAINER'>Školitel</SelectItem>
+                      <SelectItem value='WORKER'>Pracovník</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -963,7 +1103,7 @@ export default function AdminPrehledClient() {
             )}
             <DialogFooter>
               <Button
-                variant="outline"
+                variant='outline'
                 onClick={() => setIsEditDialogOpen(false)}
                 disabled={savingGeneralUser}
               >
@@ -980,8 +1120,11 @@ export default function AdminPrehledClient() {
         </Dialog>
 
         {/* Dialog pro editaci školení */}
-        <Dialog open={isTrainingEditDialogOpen} onOpenChange={setIsTrainingEditDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+        <Dialog
+          open={isTrainingEditDialogOpen}
+          onOpenChange={setIsTrainingEditDialogOpen}
+        >
+          <DialogContent className='sm:max-w-[500px]'>
             <DialogHeader>
               <DialogTitle>Upravit školení</DialogTitle>
               <DialogDescription>
@@ -989,24 +1132,24 @@ export default function AdminPrehledClient() {
               </DialogDescription>
             </DialogHeader>
             {trainingEdit && (
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-training-code" className="text-right">
+              <div className='grid gap-4 py-4'>
+                <div className='grid grid-cols-4 items-center gap-4'>
+                  <Label htmlFor='edit-training-code' className='text-right'>
                     Kód
                   </Label>
                   <Input
-                    id="edit-training-code"
+                    id='edit-training-code'
                     value={trainingEdit.code}
                     disabled
-                    className="col-span-3 bg-muted"
+                    className='bg-muted col-span-3'
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-training-name" className="text-right">
+                <div className='grid grid-cols-4 items-center gap-4'>
+                  <Label htmlFor='edit-training-name' className='text-right'>
                     Název
                   </Label>
                   <Input
-                    id="edit-training-name"
+                    id='edit-training-name'
                     value={trainingEdit.name}
                     onChange={(e) =>
                       setTrainingEdit({
@@ -1014,15 +1157,18 @@ export default function AdminPrehledClient() {
                         name: e.target.value
                       })
                     }
-                    className="col-span-3"
+                    className='col-span-3'
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-training-description" className="text-right">
+                <div className='grid grid-cols-4 items-center gap-4'>
+                  <Label
+                    htmlFor='edit-training-description'
+                    className='text-right'
+                  >
                     Popis
                   </Label>
                   <Textarea
-                    id="edit-training-description"
+                    id='edit-training-description'
                     value={trainingEdit.description || ''}
                     onChange={(e) =>
                       setTrainingEdit({
@@ -1030,7 +1176,7 @@ export default function AdminPrehledClient() {
                         description: e.target.value
                       })
                     }
-                    className="col-span-3"
+                    className='col-span-3'
                     rows={4}
                   />
                 </div>
@@ -1038,16 +1184,13 @@ export default function AdminPrehledClient() {
             )}
             <DialogFooter>
               <Button
-                variant="outline"
+                variant='outline'
                 onClick={() => setIsTrainingEditDialogOpen(false)}
                 disabled={savingTraining}
               >
                 Zrušit
               </Button>
-              <Button
-                onClick={handleSaveTraining}
-                disabled={savingTraining}
-              >
+              <Button onClick={handleSaveTraining} disabled={savingTraining}>
                 {savingTraining ? 'Ukládání...' : 'Uložit změny'}
               </Button>
             </DialogFooter>

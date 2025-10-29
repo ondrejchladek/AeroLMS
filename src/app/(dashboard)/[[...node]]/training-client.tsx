@@ -61,7 +61,12 @@ function isTiptapFormat(content: any): boolean {
   return content?.type === 'doc' && Array.isArray(content?.content);
 }
 
-export function TrainingClient({ trainingData, training, displayName, userRole }: TrainingClientProps) {
+export function TrainingClient({
+  trainingData,
+  training,
+  displayName,
+  userRole
+}: TrainingClientProps) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [test, setTest] = useState<any>(null);
@@ -87,11 +92,14 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
       const activeTest = testsData.tests[0];
 
       // Try to start test attempt
-      const startResponse = await fetch(`/api/trainings/${training.id}/test/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ testId: activeTest.id })
-      });
+      const startResponse = await fetch(
+        `/api/trainings/${training.id}/test/start`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ testId: activeTest.id })
+        }
+      );
 
       const startData = await startResponse.json();
 
@@ -100,7 +108,8 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
         if (startData.errorCode === 'FIRST_TEST_REQUIRED') {
           toast.error(startData.error, {
             duration: 5000,
-            description: 'Kontaktujte svého školitele pro absolvování prvního testu.'
+            description:
+              'Kontaktujte svého školitele pro absolvování prvního testu.'
           });
           return;
         } else if (startData.errorCode === 'TOO_EARLY_TO_RETAKE') {
@@ -165,7 +174,7 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
     setTestResults(null);
     setAttemptId(null);
     setTest(null);
-    
+
     // Start new test immediately
     if (!training?.id) return;
 
@@ -177,9 +186,12 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
       setTest(testData);
 
       // Start test attempt
-      const startResponse = await fetch(`/api/trainings/${training.id}/test/start`, {
-        method: 'POST'
-      });
+      const startResponse = await fetch(
+        `/api/trainings/${training.id}/test/start`,
+        {
+          method: 'POST'
+        }
+      );
       if (!startResponse.ok) throw new Error('Failed to start test');
       const { attemptId } = await startResponse.json();
       setAttemptId(attemptId);
@@ -205,7 +217,7 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
     setIsDownloadingPdf(true);
     try {
       const response = await fetch(`/api/trainings/${training.id}/pdf`);
-      
+
       if (!response.ok) {
         throw new Error('Failed to generate PDF');
       }
@@ -259,15 +271,10 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
     }
   }, [trainingData.datumPristi]);
 
-
   // Test mode
   if (viewMode === 'test' && test && attemptId) {
     return (
-      <TestForm
-        test={test}
-        attemptId={attemptId}
-        onSubmit={handleSubmitTest}
-      />
+      <TestForm test={test} attemptId={attemptId} onSubmit={handleSubmitTest} />
     );
   }
 
@@ -285,35 +292,35 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
 
   // Overview mode (default)
   return (
-    <div className="w-full space-y-6">
-      <div className="flex items-center justify-between">
+    <div className='w-full space-y-6'>
+      <div className='flex items-center justify-between'>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{displayName}</h1>
+          <h1 className='text-3xl font-bold tracking-tight'>{displayName}</h1>
           {training && training.description && (
-            <p className="text-muted-foreground mt-1">{training.description}</p>
+            <p className='text-muted-foreground mt-1'>{training.description}</p>
           )}
         </div>
         <Button
-          variant="outline"
+          variant='outline'
           onClick={() => router.push('/')}
-          className="gap-2"
+          className='gap-2'
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className='h-4 w-4' />
           Zpět na přehled
         </Button>
       </div>
 
       {/* Status Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className='grid gap-4 md:grid-cols-4'>
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
+          <CardHeader className='pb-3'>
+            <CardTitle className='text-muted-foreground flex items-center gap-2 text-sm font-medium'>
+              <Calendar className='h-4 w-4' />
               Poslední školení
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold">
+            <p className='text-2xl font-bold'>
               {trainingData.datumPosl
                 ? new Date(trainingData.datumPosl).toLocaleDateString('cs-CZ')
                 : 'Neabsolvováno'}
@@ -322,19 +329,19 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
         </Card>
 
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
+          <CardHeader className='pb-3'>
+            <CardTitle className='text-muted-foreground flex items-center gap-2 text-sm font-medium'>
+              <AlertCircle className='h-4 w-4' />
               Status
             </CardTitle>
           </CardHeader>
           <CardContent>
             {trainingData.pozadovano ? (
-              <Badge className="text-lg py-1 px-3 bg-orange-600">
+              <Badge className='bg-orange-600 px-3 py-1 text-lg'>
                 Požadováno
               </Badge>
             ) : (
-              <Badge variant="secondary" className="text-lg py-1 px-3">
+              <Badge variant='secondary' className='px-3 py-1 text-lg'>
                 Nepovinné
               </Badge>
             )}
@@ -342,14 +349,16 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
         </Card>
 
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Clock className="h-4 w-4" />
+          <CardHeader className='pb-3'>
+            <CardTitle className='text-muted-foreground flex items-center gap-2 text-sm font-medium'>
+              <Clock className='h-4 w-4' />
               Příští školení
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className={`text-2xl font-bold ${isExpired ? 'text-red-600' : ''}`}>
+            <p
+              className={`text-2xl font-bold ${isExpired ? 'text-red-600' : ''}`}
+            >
               {trainingData.datumPristi
                 ? new Date(trainingData.datumPristi).toLocaleDateString('cs-CZ')
                 : 'Neplánováno'}
@@ -358,25 +367,23 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
         </Card>
 
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Award className="h-4 w-4" />
+          <CardHeader className='pb-3'>
+            <CardTitle className='text-muted-foreground flex items-center gap-2 text-sm font-medium'>
+              <Award className='h-4 w-4' />
               Platnost
             </CardTitle>
           </CardHeader>
           <CardContent>
             {isCompleted ? (
               isExpired ? (
-                <Badge variant="destructive" className="text-lg py-1 px-3">
+                <Badge variant='destructive' className='px-3 py-1 text-lg'>
                   Vypršelo
                 </Badge>
               ) : (
-                <Badge className="text-lg py-1 px-3 bg-green-600">
-                  Platné
-                </Badge>
+                <Badge className='bg-green-600 px-3 py-1 text-lg'>Platné</Badge>
               )
             ) : (
-              <Badge variant="outline" className="text-lg py-1 px-3">
+              <Badge variant='outline' className='px-3 py-1 text-lg'>
                 Neškoleno
               </Badge>
             )}
@@ -386,15 +393,15 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
 
       {/* Warnings */}
       {isExpired && (
-        <Card className="border-red-200 bg-red-50 dark:bg-red-950/20">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+        <Card className='border-red-200 bg-red-50 dark:bg-red-950/20'>
+          <CardContent className='pt-6'>
+            <div className='flex items-start gap-3'>
+              <AlertCircle className='mt-0.5 h-5 w-5 text-red-600' />
               <div>
-                <p className="font-semibold text-red-900 dark:text-red-100">
+                <p className='font-semibold text-red-900 dark:text-red-100'>
                   Platnost školení vypršela!
                 </p>
-                <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                <p className='mt-1 text-sm text-red-700 dark:text-red-300'>
                   Je nutné absolvovat nové školení co nejdříve.
                 </p>
               </div>
@@ -407,15 +414,15 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
       {userRole === 'WORKER' && training?.hasTest && (
         <div>
           {!isCompleted && (
-            <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/20 mb-4">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+            <Card className='mb-4 border-blue-200 bg-blue-50 dark:bg-blue-950/20'>
+              <CardContent className='pt-6'>
+                <div className='flex items-start gap-3'>
+                  <Info className='mt-0.5 h-5 w-5 text-blue-600' />
                   <div>
-                    <p className="font-semibold text-blue-900 dark:text-blue-100">
+                    <p className='font-semibold text-blue-900 dark:text-blue-100'>
                       První test musí být absolvován osobně
                     </p>
-                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                    <p className='mt-1 text-sm text-blue-700 dark:text-blue-300'>
                       Kontaktujte svého školitele pro absolvování prvního testu.
                     </p>
                   </div>
@@ -425,16 +432,17 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
           )}
 
           {isCompleted && trainingData.datumPristi && !canStartTest() && (
-            <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 mb-4">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-amber-600 mt-0.5" />
+            <Card className='mb-4 border-amber-200 bg-amber-50 dark:bg-amber-950/20'>
+              <CardContent className='pt-6'>
+                <div className='flex items-start gap-3'>
+                  <Clock className='mt-0.5 h-5 w-5 text-amber-600' />
                   <div>
-                    <p className="font-semibold text-amber-900 dark:text-amber-100">
+                    <p className='font-semibold text-amber-900 dark:text-amber-100'>
                       Test bude dostupný měsíc před vypršením
                     </p>
-                    <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
-                      Test můžete spustit od: {(() => {
+                    <p className='mt-1 text-sm text-amber-700 dark:text-amber-300'>
+                      Test můžete spustit od:{' '}
+                      {(() => {
                         const dueDate = new Date(trainingData.datumPristi);
                         const oneMonthBefore = new Date(dueDate);
                         oneMonthBefore.setMonth(oneMonthBefore.getMonth() - 1);
@@ -451,28 +459,30 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
 
       {/* Action Buttons */}
       {training && (
-        <div className="flex gap-4">
+        <div className='flex gap-4'>
           <Button
-            size="lg"
-            variant="outline"
+            size='lg'
+            variant='outline'
             onClick={handleDownloadPdf}
             disabled={isDownloadingPdf || !training.content}
-            className="gap-2 cursor-pointer px-8 py-6 text-base"
+            className='cursor-pointer gap-2 px-8 py-6 text-base'
           >
-            <FileText className="h-6 w-6" />
+            <FileText className='h-6 w-6' />
             {isDownloadingPdf ? 'Generuji PDF...' : 'Stáhnout obsah v .pdf'}
           </Button>
 
           <Button
-            size="lg"
+            size='lg'
             onClick={handleStartTest}
             disabled={!training.hasTest || !canStartTest()}
-            className="gap-2 cursor-pointer px-8 py-6 text-base"
+            className='cursor-pointer gap-2 px-8 py-6 text-base'
           >
-            <FileText className="h-6 w-6" />
-            {!canStartTest() && userRole === 'WORKER' ?
-              (isCompleted ? 'Test zatím nedostupný' : 'První test osobně') :
-              'Spustit test'}
+            <FileText className='h-6 w-6' />
+            {!canStartTest() && userRole === 'WORKER'
+              ? isCompleted
+                ? 'Test zatím nedostupný'
+                : 'První test osobně'
+              : 'Spustit test'}
           </Button>
         </div>
       )}
@@ -481,17 +491,21 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
       {training && training.content && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
+            <CardTitle className='flex items-center gap-2'>
+              <BookOpen className='h-5 w-5' />
               Obsah školení
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="max-w-[1200px] mx-auto space-y-8">
+            <div className='mx-auto max-w-[1200px] space-y-8'>
               {isTiptapFormat(training.content) ? (
                 // New Tiptap format - render with read-only editor
                 <TiptapEditor
-                  value={typeof training.content === 'string' ? training.content : JSON.stringify(training.content)}
+                  value={
+                    typeof training.content === 'string'
+                      ? training.content
+                      : JSON.stringify(training.content)
+                  }
                   editable={false}
                 />
               ) : training.content.sections ? (
@@ -505,11 +519,11 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
 
                   // Render structured content as continuous flow
                   return (
-                    <div key={index} className="space-y-6">
+                    <div key={index} className='space-y-6'>
                       {/* Introduction */}
                       {content.introduction && (
-                        <div className="prose prose-sm max-w-none">
-                          <p className="text-base leading-relaxed text-muted-foreground">
+                        <div className='prose prose-sm max-w-none'>
+                          <p className='text-muted-foreground text-base leading-relaxed'>
                             {content.introduction}
                           </p>
                         </div>
@@ -517,21 +531,26 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
 
                       {/* Key Points */}
                       {content.keyPoints && (
-                        <Card className="bg-primary/5 border-primary/20">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm flex items-center gap-2">
-                              <Info className="h-4 w-4" />
+                        <Card className='bg-primary/5 border-primary/20'>
+                          <CardHeader className='pb-3'>
+                            <CardTitle className='flex items-center gap-2 text-sm'>
+                              <Info className='h-4 w-4' />
                               Klíčové body
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <ul className="space-y-2">
-                              {content.keyPoints.map((point: string, i: number) => (
-                                <li key={i} className="flex items-start gap-2">
-                                  <CheckCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                                  <span className="text-sm">{point}</span>
-                                </li>
-                              ))}
+                            <ul className='space-y-2'>
+                              {content.keyPoints.map(
+                                (point: string, i: number) => (
+                                  <li
+                                    key={i}
+                                    className='flex items-start gap-2'
+                                  >
+                                    <CheckCircle className='text-primary mt-0.5 h-4 w-4 flex-shrink-0' />
+                                    <span className='text-sm'>{point}</span>
+                                  </li>
+                                )
+                              )}
                             </ul>
                           </CardContent>
                         </Card>
@@ -539,47 +558,65 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
 
                       {/* Image placeholder */}
                       {content.image && (
-                        <div className="relative w-full h-64 bg-muted rounded-lg flex items-center justify-center">
-                          <div className="text-center text-muted-foreground">
-                            <BarChart3 className="h-12 w-12 mx-auto mb-2" />
-                            <p className="text-sm">Ilustrační diagram</p>
+                        <div className='bg-muted relative flex h-64 w-full items-center justify-center rounded-lg'>
+                          <div className='text-muted-foreground text-center'>
+                            <BarChart3 className='mx-auto mb-2 h-12 w-12' />
+                            <p className='text-sm'>Ilustrační diagram</p>
                           </div>
                         </div>
                       )}
 
                       {/* Rules */}
                       {content.rules && (
-                        <div className="space-y-4">
+                        <div className='space-y-4'>
                           {content.rules.map((rule: any, i: number) => (
                             <Card key={i}>
-                              <CardHeader className="pb-3">
-                                <CardTitle className="text-base flex items-center gap-2">
-                                  <Badge variant="outline">{rule.number}</Badge>
+                              <CardHeader className='pb-3'>
+                                <CardTitle className='flex items-center gap-2 text-base'>
+                                  <Badge variant='outline'>{rule.number}</Badge>
                                   {rule.title}
                                 </CardTitle>
                               </CardHeader>
-                              <CardContent className="space-y-3">
-                                <p className="text-sm text-muted-foreground">{rule.description}</p>
+                              <CardContent className='space-y-3'>
+                                <p className='text-muted-foreground text-sm'>
+                                  {rule.description}
+                                </p>
 
                                 {rule.checklist && (
-                                  <div className="space-y-1">
-                                    {rule.checklist.map((item: string, j: number) => (
-                                      <div key={j} className="flex items-center gap-2">
-                                        <ListChecks className="h-3 w-3 text-muted-foreground" />
-                                        <span className="text-sm">{item}</span>
-                                      </div>
-                                    ))}
+                                  <div className='space-y-1'>
+                                    {rule.checklist.map(
+                                      (item: string, j: number) => (
+                                        <div
+                                          key={j}
+                                          className='flex items-center gap-2'
+                                        >
+                                          <ListChecks className='text-muted-foreground h-3 w-3' />
+                                          <span className='text-sm'>
+                                            {item}
+                                          </span>
+                                        </div>
+                                      )
+                                    )}
                                   </div>
                                 )}
 
                                 {rule.parameters && (
-                                  <div className="grid grid-cols-2 gap-2 mt-3">
-                                    {Object.entries(rule.parameters).map(([key, value]) => (
-                                      <div key={key} className="flex justify-between p-2 bg-muted rounded text-sm">
-                                        <span className="font-medium">{key}:</span>
-                                        <span className="text-muted-foreground">{value as string}</span>
-                                      </div>
-                                    ))}
+                                  <div className='mt-3 grid grid-cols-2 gap-2'>
+                                    {Object.entries(rule.parameters).map(
+                                      ([key, value]) => (
+                                        <div
+                                          key={key}
+                                          className='bg-muted flex justify-between rounded p-2 text-sm'
+                                        >
+                                          <span className='font-medium'>
+                                            {key}:
+                                          </span>
+                                          <span className='text-muted-foreground'>
+                                            {value as string}
+                                          </span>
+                                        </div>
+                                      )
+                                    )}
                                   </div>
                                 )}
                               </CardContent>
@@ -590,33 +627,44 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
 
                       {/* Standards */}
                       {content.standards && (
-                        <div className="flex flex-wrap gap-2">
-                          {content.standards.map((standard: string, i: number) => (
-                            <Badge key={i} variant="secondary">
-                              <FileCheck className="h-3 w-3 mr-1" />
-                              {standard}
-                            </Badge>
-                          ))}
+                        <div className='flex flex-wrap gap-2'>
+                          {content.standards.map(
+                            (standard: string, i: number) => (
+                              <Badge key={i} variant='secondary'>
+                                <FileCheck className='mr-1 h-3 w-3' />
+                                {standard}
+                              </Badge>
+                            )
+                          )}
                         </div>
                       )}
 
                       {/* Tolerances */}
                       {content.tolerances && (
                         <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm flex items-center gap-2">
-                              <Settings className="h-4 w-4" />
+                          <CardHeader className='pb-3'>
+                            <CardTitle className='flex items-center gap-2 text-sm'>
+                              <Settings className='h-4 w-4' />
                               Tolerance
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <div className="grid grid-cols-2 gap-3">
-                              {Object.entries(content.tolerances).map(([key, value]) => (
-                                <div key={key} className="p-3 border rounded-lg">
-                                  <div className="text-xs text-muted-foreground mb-1">{key}</div>
-                                  <div className="font-mono font-semibold">{value as string}</div>
-                                </div>
-                              ))}
+                            <div className='grid grid-cols-2 gap-3'>
+                              {Object.entries(content.tolerances).map(
+                                ([key, value]) => (
+                                  <div
+                                    key={key}
+                                    className='rounded-lg border p-3'
+                                  >
+                                    <div className='text-muted-foreground mb-1 text-xs'>
+                                      {key}
+                                    </div>
+                                    <div className='font-mono font-semibold'>
+                                      {value as string}
+                                    </div>
+                                  </div>
+                                )
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -624,20 +672,26 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
 
                       {/* Defects */}
                       {content.defects && (
-                        <Card className="border-destructive/20 bg-destructive/5">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm flex items-center gap-2 text-destructive">
-                              <AlertTriangle className="h-4 w-4" />
+                        <Card className='border-destructive/20 bg-destructive/5'>
+                          <CardHeader className='pb-3'>
+                            <CardTitle className='text-destructive flex items-center gap-2 text-sm'>
+                              <AlertTriangle className='h-4 w-4' />
                               Možné vady
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <div className="flex flex-wrap gap-2">
-                              {content.defects.map((defect: string, i: number) => (
-                                <Badge key={i} variant="outline" className="border-destructive/30 text-destructive">
-                                  {defect}
-                                </Badge>
-                              ))}
+                            <div className='flex flex-wrap gap-2'>
+                              {content.defects.map(
+                                (defect: string, i: number) => (
+                                  <Badge
+                                    key={i}
+                                    variant='outline'
+                                    className='border-destructive/30 text-destructive'
+                                  >
+                                    {defect}
+                                  </Badge>
+                                )
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -645,34 +699,44 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
 
                       {/* Documents */}
                       {content.documents && (
-                        <div className="space-y-3">
+                        <div className='space-y-3'>
                           {content.documents.map((doc: any, i: number) => (
-                            <Card key={i} className="overflow-hidden">
-                              <div className="flex">
-                                <div className="w-2 bg-primary" />
-                                <div className="flex-1 p-4">
-                                  <div className="flex items-start justify-between">
-                                    <div className="space-y-1">
-                                      <div className="flex items-center gap-2">
-                                        <FileText className="h-4 w-4 text-primary" />
-                                        <h4 className="font-semibold text-sm">{doc.name}</h4>
+                            <Card key={i} className='overflow-hidden'>
+                              <div className='flex'>
+                                <div className='bg-primary w-2' />
+                                <div className='flex-1 p-4'>
+                                  <div className='flex items-start justify-between'>
+                                    <div className='space-y-1'>
+                                      <div className='flex items-center gap-2'>
+                                        <FileText className='text-primary h-4 w-4' />
+                                        <h4 className='text-sm font-semibold'>
+                                          {doc.name}
+                                        </h4>
                                       </div>
-                                      <p className="text-xs text-muted-foreground">{doc.purpose}</p>
+                                      <p className='text-muted-foreground text-xs'>
+                                        {doc.purpose}
+                                      </p>
                                     </div>
                                     {doc.frequency && (
-                                      <Badge variant="secondary">
-                                        <Clock className="h-3 w-3 mr-1" />
+                                      <Badge variant='secondary'>
+                                        <Clock className='mr-1 h-3 w-3' />
                                         {doc.frequency}
                                       </Badge>
                                     )}
                                   </div>
                                   {doc.fields && (
-                                    <div className="mt-2 flex flex-wrap gap-1">
-                                      {doc.fields.map((field: string, j: number) => (
-                                        <Badge key={j} variant="outline" className="text-xs">
-                                          {field}
-                                        </Badge>
-                                      ))}
+                                    <div className='mt-2 flex flex-wrap gap-1'>
+                                      {doc.fields.map(
+                                        (field: string, j: number) => (
+                                          <Badge
+                                            key={j}
+                                            variant='outline'
+                                            className='text-xs'
+                                          >
+                                            {field}
+                                          </Badge>
+                                        )
+                                      )}
                                     </div>
                                   )}
                                 </div>
@@ -685,18 +749,21 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
                       {/* PPE */}
                       {content.ppe && (
                         <Card>
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm flex items-center gap-2">
-                              <Shield className="h-4 w-4" />
+                          <CardHeader className='pb-3'>
+                            <CardTitle className='flex items-center gap-2 text-sm'>
+                              <Shield className='h-4 w-4' />
                               Osobní ochranné pomůcky
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className='grid grid-cols-2 gap-2'>
                               {content.ppe.map((item: string, i: number) => (
-                                <div key={i} className="flex items-center gap-2 p-2 bg-muted rounded">
-                                  <Shield className="h-4 w-4 text-primary" />
-                                  <span className="text-sm">{item}</span>
+                                <div
+                                  key={i}
+                                  className='bg-muted flex items-center gap-2 rounded p-2'
+                                >
+                                  <Shield className='text-primary h-4 w-4' />
+                                  <span className='text-sm'>{item}</span>
                                 </div>
                               ))}
                             </div>
@@ -706,21 +773,26 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
 
                       {/* Hazards */}
                       {content.hazards && (
-                        <Card className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm flex items-center gap-2 text-yellow-700 dark:text-yellow-300">
-                              <AlertTriangle className="h-4 w-4" />
+                        <Card className='border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20'>
+                          <CardHeader className='pb-3'>
+                            <CardTitle className='flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-300'>
+                              <AlertTriangle className='h-4 w-4' />
                               Nebezpečí
                             </CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <ul className="space-y-1">
-                              {content.hazards.map((hazard: string, i: number) => (
-                                <li key={i} className="flex items-center gap-2 text-sm">
-                                  <div className="h-1.5 w-1.5 rounded-full bg-yellow-600" />
-                                  {hazard}
-                                </li>
-                              ))}
+                            <ul className='space-y-1'>
+                              {content.hazards.map(
+                                (hazard: string, i: number) => (
+                                  <li
+                                    key={i}
+                                    className='flex items-center gap-2 text-sm'
+                                  >
+                                    <div className='h-1.5 w-1.5 rounded-full bg-yellow-600' />
+                                    {hazard}
+                                  </li>
+                                )
+                              )}
                             </ul>
                           </CardContent>
                         </Card>
@@ -728,18 +800,29 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
 
                       {/* Emergency */}
                       {content.emergency && (
-                        <Card className="border-destructive bg-destructive/5">
-                          <CardHeader className="pb-3">
-                            <CardTitle className="text-sm text-destructive">Tísňové kontakty</CardTitle>
+                        <Card className='border-destructive bg-destructive/5'>
+                          <CardHeader className='pb-3'>
+                            <CardTitle className='text-destructive text-sm'>
+                              Tísňové kontakty
+                            </CardTitle>
                           </CardHeader>
                           <CardContent>
-                            <div className="space-y-2">
-                              {Object.entries(content.emergency).map(([key, value]) => (
-                                <div key={key} className="flex justify-between p-2 bg-background rounded">
-                                  <span className="text-sm font-medium">{key}:</span>
-                                  <span className="text-sm font-mono font-bold text-destructive">{value as string}</span>
-                                </div>
-                              ))}
+                            <div className='space-y-2'>
+                              {Object.entries(content.emergency).map(
+                                ([key, value]) => (
+                                  <div
+                                    key={key}
+                                    className='bg-background flex justify-between rounded p-2'
+                                  >
+                                    <span className='text-sm font-medium'>
+                                      {key}:
+                                    </span>
+                                    <span className='text-destructive font-mono text-sm font-bold'>
+                                      {value as string}
+                                    </span>
+                                  </div>
+                                )
+                              )}
                             </div>
                           </CardContent>
                         </Card>
@@ -747,11 +830,11 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
                     </div>
                   );
                 })
-            ) : (
-              <p className="text-muted-foreground">
-                Pro toto školení není dostupný online obsah.
-              </p>
-            )}
+              ) : (
+                <p className='text-muted-foreground'>
+                  Pro toto školení není dostupný online obsah.
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -764,16 +847,16 @@ export function TrainingClient({ trainingData, training, displayName, userRole }
             <CardTitle>Detail školení</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">
+            <p className='text-muted-foreground'>
               Pro toto školení nejsou k dispozici další informace v systému.
             </p>
             {trainingData.pozadovano && (
-              <p className="text-orange-600 dark:text-orange-400 mt-2">
+              <p className='mt-2 text-orange-600 dark:text-orange-400'>
                 ⚠️ Toto školení je pro vás požadováno.
               </p>
             )}
             {isExpired && (
-              <p className="text-red-600 dark:text-red-400 mt-2">
+              <p className='mt-2 text-red-600 dark:text-red-400'>
                 ❌ Termín dalšího školení již vypršel!
               </p>
             )}

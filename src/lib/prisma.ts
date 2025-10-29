@@ -8,19 +8,10 @@ declare global {
 }
 
 const createPrismaClient = (): PrismaClient => {
-  const dbProvider = process.env.DB_PROVIDER || 'sqlserver';
-  const isNeon = dbProvider === 'neon';
-
   const logConfig =
     process.env.NODE_ENV === 'production'
       ? ['error', 'warn']
       : ['query', 'info', 'warn', 'error'];
-
-  // Log database connection info
-  console.log(`🗄️ Using ${isNeon ? 'Neon PostgreSQL' : 'SQL Server'} database`);
-  console.log(`📊 Environment: DB_PROVIDER=${dbProvider}`);
-  console.log(`📊 DATABASE_URL_NEON exists: ${!!process.env.DATABASE_URL_NEON}`);
-  console.log(`📊 DATABASE_URL exists: ${!!process.env.DATABASE_URL}`);
 
   return new PrismaClient({
     log: logConfig as any

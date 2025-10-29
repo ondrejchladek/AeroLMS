@@ -169,6 +169,8 @@ BEGIN TRY
     PRINT '3. Removing AeroLMS columns from User table...';
     PRINT '----------------------------------------';
     PRINT '⚠️  WARNING: This will modify your User table!';
+    PRINT '⚠️  This section is designed for LOCAL development rollback!';
+    PRINT '⚠️  PRODUCTION database has training columns with _ prefix!';
     PRINT '⚠️  Comment out this section if you want to keep User table intact!';
     PRINT '';
 
@@ -234,6 +236,8 @@ BEGIN TRY
     DEALLOCATE app_cursor;
 
     -- Drop training columns (DatumPosl, DatumPristi, Pozadovano)
+    -- NOTE: For LOCAL development (columns WITHOUT _ prefix)
+    -- For PRODUCTION (columns WITH _ prefix), modify column names below
     DECLARE @TrainingCodes TABLE (Code NVARCHAR(100));
     INSERT INTO @TrainingCodes VALUES
         ('CMM'), ('EDM'), ('EleZnaceni'), ('ITBezpecnost'), ('KnihaStroje'),

@@ -12,7 +12,7 @@ export const emailLoginSchema = z.object({
     .min(6, 'Heslo musí mít alespoň 6 znaků')
 });
 
-// Schema pro přihlášení kódem zaměstnance  
+// Schema pro přihlášení kódem zaměstnance
 export const codeLoginSchema = z.object({
   code: z
     .string({ required_error: 'Kód zaměstnance je povinný' })

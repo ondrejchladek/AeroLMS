@@ -17,93 +17,93 @@ model User {
   password                                        String?
   updatedAt                                       DateTime              @updatedAt
 
-  CMMDatumPosl                                    DateTime?
-  CMMDatumPristi                                  DateTime?
-  CMMPozadovano                                   Boolean       @default(false)
-  EDMDatumPosl                                    DateTime?
-  EDMDatumPristi                                  DateTime?
-  EDMPozadovano                                   Boolean       @default(false)
-  EleZnaceniDatumPosl                             DateTime?
-  EleZnaceniDatumPristi                           DateTime?
-  EleZnaceniPozadovano                            Boolean       @default(false)
-  ITBezpecnostDatumPosl                           DateTime?
-  ITBezpecnostDatumPristi                         DateTime?
-  ITBezpecnostPozadovano                          Boolean       @default(false)
-  KnihaStrojeDatumPosl                            DateTime?
-  KnihaStrojeDatumPristi                          DateTime?
-  KnihaStrojePozadovano                           Boolean       @default(false)
-  KontrPrijZbozDatumPosl                          DateTime?
-  KontrPrijZbozDatumPristi                        DateTime?
-  KontrPrijZbozPozadovano                         Boolean       @default(false)
-  MerAVyhodOpotrebeniDatumPosl                    DateTime?
-  MerAVyhodOpotrebeniDatumPristi                  DateTime?
-  MerAVyhodOpotrebeniPozadovano                   Boolean       @default(false)
-  MeridlaDatumPosl                                DateTime?
-  MeridlaDatumPristi                              DateTime?
-  MeridlaPozadovano                               Boolean       @default(false)
-  MonitorVyraCMTDiluDatumPosl                     DateTime?
-  MonitorVyraCMTDiluDatumPristi                   DateTime?
-  MonitorVyraCMTDiluPozadovano                    Boolean       @default(false)
-  NakladaniLatkamiDatumPosl                       DateTime?
-  NakladaniLatkamiDatumPristi                     DateTime?
-  NakladaniLatkamiPozadovano                      Boolean       @default(false)
-  OpotrebeniNastrojuuCMTDatumPosl                 DateTime?
-  OpotrebeniNastrojuuCMTDatumPristi               DateTime?
-  OpotrebeniNastrojuuCMTPozadovano                Boolean       @default(false)
-  PouzitiNatsrojuDatumPosl                        DateTime?
-  PouzitiNatsrojuDatumPristi                      DateTime?
-  PouzitiNatsrojuPozadovano                       Boolean       @default(false)
-  PozdavkyEN10204DodakDatumPosl                   DateTime?
-  PozdavkyEN10204DodakDatumPristi                 DateTime?
-  PozdavkyEN10204DodakPozadovano                  Boolean       @default(false)
-  PraceKonProduktDatumPosl                        DateTime?
-  PraceKonProduktDatumPristi                      DateTime?
-  PraceKonProduktPozadovano                       Boolean       @default(false)
-  PruvodkaDatumPosl                               DateTime?
-  PruvodkaDatumPristi                             DateTime?
-  PruvodkaPozadovano                              Boolean       @default(false)
-  RazK1KDatumPosl                                 DateTime?
-  RazK1KDatumPristi                               DateTime?
-  RazK1KPozadovano                                Boolean       @default(false)
-  RegulacniKartyDatumPosl                         DateTime?
-  RegulacniKartyDatumPristi                       DateTime?
-  RegulacniKartyPozadovano                        Boolean       @default(false)
-  SamokontrolaDatumPosl                           DateTime?
-  SamokontrolaDatumPristi                         DateTime?
-  SamokontrolaPozadovano                          Boolean       @default(false)
-  SeriovaCislaDatumPosl                           DateTime?
-  SeriovaCislaDatumPristi                         DateTime?
-  SeriovaCislaPozadovano                          Boolean       @default(false)
-  SymbolyvBBDatumPosl                             DateTime?
-  SymbolyvBBDatumPristi                           DateTime?
-  SymbolyvBBPozadovano                            Boolean       @default(false)
-  SystemmanagemenntuKvalityCilepodnikuDatumPosl   DateTime?
-  SystemmanagemenntuKvalityCilepodnikuDatumPristi DateTime?
-  SystemmanagemenntuKvalityCilepodnikuPozadovano  Boolean       @default(false)
-  TrideniOdpaduDatumPosl                          DateTime?
-  TrideniOdpaduDatumPristi                        DateTime?
-  TrideniOdpaduPozadovano                         Boolean       @default(false)
-  UdrzbaStrojuPracovnikyDilnyDatumPosl            DateTime?
-  UdrzbaStrojuPracovnikyDilnyDatumPristi          DateTime?
-  UdrzbaStrojuPracovnikyDilnyPozadovano           Boolean       @default(false)
-  VizualniKontrolaDatumPosl                       DateTime?
-  VizualniKontrolaDatumPristi                     DateTime?
-  VizualniKontrolaPozadovano                      Boolean       @default(false)
-  VrtaniKritDilyDatumPosl                         DateTime?
-  VrtaniKritDilyDatumPristi                       DateTime?
-  VrtaniKritDilyPozadovano                        Boolean       @default(false)
-  VzorovaniDatumPosl                              DateTime?
-  VzorovaniDatumPristi                            DateTime?
-  VzorovaniPozadovano                             Boolean       @default(false)
-  ZkouskaTvrdostiDatumPosl                        DateTime?
-  ZkouskaTvrdostiDatumPristi                      DateTime?
-  ZkouskaTvrdostiPozadovano                       Boolean       @default(false)
-  ZlomeniNastrojeDatumPosl                        DateTime?
-  ZlomeniNastrojeDatumPristi                      DateTime?
-  ZlomeniNastrojePozadovano                       Boolean       @default(false)
-  ZnaceniDatumPosl                                DateTime?
-  ZnaceniDatumPristi                              DateTime?
-  ZnaceniPozadovano                               Boolean       @default(false)
+  CMMDatumPosl                                    DateTime?     @map("_CMMDatumPosl")
+  CMMDatumPristi                                  DateTime?     @map("_CMMDatumPristi")
+  CMMPozadovano                                   Boolean       @default(false) @map("_CMMPozadovano")
+  EDMDatumPosl                                    DateTime?     @map("_EDMDatumPosl")
+  EDMDatumPristi                                  DateTime?     @map("_EDMDatumPristi")
+  EDMPozadovano                                   Boolean       @default(false) @map("_EDMPozadovano")
+  EleZnaceniDatumPosl                             DateTime?     @map("_EleZnaceniDatumPosl")
+  EleZnaceniDatumPristi                           DateTime?     @map("_EleZnaceniDatumPristi")
+  EleZnaceniPozadovano                            Boolean       @default(false) @map("_EleZnaceniPozadovano")
+  ITBezpecnostDatumPosl                           DateTime?     @map("_ITBezpecnostDatumPosl")
+  ITBezpecnostDatumPristi                         DateTime?     @map("_ITBezpecnostDatumPristi")
+  ITBezpecnostPozadovano                          Boolean       @default(false) @map("_ITBezpecnostPozadovano")
+  KnihaStrojeDatumPosl                            DateTime?     @map("_KnihaStrojeDatumPosl")
+  KnihaStrojeDatumPristi                          DateTime?     @map("_KnihaStrojeDatumPristi")
+  KnihaStrojePozadovano                           Boolean       @default(false) @map("_KnihaStrojePozadovano")
+  KontrPrijZbozDatumPosl                          DateTime?     @map("_KontrPrijZbozDatumPosl")
+  KontrPrijZbozDatumPristi                        DateTime?     @map("_KontrPrijZbozDatumPristi")
+  KontrPrijZbozPozadovano                         Boolean       @default(false) @map("_KontrPrijZbozPozadovano")
+  MerAVyhodOpotrebeniDatumPosl                    DateTime?     @map("_MerAVyhodOpotrebeniDatumPosl")
+  MerAVyhodOpotrebeniDatumPristi                  DateTime?     @map("_MerAVyhodOpotrebeniDatumPristi")
+  MerAVyhodOpotrebeniPozadovano                   Boolean       @default(false) @map("_MerAVyhodOpotrebeniPozadovano")
+  MeridlaDatumPosl                                DateTime?     @map("_MeridlaDatumPosl")
+  MeridlaDatumPristi                              DateTime?     @map("_MeridlaDatumPristi")
+  MeridlaPozadovano                               Boolean       @default(false) @map("_MeridlaPozadovano")
+  MonitorVyraCMTDiluDatumPosl                     DateTime?     @map("_MonitorVyraCMTDiluDatumPosl")
+  MonitorVyraCMTDiluDatumPristi                   DateTime?     @map("_MonitorVyraCMTDiluDatumPristi")
+  MonitorVyraCMTDiluPozadovano                    Boolean       @default(false) @map("_MonitorVyraCMTDiluPozadovano")
+  NakladaniLatkamiDatumPosl                       DateTime?     @map("_NakladaniLatkamiDatumPosl")
+  NakladaniLatkamiDatumPristi                     DateTime?     @map("_NakladaniLatkamiDatumPristi")
+  NakladaniLatkamiPozadovano                      Boolean       @default(false) @map("_NakladaniLatkamiPozadovano")
+  OpotrebeniNastrojuuCMTDatumPosl                 DateTime?     @map("_OpotrebeniNastrojuuCMTDatumPosl")
+  OpotrebeniNastrojuuCMTDatumPristi               DateTime?     @map("_OpotrebeniNastrojuuCMTDatumPristi")
+  OpotrebeniNastrojuuCMTPozadovano                Boolean       @default(false) @map("_OpotrebeniNastrojuuCMTPozadovano")
+  PouzitiNatsrojuDatumPosl                        DateTime?     @map("_PouzitiNatsrojuDatumPosl")
+  PouzitiNatsrojuDatumPristi                      DateTime?     @map("_PouzitiNatsrojuDatumPristi")
+  PouzitiNatsrojuPozadovano                       Boolean       @default(false) @map("_PouzitiNatsrojuPozadovano")
+  PozdavkyEN10204DodakDatumPosl                   DateTime?     @map("_PozdavkyEN10204DodakDatumPosl")
+  PozdavkyEN10204DodakDatumPristi                 DateTime?     @map("_PozdavkyEN10204DodakDatumPristi")
+  PozdavkyEN10204DodakPozadovano                  Boolean       @default(false) @map("_PozdavkyEN10204DodakPozadovano")
+  PraceKonProduktDatumPosl                        DateTime?     @map("_PraceKonProduktDatumPosl")
+  PraceKonProduktDatumPristi                      DateTime?     @map("_PraceKonProduktDatumPristi")
+  PraceKonProduktPozadovano                       Boolean       @default(false) @map("_PraceKonProduktPozadovano")
+  PruvodkaDatumPosl                               DateTime?     @map("_PruvodkaDatumPosl")
+  PruvodkaDatumPristi                             DateTime?     @map("_PruvodkaDatumPristi")
+  PruvodkaPozadovano                              Boolean       @default(false) @map("_PruvodkaPozadovano")
+  RazK1KDatumPosl                                 DateTime?     @map("_RazK1KDatumPosl")
+  RazK1KDatumPristi                               DateTime?     @map("_RazK1KDatumPristi")
+  RazK1KPozadovano                                Boolean       @default(false) @map("_RazK1KPozadovano")
+  RegulacniKartyDatumPosl                         DateTime?     @map("_RegulacniKartyDatumPosl")
+  RegulacniKartyDatumPristi                       DateTime?     @map("_RegulacniKartyDatumPristi")
+  RegulacniKartyPozadovano                        Boolean       @default(false) @map("_RegulacniKartyPozadovano")
+  SamokontrolaDatumPosl                           DateTime?     @map("_SamokontrolaDatumPosl")
+  SamokontrolaDatumPristi                         DateTime?     @map("_SamokontrolaDatumPristi")
+  SamokontrolaPozadovano                          Boolean       @default(false) @map("_SamokontrolaPozadovano")
+  SeriovaCislaDatumPosl                           DateTime?     @map("_SeriovaCislaDatumPosl")
+  SeriovaCislaDatumPristi                         DateTime?     @map("_SeriovaCislaDatumPristi")
+  SeriovaCislaPozadovano                          Boolean       @default(false) @map("_SeriovaCislaPozadovano")
+  SymbolyvBBDatumPosl                             DateTime?     @map("_SymbolyvBBDatumPosl")
+  SymbolyvBBDatumPristi                           DateTime?     @map("_SymbolyvBBDatumPristi")
+  SymbolyvBBPozadovano                            Boolean       @default(false) @map("_SymbolyvBBPozadovano")
+  SystemmanagemenntuKvalityCilepodnikuDatumPosl   DateTime?     @map("_SystemmanagemenntuKvalityCilepodnikuDatumPosl")
+  SystemmanagemenntuKvalityCilepodnikuDatumPristi DateTime?     @map("_SystemmanagemenntuKvalityCilepodnikuDatumPristi")
+  SystemmanagemenntuKvalityCilepodnikuPozadovano  Boolean       @default(false) @map("_SystemmanagemenntuKvalityCilepodnikuPozadovano")
+  TrideniOdpaduDatumPosl                          DateTime?     @map("_TrideniOdpaduDatumPosl")
+  TrideniOdpaduDatumPristi                        DateTime?     @map("_TrideniOdpaduDatumPristi")
+  TrideniOdpaduPozadovano                         Boolean       @default(false) @map("_TrideniOdpaduPozadovano")
+  UdrzbaStrojuPracovnikyDilnyDatumPosl            DateTime?     @map("_UdrzbaStrojuPracovnikyDilnyDatumPosl")
+  UdrzbaStrojuPracovnikyDilnyDatumPristi          DateTime?     @map("_UdrzbaStrojuPracovnikyDilnyDatumPristi")
+  UdrzbaStrojuPracovnikyDilnyPozadovano           Boolean       @default(false) @map("_UdrzbaStrojuPracovnikyDilnyPozadovano")
+  VizualniKontrolaDatumPosl                       DateTime?     @map("_VizualniKontrolaDatumPosl")
+  VizualniKontrolaDatumPristi                     DateTime?     @map("_VizualniKontrolaDatumPristi")
+  VizualniKontrolaPozadovano                      Boolean       @default(false) @map("_VizualniKontrolaPozadovano")
+  VrtaniKritDilyDatumPosl                         DateTime?     @map("_VrtaniKritDilyDatumPosl")
+  VrtaniKritDilyDatumPristi                       DateTime?     @map("_VrtaniKritDilyDatumPristi")
+  VrtaniKritDilyPozadovano                        Boolean       @default(false) @map("_VrtaniKritDilyPozadovano")
+  VzorovaniDatumPosl                              DateTime?     @map("_VzorovaniDatumPosl")
+  VzorovaniDatumPristi                            DateTime?     @map("_VzorovaniDatumPristi")
+  VzorovaniPozadovano                             Boolean       @default(false) @map("_VzorovaniPozadovano")
+  ZkouskaTvrdostiDatumPosl                        DateTime?     @map("_ZkouskaTvrdostiDatumPosl")
+  ZkouskaTvrdostiDatumPristi                      DateTime?     @map("_ZkouskaTvrdostiDatumPristi")
+  ZkouskaTvrdostiPozadovano                       Boolean       @default(false) @map("_ZkouskaTvrdostiPozadovano")
+  ZlomeniNastrojeDatumPosl                        DateTime?     @map("_ZlomeniNastrojeDatumPosl")
+  ZlomeniNastrojeDatumPristi                      DateTime?     @map("_ZlomeniNastrojeDatumPristi")
+  ZlomeniNastrojePozadovano                       Boolean       @default(false) @map("_ZlomeniNastrojePozadovano")
+  ZnaceniDatumPosl                                DateTime?     @map("_ZnaceniDatumPosl")
+  ZnaceniDatumPristi                              DateTime?     @map("_ZnaceniDatumPristi")
+  ZnaceniPozadovano                               Boolean       @default(false) @map("_ZnaceniPozadovano")
 
   testAttempts                                    TestAttempt[]
   trainingAssignments                             TrainingAssignment[]
@@ -138,6 +138,9 @@ model Test {
   questions    Question[]
   training     Training      @relation(fields: [trainingId], references: [id])
   testAttempts TestAttempt[]
+
+  @@index([trainingId])
+  @@index([isActive])
 }
 
 model Question {
@@ -164,18 +167,16 @@ model TestAttempt {
   score         Float?
   passed        Boolean?
   answers       String?   @db.NVarChar(Max)
-  employeeCode  Int?
-  employeeName  String?
-  department    String?
-  workPosition  String?
-  supervisor    String?
-  evaluator     String?
-  signatureData String?   @db.NVarChar(Max)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   test          Test      @relation(fields: [testId], references: [id])
-  user          User          @relation(fields: [userId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
   certificates  Certificate[]
+
+  @@index([userId])
+  @@index([testId])
+  @@index([userId, testId])
+  @@index([createdAt])
 }
 
 model Certificate {
@@ -193,6 +194,10 @@ model Certificate {
   user              User         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   training          Training     @relation(fields: [trainingId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   testAttempt       TestAttempt  @relation(fields: [testAttemptId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([trainingId])
+  @@index([certificateNumber])
 }
 
 model TrainingAssignment {
@@ -206,4 +211,6 @@ model TrainingAssignment {
   training   Training @relation(fields: [trainingId], references: [id])
 
   @@unique([trainerId, trainingId])
+  @@index([trainerId])
+  @@index([trainingId])
 }

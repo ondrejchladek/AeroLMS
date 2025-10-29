@@ -59,15 +59,17 @@ export default async function AssignmentsPage() {
   ]);
 
   // Convert Date objects to strings for client component
-  const formattedAssignments = assignments.map(assignment => ({
+  const formattedAssignments = assignments.map((assignment) => ({
     ...assignment,
     assignedAt: assignment.assignedAt.toISOString(),
     updatedAt: assignment.updatedAt.toISOString()
   }));
 
-  return <AssignmentsClient
-    trainers={trainers}
-    trainings={trainings}
-    initialAssignments={formattedAssignments}
-  />;
+  return (
+    <AssignmentsClient
+      trainers={trainers}
+      trainings={trainings}
+      initialAssignments={formattedAssignments}
+    />
+  );
 }

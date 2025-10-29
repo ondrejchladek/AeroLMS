@@ -20,7 +20,7 @@ export function useBreadcrumbs() {
     };
 
     // Find matching nav item from sidebar data
-    const matchingNavItem = navItems.find(item => item.url === pathname);
+    const matchingNavItem = navItems.find((item) => item.url === pathname);
 
     if (matchingNavItem) {
       // Return AeroLMS / [Nav Item Title]
@@ -36,7 +36,7 @@ export function useBreadcrumbs() {
     // Check for nested items if needed
     for (const navItem of navItems) {
       if (navItem.items && navItem.items.length > 0) {
-        const nestedItem = navItem.items.find(item => item.url === pathname);
+        const nestedItem = navItem.items.find((item) => item.url === pathname);
         if (nestedItem) {
           return [
             baseBreadcrumb,

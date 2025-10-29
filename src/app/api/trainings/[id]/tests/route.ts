@@ -3,6 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isAdmin, isTrainer } from '@/types/roles';
+import {
+  CreateTestSchema,
+  validateRequestBody,
+  safeJsonParse
+} from '@/lib/validation-schemas';
 
 interface RouteParams {
   params: Promise<{
@@ -22,7 +27,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const trainingId = parseInt(id);
 
     if (isNaN(trainingId)) {
-      return NextResponse.json({ error: 'Invalid training ID' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid training ID' },
+        { status: 400 }
+      );
     }
 
     // Get user to check role
@@ -32,14 +40,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     });
 
     // WORKER sees only active test, others see all tests
-    const whereClause = user?.role === 'WORKER'
-      ? {
-          trainingId: trainingId,
-          isActive: true
-        }
-      : {
-          trainingId: trainingId
-        };
+    const whereClause =
+      user?.role === 'WORKER'
+        ? {
+            trainingId: trainingId,
+            isActive: true
+          }
+        : {
+            trainingId: trainingId
+          };
 
     // Získej testy podle role
     const tests = await prisma.test.findMany({
@@ -79,7 +88,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         order: q.order,
         type: q.type,
         question: q.question,
-        options: q.options ? JSON.parse(q.options) : null,
+        options: safeJsonParse(q.options),
         points: q.points,
         required: q.required
       }))
@@ -110,7 +119,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const trainingId = parseInt(id);
 
     if (isNaN(trainingId)) {
-      return NextResponse.json({ error: 'Invalid training ID' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid training ID' },
+        { status: 400 }
+      );
     }
 
     // Ověř oprávnění
@@ -136,8 +148,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const body = await request.json();
-    const { title, description, passingScore, timeLimit, validFrom, validTo, questions } = body;
+    // Validate request body
+    const validation = await validateRequestBody(request, CreateTestSchema);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
+
+    const {
+      title,
+      description,
+      passingScore,
+      timeLimit,
+      validFrom,
+      validTo,
+      questions
+    } = validation.data;
 
     // Vytvoř test s otázkami v transakci
     const test = await prisma.$transaction(async (tx) => {
@@ -147,26 +172,29 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           trainingId,
           title,
           description,
-          passingScore: passingScore || 70,
-          timeLimit: timeLimit || null,
+          passingScore,
+          timeLimit,
           validFrom: validFrom ? new Date(validFrom) : null,
           validTo: validTo ? new Date(validTo) : null,
           isActive: true
         }
       });
 
-      // Vytvoř otázky pokud jsou dodány
+      // Vytvoř otázky (již validované v schema)
       if (questions && questions.length > 0) {
         await tx.question.createMany({
-          data: questions.map((q: any, index: number) => ({
+          data: questions.map((q, index: number) => ({
             testId: newTest.id,
-            order: q.order !== undefined ? q.order : index,
-            type: q.type || 'single',
+            order: index,
+            type: q.type,
             question: q.question,
-            options: typeof q.options === 'string' ? q.options : JSON.stringify(q.options),
-            correctAnswer: q.correctAnswer || '',
-            points: q.points || 1,
-            required: q.required !== false
+            options: q.options ? JSON.stringify(q.options) : null,
+            correctAnswer:
+              typeof q.correctAnswer === 'string'
+                ? q.correctAnswer
+                : JSON.stringify(q.correctAnswer),
+            points: q.points,
+            required: q.required ?? true
           }))
         });
       }

@@ -2,11 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import {
+  SubmitTestSchema,
+  validateRequestBody,
+  safeJsonParse
+} from '@/lib/validation-schemas';
 
 // Function to generate unique certificate number
 function generateCertificateNumber(): string {
   const year = new Date().getFullYear();
-  const random = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+  const random = Math.floor(Math.random() * 100000)
+    .toString()
+    .padStart(5, '0');
   return `CERT-${year}-${random}`;
 }
 
@@ -21,9 +28,13 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { answers, department, workPosition, supervisor, evaluator, signatureData } = body;
+    // Validate request body
+    const validation = await validateRequestBody(request, SubmitTestSchema);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
 
+    const { answers } = validation.data;
     const attemptId = parseInt(id);
 
     // Get test attempt with test, questions and training
@@ -40,7 +51,10 @@ export async function POST(
     });
 
     if (!attempt) {
-      return NextResponse.json({ error: 'Test attempt not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Test attempt not found' },
+        { status: 404 }
+      );
     }
 
     if (attempt.userId !== parseInt(session.user.id)) {
@@ -48,7 +62,10 @@ export async function POST(
     }
 
     if (attempt.completedAt) {
-      return NextResponse.json({ error: 'Test already completed' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Test already completed' },
+        { status: 400 }
+      );
     }
 
     // Calculate score with support for multiple correct answers
@@ -61,7 +78,7 @@ export async function POST(
       const userAnswer = answers[question.id];
       if (!userAnswer && question.required) continue;
 
-      const correctAnswer = question.correctAnswer ? JSON.parse(question.correctAnswer) : null;
+      const correctAnswer = safeJsonParse(question.correctAnswer);
 
       if (question.type === 'single') {
         // Single choice - full points if correct
@@ -79,7 +96,7 @@ export async function POST(
           let incorrectSelections = 0;
 
           // Count correct selections
-          userSet.forEach(answer => {
+          userSet.forEach((answer) => {
             if (correctSet.has(answer)) {
               correctSelections++;
             } else {
@@ -88,17 +105,23 @@ export async function POST(
           });
 
           // Check for missing correct answers
-          const missingCorrect = correctAnswer.filter(ans => !userSet.has(ans)).length;
+          const missingCorrect = correctAnswer.filter(
+            (ans) => !userSet.has(ans)
+          ).length;
 
           // Award partial points based on correct selections
           // Full points only if all correct and no incorrect selections
-          if (correctSelections === correctAnswer.length && incorrectSelections === 0) {
+          if (
+            correctSelections === correctAnswer.length &&
+            incorrectSelections === 0
+          ) {
             earnedPoints += question.points;
           } else if (correctSelections > 0) {
             // Partial credit: proportion of correct answers selected
-            const partialScore = (correctSelections / correctAnswer.length) * question.points;
+            const partialScore =
+              (correctSelections / correctAnswer.length) * question.points;
             // Deduct for wrong selections
-            const penalty = (incorrectSelections * 0.25) * question.points;
+            const penalty = incorrectSelections * 0.25 * question.points;
             const finalScore = Math.max(0, partialScore - penalty);
             earnedPoints += Math.round(finalScore * 100) / 100; // Round to 2 decimal places
           }
@@ -116,12 +139,7 @@ export async function POST(
         completedAt: new Date(),
         score: score,
         passed: passed,
-        answers: JSON.stringify(answers),
-        department,
-        workPosition,
-        supervisor,
-        evaluator,
-        signatureData
+        answers: JSON.stringify(answers)
       }
     });
 

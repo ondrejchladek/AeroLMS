@@ -27,7 +27,6 @@ export function OrgSwitcher({
     Tenant | undefined
   >(defaultTenant || (tenants.length > 0 ? tenants[0] : undefined));
 
-
   if (!selectedTenant) {
     return null;
   }
@@ -40,16 +39,18 @@ export function OrgSwitcher({
         >
           <div className='flex aspect-square size-8 items-center justify-center rounded-lg'>
             <Image
-              src="/favicon-32x32.png"
-              alt="AeroLMS Logo"
+              src='/favicon-32x32.png'
+              alt='AeroLMS Logo'
               width={32}
               height={32}
               className='rounded-lg'
             />
           </div>
-          <div className='flex flex-col mt-1 leading-none'>
+          <div className='mt-1 flex flex-col leading-none'>
             <span className='font-semibold'>AeroLMS</span>
-            <span className='text-xs text-muted-foreground'>{selectedTenant.name}</span>
+            <span className='text-muted-foreground text-xs'>
+              {selectedTenant.name}
+            </span>
           </div>
         </SidebarMenuButton>
       </SidebarMenuItem>

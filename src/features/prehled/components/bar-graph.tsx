@@ -46,27 +46,33 @@ export function BarGraph({ trainings = [] }: BarGraphProps) {
   const chartData = React.useMemo(() => {
     const monthsData: Record<string, number> = {};
     const today = new Date();
-    
+
     // Inicializuj příštích 12 měsíců
     for (let i = 0; i < 12; i++) {
       const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
-      const key = date.toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' });
+      const key = date.toLocaleDateString('cs-CZ', {
+        month: 'long',
+        year: 'numeric'
+      });
       monthsData[key] = 0;
     }
-    
+
     // Spočítej školení v jednotlivých měsících
-    trainings.forEach(training => {
+    trainings.forEach((training) => {
       if (training.date) {
         const trainingDate = new Date(training.date);
         if (trainingDate >= today) {
-          const key = trainingDate.toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' });
+          const key = trainingDate.toLocaleDateString('cs-CZ', {
+            month: 'long',
+            year: 'numeric'
+          });
           if (monthsData[key] !== undefined) {
             monthsData[key]++;
           }
         }
       }
     });
-    
+
     // Převeď na formát pro Recharts
     return Object.entries(monthsData).map(([month, count]) => ({
       month,

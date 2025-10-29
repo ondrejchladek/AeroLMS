@@ -25,9 +25,7 @@ export function DynamicBreadcrumbs() {
   useEffect(() => {
     const fetchBreadcrumbs = async () => {
       // Always start with AeroLMS
-      const breadcrumbs: BreadcrumbItem[] = [
-        { title: 'AeroLMS', link: '/' }
-      ];
+      const breadcrumbs: BreadcrumbItem[] = [{ title: 'AeroLMS', link: '/' }];
 
       // Parse the pathname
       const segments = pathname.split('/').filter(Boolean);
@@ -35,7 +33,7 @@ export function DynamicBreadcrumbs() {
       // If we're on a training page
       if (segments.length > 0) {
         const slug = segments[0];
-        
+
         try {
           // Fetch training name from API
           const response = await fetch(`/api/trainings/slug/${slug}`);
@@ -50,7 +48,7 @@ export function DynamicBreadcrumbs() {
           // Fallback to formatted slug if API fails
           const title = slug
             .split('-')
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
           breadcrumbs.push({
             title,

@@ -6,8 +6,8 @@
  * Impact: MODIFIES PRODUCTION TABLE - BACKUP FIRST!
  *
  * Columns to add:
- *   - Application columns: code, name, role, email, password, etc.
- *   - Training columns: 33 training codes × 3 columns each = 99 columns
+ *   - Application columns: code, name, role, email, password, createdAt, updatedAt
+ *   - Training columns: SKIPPED (already exist in production with _ prefix)
  *
  * Run AFTER: 02_create_new_tables.sql
  * Run BEFORE: 04_create_indexes.sql
@@ -153,96 +153,15 @@ BEGIN TRY
     END
 
     PRINT '';
-
-    -- ============================================================================
-    -- SECTION 2: Add Training Columns (33 trainings × 3 columns = 99 columns)
-    -- ============================================================================
-    PRINT '2. Adding training columns (this may take a while)...';
-    PRINT '----------------------------------------';
-
-    -- Macro for adding training columns
-    DECLARE @TrainingColumns TABLE (Code NVARCHAR(100));
-
-    INSERT INTO @TrainingColumns VALUES
-        ('CMM'), ('EDM'), ('EleZnaceni'), ('ITBezpecnost'), ('KnihaStroje'),
-        ('KontrPrijZboz'), ('MerAVyhodOpotrebeni'), ('Meridla'), ('MonitorVyraCMTDilu'),
-        ('NakladaniLatkami'), ('OpotrebeniNastrojuuCMT'), ('PouzitiNatsroju'),
-        ('PozdavkyEN10204Dodak'), ('PraceKonProdukt'), ('Pruvodka'), ('RazK1K'),
-        ('RegulacniKarty'), ('Samokontrol a'), ('SeriovaCisla'), ('SymbolyvBB'),
-        ('SystemmanagemenntuKvalityCilepodniku'), ('TrideniOdpadu'),
-        ('UdrzbaStrojuPracovnikyDilny'), ('VizualniKontrola'), ('VrtaniKritDily'),
-        ('Vzorovani'), ('ZkouskaTvrdosti'), ('ZlomeniNastroje'), ('Znaceni');
-
-    DECLARE @Code NVARCHAR(100);
-    DECLARE @DatumPosl NVARCHAR(150);
-    DECLARE @DatumPristi NVARCHAR(150);
-    DECLARE @Pozadovano NVARCHAR(150);
-    DECLARE @SQL NVARCHAR(MAX);
-
-    DECLARE training_cursor CURSOR FOR SELECT Code FROM @TrainingColumns;
-    OPEN training_cursor;
-
-    FETCH NEXT FROM training_cursor INTO @Code;
-    WHILE @@FETCH_STATUS = 0
-    BEGIN
-        SET @DatumPosl = @Code + 'DatumPosl';
-        SET @DatumPristi = @Code + 'DatumPristi';
-        SET @Pozadovano = @Code + 'Pozadovano';
-
-        -- Add DatumPosl column
-        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
-                       WHERE TABLE_NAME='User' AND COLUMN_NAME=@DatumPosl)
-        BEGIN
-            SET @SQL = 'ALTER TABLE [dbo].[User] ADD [' + @DatumPosl + '] DATETIME2 NULL';
-            EXEC sp_executesql @SQL;
-            PRINT '  ✓ Added: ' + @DatumPosl;
-            SET @ColumnCount = @ColumnCount + 1;
-        END
-        ELSE
-        BEGIN
-            SET @SkippedCount = @SkippedCount + 1;
-        END
-
-        -- Add DatumPristi column
-        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
-                       WHERE TABLE_NAME='User' AND COLUMN_NAME=@DatumPristi)
-        BEGIN
-            SET @SQL = 'ALTER TABLE [dbo].[User] ADD [' + @DatumPristi + '] DATETIME2 NULL';
-            EXEC sp_executesql @SQL;
-            PRINT '  ✓ Added: ' + @DatumPristi;
-            SET @ColumnCount = @ColumnCount + 1;
-        END
-        ELSE
-        BEGIN
-            SET @SkippedCount = @SkippedCount + 1;
-        END
-
-        -- Add Pozadovano column
-        IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
-                       WHERE TABLE_NAME='User' AND COLUMN_NAME=@Pozadovano)
-        BEGIN
-            SET @SQL = 'ALTER TABLE [dbo].[User] ADD [' + @Pozadovano + '] BIT NOT NULL DEFAULT 0';
-            EXEC sp_executesql @SQL;
-            PRINT '  ✓ Added: ' + @Pozadovano;
-            SET @ColumnCount = @ColumnCount + 1;
-        END
-        ELSE
-        BEGIN
-            SET @SkippedCount = @SkippedCount + 1;
-        END
-
-        FETCH NEXT FROM training_cursor INTO @Code;
-    END
-
-    CLOSE training_cursor;
-    DEALLOCATE training_cursor;
-
+    PRINT '⚠️  NOTE: Training columns already exist in production DB with _ prefix';
+    PRINT '    (e.g., _CMMDatumPristi, _CMMDatumPosl, _CMMPozadovano)';
+    PRINT '    Skipping training column creation - they will be mapped in Prisma schema.';
     PRINT '';
 
     -- ============================================================================
-    -- SECTION 3: Add Unique Constraints (if columns were just created)
+    -- SECTION 2: Add Unique Constraints (if columns were just created)
     -- ============================================================================
-    PRINT '3. Adding unique constraints...';
+    PRINT '2. Adding unique constraints...';
     PRINT '----------------------------------------';
 
     -- Unique constraint on code

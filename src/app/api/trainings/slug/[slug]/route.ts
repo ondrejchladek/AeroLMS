@@ -16,29 +16,29 @@ export async function GET(
 ) {
   try {
     const { slug } = await context.params;
-    
+
     // First try to find by direct code match
     const trainingByCode = await prisma.training.findUnique({
       where: { code: slug.toUpperCase() },
-      select: { 
+      select: {
         id: true,
-        name: true, 
+        name: true,
         code: true,
-        description: true 
+        description: true
       }
     });
-    
+
     if (trainingByCode) {
       return NextResponse.json(trainingByCode);
     }
 
     // If not found by code, load all trainings and compare slugs
     const allTrainings = await prisma.training.findMany({
-      select: { 
+      select: {
         id: true,
-        name: true, 
+        name: true,
         code: true,
-        description: true 
+        description: true
       }
     });
 
@@ -52,24 +52,24 @@ export async function GET(
 
     // Also check common mappings (for backward compatibility)
     const commonMappings: Record<string, string> = {
-      'cmm': 'CMM',
-      'edm': 'EDM',
+      cmm: 'CMM',
+      edm: 'EDM',
       'vizualni-kontrola': 'VizualniKontrola',
-      'znaceni': 'Znaceni',
+      znaceni: 'Znaceni',
       'zlomeni-nastroje': 'ZlomeniNastroje',
-      'vzorovani': 'Vzorovani',
+      vzorovani: 'Vzorovani',
       'udrzba-stroju-pracovniky-dilny': 'UdrzbaStrojuPracovnikyDilny',
       'system-managementu-kvality': 'SystemmanagemenntuKvalityCilepodniku',
       'symboly-v-bb': 'SymbolyvBB',
       'seriova-cisla': 'SeriovaCisla',
-      'samokontrola': 'Samokontrola',
+      samokontrola: 'Samokontrola',
       'regulacni-karty': 'RegulacniKarty',
-      'pruvodka': 'Pruvodka',
+      pruvodka: 'Pruvodka',
       'prace-kon-produkt': 'PraceKonProdukt',
       'pouziti-nastroju': 'PouzitiNatsroju',
       'opotrebeni-nastroju-cmt': 'OpotrebeniNastrojuuCMT',
       'monitor-vyra-cmt-dilu': 'MonitorVyraCMTDilu',
-      'meridla': 'Meridla',
+      meridla: 'Meridla',
       'kniha-stroje': 'KnihaStroje',
       'mereni-vyhodnoceni-opotrebeni': 'MerAVyhodOpotrebeni'
     };
@@ -78,23 +78,20 @@ export async function GET(
     if (mappedCode) {
       const trainingByMappedCode = await prisma.training.findUnique({
         where: { code: mappedCode },
-        select: { 
+        select: {
           id: true,
-          name: true, 
+          name: true,
           code: true,
-          description: true 
+          description: true
         }
       });
-      
+
       if (trainingByMappedCode) {
         return NextResponse.json(trainingByMappedCode);
       }
     }
 
-    return NextResponse.json(
-      { error: 'Training not found' },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: 'Training not found' }, { status: 404 });
   } catch (error) {
     console.error('Error fetching training by slug:', error);
     return NextResponse.json(

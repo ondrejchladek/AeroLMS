@@ -21,7 +21,10 @@ export async function POST(
     const { testId } = body;
 
     if (!testId) {
-      return NextResponse.json({ error: 'Test ID is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Test ID is required' },
+        { status: 400 }
+      );
     }
 
     // Verify test exists and belongs to this training
@@ -37,7 +40,10 @@ export async function POST(
     });
 
     if (!test) {
-      return NextResponse.json({ error: 'Test not found or not active' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Test not found or not active' },
+        { status: 404 }
+      );
     }
 
     // Get user data with training-specific fields
@@ -67,11 +73,14 @@ export async function POST(
 
         if (!lastCompletionDate) {
           // First test must be taken in person
-          return NextResponse.json({
-            error: 'První test musí být absolvován osobně se školitelem',
-            errorCode: 'FIRST_TEST_REQUIRED',
-            requiresInPerson: true
-          }, { status: 403 });
+          return NextResponse.json(
+            {
+              error: 'První test musí být absolvován osobně se školitelem',
+              errorCode: 'FIRST_TEST_REQUIRED',
+              requiresInPerson: true
+            },
+            { status: 403 }
+          );
         }
 
         // Check if user can retake test (one month before expiration)
@@ -85,13 +94,19 @@ export async function POST(
 
           // Check if we're within the allowed retake period
           if (today < oneMonthBefore) {
-            const daysUntilAllowed = Math.ceil((oneMonthBefore.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            return NextResponse.json({
-              error: `Test můžete opakovat až měsíc před vypršením platnosti (za ${daysUntilAllowed} dní)`,
-              errorCode: 'TOO_EARLY_TO_RETAKE',
-              nextAllowedDate: oneMonthBefore.toISOString(),
-              daysUntilAllowed
-            }, { status: 403 });
+            const daysUntilAllowed = Math.ceil(
+              (oneMonthBefore.getTime() - today.getTime()) /
+                (1000 * 60 * 60 * 24)
+            );
+            return NextResponse.json(
+              {
+                error: `Test můžete opakovat až měsíc před vypršením platnosti (za ${daysUntilAllowed} dní)`,
+                errorCode: 'TOO_EARLY_TO_RETAKE',
+                nextAllowedDate: oneMonthBefore.toISOString(),
+                daysUntilAllowed
+              },
+              { status: 403 }
+            );
           }
         }
 
@@ -107,12 +122,16 @@ export async function POST(
 
         if (failedAttempts.length >= 2) {
           // After 2 failed attempts, must take test in person
-          return NextResponse.json({
-            error: 'Po dvou neúspěšných pokusech musíte absolvovat test osobně se školitelem',
-            errorCode: 'MAX_ATTEMPTS_REACHED',
-            requiresInPerson: true,
-            failedAttempts: failedAttempts.length
-          }, { status: 403 });
+          return NextResponse.json(
+            {
+              error:
+                'Po dvou neúspěšných pokusech musíte absolvovat test osobně se školitelem',
+              errorCode: 'MAX_ATTEMPTS_REACHED',
+              requiresInPerson: true,
+              failedAttempts: failedAttempts.length
+            },
+            { status: 403 }
+          );
         }
       }
     }
@@ -139,8 +158,6 @@ export async function POST(
       data: {
         testId: testId,
         userId: parseInt(session.user.id),
-        employeeCode: session.user.code || null,
-        employeeName: session.user.name,
         startedAt: new Date()
       }
     });

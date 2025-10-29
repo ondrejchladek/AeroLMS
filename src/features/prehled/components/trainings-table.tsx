@@ -8,7 +8,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Check, AlertCircle, XCircle, Clock } from 'lucide-react';
@@ -57,7 +57,7 @@ export function TrainingsTable({ trainings }: TrainingsTableProps) {
     if (!training.lastDate) {
       // Čeká na první absolvování
       return {
-        icon: <Clock className="h-5 w-5 text-gray-500" />,
+        icon: <Clock className='h-5 w-5 text-gray-500' />,
         label: 'Čeká na první absolvování',
         className: 'text-gray-500'
       };
@@ -66,7 +66,7 @@ export function TrainingsTable({ trainings }: TrainingsTableProps) {
     if (!training.nextDate) {
       // Neurčeno
       return {
-        icon: <AlertCircle className="h-5 w-5 text-gray-400" />,
+        icon: <AlertCircle className='h-5 w-5 text-gray-400' />,
         label: 'Neurčeno',
         className: 'text-gray-400'
       };
@@ -78,7 +78,7 @@ export function TrainingsTable({ trainings }: TrainingsTableProps) {
     if (nextDate < now) {
       // Prošlé
       return {
-        icon: <XCircle className="h-5 w-5 text-red-600" />,
+        icon: <XCircle className='h-5 w-5 text-red-600' />,
         label: 'Prošlé',
         className: 'text-red-600'
       };
@@ -90,7 +90,7 @@ export function TrainingsTable({ trainings }: TrainingsTableProps) {
     if (diffDays <= 30) {
       // Brzy vyprší
       return {
-        icon: <AlertCircle className="h-5 w-5 text-yellow-600" />,
+        icon: <AlertCircle className='h-5 w-5 text-yellow-600' />,
         label: 'Brzy vyprší',
         className: 'text-yellow-600'
       };
@@ -98,16 +98,16 @@ export function TrainingsTable({ trainings }: TrainingsTableProps) {
 
     // Platné
     return {
-      icon: <Check className="h-5 w-5 text-green-600" />,
+      icon: <Check className='h-5 w-5 text-green-600' />,
       label: 'Platné',
       className: 'text-green-600'
     };
   };
 
   return (
-    <div className="rounded-lg border bg-card">
-      <div className="p-6">
-        <h2 className="mb-4 text-xl font-semibold">Přehled školení</h2>
+    <div className='bg-card rounded-lg border'>
+      <div className='p-6'>
+        <h2 className='mb-4 text-xl font-semibold'>Přehled školení</h2>
         <Table>
           <TableHeader>
             <TableRow>
@@ -116,7 +116,7 @@ export function TrainingsTable({ trainings }: TrainingsTableProps) {
               <TableHead>Poslední absolvování</TableHead>
               <TableHead>Platnost do</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Akce</TableHead>
+              <TableHead className='text-right'>Akce</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -124,12 +124,12 @@ export function TrainingsTable({ trainings }: TrainingsTableProps) {
               const status = getStatusIcon(training);
               return (
                 <TableRow key={training.key}>
-                  <TableCell className="font-medium">{training.name}</TableCell>
+                  <TableCell className='font-medium'>{training.name}</TableCell>
                   <TableCell>
                     {training.required ? (
-                      <span className="text-orange-600 font-semibold">Ano</span>
+                      <span className='font-semibold text-orange-600'>Ano</span>
                     ) : (
-                      <span className="text-muted-foreground">Ne</span>
+                      <span className='text-muted-foreground'>Ne</span>
                     )}
                   </TableCell>
                   <TableCell>{formatDate(training.lastDate)}</TableCell>
@@ -137,15 +137,15 @@ export function TrainingsTable({ trainings }: TrainingsTableProps) {
                     {formatDate(training.nextDate, true)}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
+                    <div className='flex items-center gap-2'>
                       {status.icon}
                       <span className={status.className}>{status.label}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className='text-right'>
                     <Button
-                      variant="outline"
-                      size="sm"
+                      variant='outline'
+                      size='sm'
                       onClick={() => router.push(`/${training.slug}`)}
                     >
                       Otevřít

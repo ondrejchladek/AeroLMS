@@ -14,7 +14,12 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
 import { GitHubLogoIcon } from '@radix-ui/react-icons';
-import { IconStar, IconMail, IconIdBadge, IconAlertCircle } from '@tabler/icons-react';
+import {
+  IconStar,
+  IconMail,
+  IconIdBadge,
+  IconAlertCircle
+} from '@tabler/icons-react';
 import Link from 'next/link';
 
 export default function SignInViewPage() {
@@ -113,7 +118,7 @@ export default function SignInViewPage() {
       </Link>
 
       {/* levý panel */}
-      <div className='bg-zinc-900 relative hidden h-full flex-col p-10 text-white lg:flex dark:border-r overflow-hidden'>
+      <div className='relative hidden h-full flex-col overflow-hidden bg-zinc-900 p-10 text-white lg:flex dark:border-r'>
         {/* Background image with Next.js Image */}
         <Image
           src='/building.jpg'
@@ -121,23 +126,21 @@ export default function SignInViewPage() {
           fill
           priority
           className='object-cover'
-          sizes="50vw"
+          sizes='50vw'
         />
         {/* Gradient overlay */}
-        <div
-          className='absolute inset-0 bg-gradient-to-b from-[rgba(0,44,81,0.9)] to-[rgba(36,69,122,0.8)]'
-        />
-        <div className='relative z-20 h-full w-full flex flex-col items-center justify-center'>
+        <div className='absolute inset-0 bg-gradient-to-b from-[rgba(0,44,81,0.9)] to-[rgba(36,69,122,0.8)]' />
+        <div className='relative z-20 flex h-full w-full flex-col items-center justify-center'>
           <Image
             src='/aerotech-logo.png'
             alt='AeroTech Logo'
             width={150}
             height={138}
-            className='absolute top-[15%] left-1/2 transform -translate-x-1/2'
+            className='absolute top-[15%] left-1/2 -translate-x-1/2 transform'
             priority
           />
           <h1
-            className='text-5xl text-white uppercase tracking-[0.2em]'
+            className='text-5xl tracking-[0.2em] text-white uppercase'
             style={{
               fontFamily: 'OPTIBankGothic-Medium, Arial, sans-serif',
               fontWeight: 500,
@@ -152,7 +155,6 @@ export default function SignInViewPage() {
       {/* pravý panel – vlastní přihlášení */}
       <div className='flex h-full items-center justify-center p-4 lg:p-8'>
         <div className='flex w-full max-w-md flex-col items-center justify-center space-y-6'>
-
           {/* Zobrazení obecných chyb */}
           {generalError && (
             <Alert variant='destructive' className='mb-4'>
@@ -163,11 +165,11 @@ export default function SignInViewPage() {
 
           {/* Univerzální přihlašovací formulář */}
           <div className='w-full space-y-6'>
-            <div className='text-center space-y-2'>
+            <div className='space-y-2 text-center'>
               <h1 className='text-2xl font-semibold tracking-tight'>
                 Přihlášení
               </h1>
-              <p className='text-sm text-muted-foreground'>
+              <p className='text-muted-foreground text-sm'>
                 Použijte svůj email nebo osobní číslo
               </p>
             </div>

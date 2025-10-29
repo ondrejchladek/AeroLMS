@@ -22,14 +22,14 @@ interface RecentSalesProps {
 export function RecentSales({ trainings = [] }: RecentSalesProps) {
   // Filtruj pouze školení, která byla splněna a seřaď podle data
   const completedTrainings = trainings
-    .filter(t => t.lastDate !== null)
+    .filter((t) => t.lastDate !== null)
     .sort((a, b) => {
       if (!a.lastDate || !b.lastDate) return 0;
       return new Date(b.lastDate).getTime() - new Date(a.lastDate).getTime();
     })
     .slice(0, 5); // Zobraz pouze 5 nejnovějších
 
-  const totalCompleted = trainings.filter(t => t.lastDate !== null).length;
+  const totalCompleted = trainings.filter((t) => t.lastDate !== null).length;
 
   const formatDate = (date: Date | null) => {
     if (!date) return '';
@@ -53,7 +53,7 @@ export function RecentSales({ trainings = [] }: RecentSalesProps) {
   };
 
   const getStatusIcon = (date: Date | null) => {
-    if (!date) return <AlertCircle className="h-5 w-5 text-muted-foreground" />;
+    if (!date) return <AlertCircle className='text-muted-foreground h-5 w-5' />;
 
     const today = new Date();
     const trainingDate = new Date(date);
@@ -61,11 +61,11 @@ export function RecentSales({ trainings = [] }: RecentSalesProps) {
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays < 180) {
-      return <CheckCircle2 className="h-5 w-5 text-green-600" />;
+      return <CheckCircle2 className='h-5 w-5 text-green-600' />;
     } else if (diffDays < 365) {
-      return <Clock className="h-5 w-5 text-orange-600" />;
+      return <Clock className='h-5 w-5 text-orange-600' />;
     } else {
-      return <AlertCircle className="h-5 w-5 text-red-600" />;
+      return <AlertCircle className='h-5 w-5 text-red-600' />;
     }
   };
 
@@ -82,11 +82,9 @@ export function RecentSales({ trainings = [] }: RecentSalesProps) {
           {completedTrainings.length > 0 ? (
             completedTrainings.map((training, index) => (
               <div key={index} className='flex items-center'>
-                <div className='mr-3'>
-                  {getStatusIcon(training.lastDate)}
-                </div>
+                <div className='mr-3'>{getStatusIcon(training.lastDate)}</div>
                 <div className='flex-1 space-y-1'>
-                  <p className='text-sm font-medium leading-none'>
+                  <p className='text-sm leading-none font-medium'>
                     {training.name}
                   </p>
                   <p className='text-muted-foreground text-sm'>
@@ -104,7 +102,7 @@ export function RecentSales({ trainings = [] }: RecentSalesProps) {
               </div>
             ))
           ) : (
-            <div className='text-center py-8 text-muted-foreground'>
+            <div className='text-muted-foreground py-8 text-center'>
               Žádná splněná školení
             </div>
           )}

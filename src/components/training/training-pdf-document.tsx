@@ -5,7 +5,7 @@ import {
   Text,
   View,
   StyleSheet,
-  Font,
+  Font
 } from '@react-pdf/renderer';
 
 // Registrace fontů pro české znaky
@@ -15,24 +15,24 @@ Font.register({
     {
       src: 'https://fonts.gstatic.com/s/roboto/v30/KFOmCnqEu92Fr1Me5Q.ttf',
       fontWeight: 400,
-      fontStyle: 'normal',
+      fontStyle: 'normal'
     },
     {
       src: 'https://fonts.gstatic.com/s/roboto/v30/KFOkCnqEu92Fr1Mu52xP.ttf',
       fontWeight: 400,
-      fontStyle: 'italic',
+      fontStyle: 'italic'
     },
     {
       src: 'https://fonts.gstatic.com/s/roboto/v30/KFOlCnqEu92Fr1MmWUlvAw.ttf',
       fontWeight: 700,
-      fontStyle: 'normal',
+      fontStyle: 'normal'
     },
     {
       src: 'https://fonts.gstatic.com/s/roboto/v30/KFOjCnqEu92Fr1Mu51TzBic-CsTKlA.ttf',
       fontWeight: 700,
-      fontStyle: 'italic',
-    },
-  ],
+      fontStyle: 'italic'
+    }
+  ]
 });
 
 // Definice stylů
@@ -41,70 +41,70 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     backgroundColor: '#ffffff',
     padding: 40,
-    fontFamily: 'Roboto',
+    fontFamily: 'Roboto'
   },
   header: {
-    marginBottom: 30,
+    marginBottom: 30
   },
   title: {
     fontSize: 24,
     fontWeight: 700,
     marginBottom: 10,
-    color: '#1a1a1a',
+    color: '#1a1a1a'
   },
   subtitle: {
     fontSize: 14,
     color: '#666666',
-    marginBottom: 5,
+    marginBottom: 5
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 700,
     marginTop: 20,
     marginBottom: 10,
-    color: '#2563eb',
+    color: '#2563eb'
   },
   subsectionTitle: {
     fontSize: 14,
     fontWeight: 700,
     marginTop: 15,
     marginBottom: 8,
-    color: '#333333',
+    color: '#333333'
   },
   text: {
     fontSize: 11,
     lineHeight: 1.6,
     color: '#444444',
-    marginBottom: 8,
+    marginBottom: 8
   },
   listItem: {
     fontSize: 11,
     marginBottom: 4,
     marginLeft: 15,
-    color: '#444444',
+    color: '#444444'
   },
   badge: {
     backgroundColor: '#f3f4f6',
     padding: '4 8',
     borderRadius: 4,
     marginRight: 5,
-    marginBottom: 5,
+    marginBottom: 5
   },
   badgeText: {
     fontSize: 10,
-    color: '#666666',
+    color: '#666666'
   },
   card: {
     border: '1px solid #e5e7eb',
     borderRadius: 4,
     padding: 10,
-    marginBottom: 10,
+    marginBottom: 10
   },
   cardTitle: {
     fontSize: 12,
     fontWeight: 700,
     marginBottom: 5,
-    color: '#333333',
+    color: '#333333'
   },
   parameter: {
     flexDirection: 'row',
@@ -113,37 +113,37 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     backgroundColor: '#f9fafb',
     marginBottom: 3,
-    borderRadius: 2,
+    borderRadius: 2
   },
   parameterKey: {
     fontSize: 10,
     fontWeight: 700,
-    color: '#333333',
+    color: '#333333'
   },
   parameterValue: {
     fontSize: 10,
-    color: '#666666',
+    color: '#666666'
   },
   warningBox: {
     backgroundColor: '#fef3c7',
     border: '1px solid #fbbf24',
     borderRadius: 4,
     padding: 10,
-    marginBottom: 10,
+    marginBottom: 10
   },
   dangerBox: {
     backgroundColor: '#fee2e2',
     border: '1px solid #ef4444',
     borderRadius: 4,
     padding: 10,
-    marginBottom: 10,
+    marginBottom: 10
   },
   infoBox: {
     backgroundColor: '#dbeafe',
     border: '1px solid #3b82f6',
     borderRadius: 4,
     padding: 10,
-    marginBottom: 10,
+    marginBottom: 10
   },
   footer: {
     position: 'absolute',
@@ -152,20 +152,20 @@ const styles = StyleSheet.create({
     right: 40,
     fontSize: 9,
     color: '#999999',
-    textAlign: 'center',
+    textAlign: 'center'
   },
   pageNumber: {
     position: 'absolute',
     bottom: 30,
     right: 40,
     fontSize: 10,
-    color: '#666666',
+    color: '#666666'
   },
   flexRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 10,
-  },
+    marginBottom: 10
+  }
 });
 
 interface TrainingPDFDocumentProps {
@@ -181,7 +181,7 @@ interface TrainingPDFDocumentProps {
 export function TrainingPDFDocument({
   training,
   userName,
-  generatedDate = new Date(),
+  generatedDate = new Date()
 }: TrainingPDFDocumentProps) {
   const renderContent = (content: any) => {
     if (!content || !content.sections) return null;
@@ -215,35 +215,38 @@ export function TrainingPDFDocument({
           )}
 
           {/* Rules */}
-          {sectionContent.rules && sectionContent.rules.map((rule: any, i: number) => (
-            <View key={i} style={styles.card}>
-              <Text style={styles.cardTitle}>
-                {rule.number}. {rule.title}
-              </Text>
-              <Text style={styles.text}>{rule.description}</Text>
-              
-              {rule.checklist && (
-                <View style={{ marginTop: 5 }}>
-                  {rule.checklist.map((item: string, j: number) => (
-                    <Text key={j} style={styles.listItem}>
-                      ✓ {item}
-                    </Text>
-                  ))}
-                </View>
-              )}
+          {sectionContent.rules &&
+            sectionContent.rules.map((rule: any, i: number) => (
+              <View key={i} style={styles.card}>
+                <Text style={styles.cardTitle}>
+                  {rule.number}. {rule.title}
+                </Text>
+                <Text style={styles.text}>{rule.description}</Text>
 
-              {rule.parameters && (
-                <View style={{ marginTop: 5 }}>
-                  {Object.entries(rule.parameters).map(([key, value]) => (
-                    <View key={key} style={styles.parameter}>
-                      <Text style={styles.parameterKey}>{key}:</Text>
-                      <Text style={styles.parameterValue}>{value as string}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          ))}
+                {rule.checklist && (
+                  <View style={{ marginTop: 5 }}>
+                    {rule.checklist.map((item: string, j: number) => (
+                      <Text key={j} style={styles.listItem}>
+                        ✓ {item}
+                      </Text>
+                    ))}
+                  </View>
+                )}
+
+                {rule.parameters && (
+                  <View style={{ marginTop: 5 }}>
+                    {Object.entries(rule.parameters).map(([key, value]) => (
+                      <View key={key} style={styles.parameter}>
+                        <Text style={styles.parameterKey}>{key}:</Text>
+                        <Text style={styles.parameterValue}>
+                          {value as string}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))}
 
           {/* Standards */}
           {sectionContent.standards && (
@@ -287,31 +290,36 @@ export function TrainingPDFDocument({
           )}
 
           {/* Documents */}
-          {sectionContent.documents && sectionContent.documents.map((doc: any, i: number) => (
-            <View key={i} style={styles.card}>
-              <Text style={styles.cardTitle}>{doc.name}</Text>
-              <Text style={styles.text}>{doc.purpose}</Text>
-              {doc.frequency && (
-                <Text style={{ ...styles.text, fontSize: 10, color: '#666666' }}>
-                  Frekvence: {doc.frequency}
-                </Text>
-              )}
-              {doc.fields && (
-                <View style={styles.flexRow}>
-                  {doc.fields.map((field: string, j: number) => (
-                    <View key={j} style={styles.badge}>
-                      <Text style={styles.badgeText}>{field}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          ))}
+          {sectionContent.documents &&
+            sectionContent.documents.map((doc: any, i: number) => (
+              <View key={i} style={styles.card}>
+                <Text style={styles.cardTitle}>{doc.name}</Text>
+                <Text style={styles.text}>{doc.purpose}</Text>
+                {doc.frequency && (
+                  <Text
+                    style={{ ...styles.text, fontSize: 10, color: '#666666' }}
+                  >
+                    Frekvence: {doc.frequency}
+                  </Text>
+                )}
+                {doc.fields && (
+                  <View style={styles.flexRow}>
+                    {doc.fields.map((field: string, j: number) => (
+                      <View key={j} style={styles.badge}>
+                        <Text style={styles.badgeText}>{field}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))}
 
           {/* PPE */}
           {sectionContent.ppe && (
             <View style={styles.infoBox}>
-              <Text style={styles.subsectionTitle}>Osobní ochranné pomůcky</Text>
+              <Text style={styles.subsectionTitle}>
+                Osobní ochranné pomůcky
+              </Text>
               {sectionContent.ppe.map((item: string, i: number) => (
                 <Text key={i} style={styles.listItem}>
                   • {item}
@@ -353,7 +361,7 @@ export function TrainingPDFDocument({
 
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size='A4' style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>{training.name}</Text>
@@ -363,9 +371,7 @@ export function TrainingPDFDocument({
           <Text style={styles.subtitle}>
             Vygenerováno: {generatedDate.toLocaleDateString('cs-CZ')}
           </Text>
-          {userName && (
-            <Text style={styles.subtitle}>Pro: {userName}</Text>
-          )}
+          {userName && <Text style={styles.subtitle}>Pro: {userName}</Text>}
         </View>
 
         {/* Content */}
@@ -375,11 +381,13 @@ export function TrainingPDFDocument({
         <Text style={styles.footer}>
           © {new Date().getFullYear()} AeroLMS - Systém školení zaměstnanců
         </Text>
-        
+
         {/* Page Numbers */}
         <Text
           style={styles.pageNumber}
-          render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`}
+          render={({ pageNumber, totalPages }) =>
+            `${pageNumber} / ${totalPages}`
+          }
         />
       </Page>
     </Document>

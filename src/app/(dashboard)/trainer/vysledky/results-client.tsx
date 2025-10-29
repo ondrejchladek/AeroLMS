@@ -1,8 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -10,7 +15,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from '@/components/ui/select';
 import {
   Table,
@@ -18,10 +23,17 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, XCircle, Award, FileText, Search, Filter } from 'lucide-react';
+import {
+  CheckCircle,
+  XCircle,
+  Award,
+  FileText,
+  Search,
+  Filter
+} from 'lucide-react';
 
 interface TestAttempt {
   id: number;
@@ -29,7 +41,6 @@ interface TestAttempt {
   trainingName: string;
   score: number;
   passed: boolean;
-  evaluator: string;
   createdAt: string;
   certificate: {
     id: number;
@@ -81,7 +92,9 @@ export function ResultsClient() {
     const fetchAttempts = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/test-attempts/manual?userId=${selectedUserId}`);
+        const response = await fetch(
+          `/api/test-attempts/manual?userId=${selectedUserId}`
+        );
         if (response.ok) {
           const data = await response.json();
           setAttempts(data.attempts || []);
@@ -105,11 +118,11 @@ export function ResultsClient() {
     }
 
     const query = searchQuery.toLowerCase();
-    const filtered = attempts.filter(attempt =>
-      attempt.trainingName.toLowerCase().includes(query) ||
-      attempt.testTitle.toLowerCase().includes(query) ||
-      attempt.evaluator?.toLowerCase().includes(query) ||
-      attempt.certificate?.certificateNumber.toLowerCase().includes(query)
+    const filtered = attempts.filter(
+      (attempt) =>
+        attempt.trainingName.toLowerCase().includes(query) ||
+        attempt.testTitle.toLowerCase().includes(query) ||
+        attempt.certificate?.certificateNumber.toLowerCase().includes(query)
     );
     setFilteredAttempts(filtered);
   }, [searchQuery, attempts]);
@@ -124,35 +137,35 @@ export function ResultsClient() {
     });
   };
 
-  const selectedUser = users.find(u => u.id === parseInt(selectedUserId));
+  const selectedUser = users.find((u) => u.id === parseInt(selectedUserId));
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Výsledky testů</h1>
-        <p className="text-muted-foreground">
+    <div className='container mx-auto max-w-7xl p-6'>
+      <div className='mb-6'>
+        <h1 className='mb-2 text-3xl font-bold'>Výsledky testů</h1>
+        <p className='text-muted-foreground'>
           Přehled všech výsledků testů absolvovaných osobně
         </p>
       </div>
 
-      <Card className="mb-6">
+      <Card className='mb-6'>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Filter className="h-5 w-5" />
+          <CardTitle className='flex items-center gap-2'>
+            <Filter className='h-5 w-5' />
             Filtry
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className='grid gap-4 md:grid-cols-2'>
             {/* User Selection */}
-            <div className="space-y-2">
-              <Label htmlFor="user">Zaměstnanec</Label>
+            <div className='space-y-2'>
+              <Label htmlFor='user'>Zaměstnanec</Label>
               <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger id="user">
-                  <SelectValue placeholder="Vyberte zaměstnance" />
+                <SelectTrigger id='user'>
+                  <SelectValue placeholder='Vyberte zaměstnance' />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map(user => (
+                  {users.map((user) => (
                     <SelectItem key={user.id} value={user.id.toString()}>
                       {user.name} ({user.code})
                     </SelectItem>
@@ -162,16 +175,16 @@ export function ResultsClient() {
             </div>
 
             {/* Search */}
-            <div className="space-y-2">
-              <Label htmlFor="search">Vyhledávání</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className='space-y-2'>
+              <Label htmlFor='search'>Vyhledávání</Label>
+              <div className='relative'>
+                <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
                 <Input
-                  id="search"
-                  placeholder="Hledat podle školení, testu, hodnotitele..."
+                  id='search'
+                  placeholder='Hledat podle školení, testu, hodnotitele...'
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
+                  className='pl-10'
                   disabled={!selectedUserId}
                 />
               </div>
@@ -183,13 +196,14 @@ export function ResultsClient() {
       {selectedUser && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+            <CardTitle className='flex items-center justify-between'>
+              <div className='flex items-center gap-2'>
+                <FileText className='h-5 w-5' />
                 Výsledky - {selectedUser.name}
               </div>
-              <Badge variant="outline">
-                {filteredAttempts.length} {filteredAttempts.length === 1 ? 'výsledek' : 'výsledků'}
+              <Badge variant='outline'>
+                {filteredAttempts.length}{' '}
+                {filteredAttempts.length === 1 ? 'výsledek' : 'výsledků'}
               </Badge>
             </CardTitle>
             <CardDescription>
@@ -198,15 +212,17 @@ export function ResultsClient() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className='text-muted-foreground py-8 text-center'>
                 Načítání...
               </div>
             ) : filteredAttempts.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                {searchQuery ? 'Nebyly nalezeny žádné výsledky' : 'Žádné výsledky k zobrazení'}
+              <div className='text-muted-foreground py-8 text-center'>
+                {searchQuery
+                  ? 'Nebyly nalezeny žádné výsledky'
+                  : 'Žádné výsledky k zobrazení'}
               </div>
             ) : (
-              <div className="rounded-lg border">
+              <div className='rounded-lg border'>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -214,7 +230,6 @@ export function ResultsClient() {
                       <TableHead>Test</TableHead>
                       <TableHead>Skóre</TableHead>
                       <TableHead>Výsledek</TableHead>
-                      <TableHead>Hodnotitel</TableHead>
                       <TableHead>Datum</TableHead>
                       <TableHead>Certifikát</TableHead>
                     </TableRow>
@@ -222,42 +237,43 @@ export function ResultsClient() {
                   <TableBody>
                     {filteredAttempts.map((attempt) => (
                       <TableRow key={attempt.id}>
-                        <TableCell className="font-medium">
+                        <TableCell className='font-medium'>
                           {attempt.trainingName}
                         </TableCell>
                         <TableCell>{attempt.testTitle}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">{attempt.score.toFixed(1)}%</Badge>
+                          <Badge variant='outline'>
+                            {attempt.score.toFixed(1)}%
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           {attempt.passed ? (
-                            <Badge variant="default" className="gap-1">
-                              <CheckCircle className="h-3 w-3" />
+                            <Badge variant='default' className='gap-1'>
+                              <CheckCircle className='h-3 w-3' />
                               Uspěl
                             </Badge>
                           ) : (
-                            <Badge variant="destructive" className="gap-1">
-                              <XCircle className="h-3 w-3" />
+                            <Badge variant='destructive' className='gap-1'>
+                              <XCircle className='h-3 w-3' />
                               Neuspěl
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {attempt.evaluator || '-'}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className='text-muted-foreground text-sm'>
                           {formatDate(attempt.createdAt)}
                         </TableCell>
                         <TableCell>
                           {attempt.certificate ? (
-                            <div className="flex items-center gap-2">
-                              <Award className="h-4 w-4 text-yellow-600" />
-                              <span className="text-sm font-mono">
+                            <div className='flex items-center gap-2'>
+                              <Award className='h-4 w-4 text-yellow-600' />
+                              <span className='font-mono text-sm'>
                                 {attempt.certificate.certificateNumber}
                               </span>
                             </div>
                           ) : (
-                            <span className="text-sm text-muted-foreground">-</span>
+                            <span className='text-muted-foreground text-sm'>
+                              -
+                            </span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -272,9 +288,9 @@ export function ResultsClient() {
 
       {!selectedUserId && (
         <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12 text-muted-foreground">
-              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <CardContent className='pt-6'>
+            <div className='text-muted-foreground py-12 text-center'>
+              <FileText className='mx-auto mb-4 h-12 w-12 opacity-50' />
               <p>Vyberte zaměstnance pro zobrazení výsledků</p>
             </div>
           </CardContent>

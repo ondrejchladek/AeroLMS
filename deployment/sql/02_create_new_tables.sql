@@ -163,13 +163,6 @@ BEGIN TRY
             [score] FLOAT NULL,
             [passed] BIT NULL,
             [answers] NVARCHAR(MAX) NULL,
-            [employeeCode] INT NULL,
-            [employeeName] NVARCHAR(500) NULL,
-            [department] NVARCHAR(200) NULL,
-            [workPosition] NVARCHAR(200) NULL,
-            [supervisor] NVARCHAR(200) NULL,
-            [evaluator] NVARCHAR(200) NULL,
-            [signatureData] NVARCHAR(MAX) NULL,
             [createdAt] DATETIME2 NOT NULL CONSTRAINT [TestAttempt_createdAt_df] DEFAULT CURRENT_TIMESTAMP,
             [updatedAt] DATETIME2 NOT NULL CONSTRAINT [TestAttempt_updatedAt_df] DEFAULT CURRENT_TIMESTAMP,
             CONSTRAINT [TestAttempt_pkey] PRIMARY KEY CLUSTERED ([id])

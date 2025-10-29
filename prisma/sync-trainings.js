@@ -24,7 +24,7 @@ async function detectTrainingColumns() {
             code,
             hasDatumPosl: true,
             hasDatumPristi: false,
-            hasPozadovano: false,
+            hasPozadovano: false
           });
         } else {
           trainings.get(code).hasDatumPosl = true;
@@ -38,7 +38,7 @@ async function detectTrainingColumns() {
             code,
             hasDatumPosl: false,
             hasDatumPristi: true,
-            hasPozadovano: false,
+            hasPozadovano: false
           });
         } else {
           trainings.get(code).hasDatumPristi = true;
@@ -52,7 +52,7 @@ async function detectTrainingColumns() {
             code,
             hasDatumPosl: false,
             hasDatumPristi: false,
-            hasPozadovano: true,
+            hasPozadovano: true
           });
         } else {
           trainings.get(code).hasPozadovano = true;
@@ -62,7 +62,7 @@ async function detectTrainingColumns() {
 
     // Return only trainings with Pozadovano column (as requested by user)
     const trainingsWithPozadovano = Array.from(trainings.values()).filter(
-      t => t.hasPozadovano
+      (t) => t.hasPozadovano
     );
 
     return trainingsWithPozadovano;
@@ -78,7 +78,9 @@ async function main() {
   try {
     // 1. Detect all training columns
     const detectedTrainings = await detectTrainingColumns();
-    console.log(`📊 Detected ${detectedTrainings.length} trainings from User table columns`);
+    console.log(
+      `📊 Detected ${detectedTrainings.length} trainings from User table columns`
+    );
 
     // Show detected trainings
     console.log('\n📋 DETECTED TRAININGS:');
@@ -89,7 +91,9 @@ async function main() {
         t.hasDatumPristi ? '✓ DatumPristi' : '✗ DatumPristi',
         t.hasPozadovano ? '✓ Pozadovano' : '✗ Pozadovano'
       ];
-      console.log(`${(idx + 1).toString().padStart(2)}. ${t.code.padEnd(40)} [${flags.join(', ')}]`);
+      console.log(
+        `${(idx + 1).toString().padStart(2)}. ${t.code.padEnd(40)} [${flags.join(', ')}]`
+      );
     });
 
     // 2. Check existing trainings in database
@@ -101,24 +105,28 @@ async function main() {
       }
     });
 
-    const existingCodes = new Set(existingTrainings.map(t => t.code));
+    const existingCodes = new Set(existingTrainings.map((t) => t.code));
 
-    console.log(`\n📚 Found ${existingTrainings.length} existing trainings in database:`);
-    existingTrainings.forEach(t => {
+    console.log(
+      `\n📚 Found ${existingTrainings.length} existing trainings in database:`
+    );
+    existingTrainings.forEach((t) => {
       console.log(`  - ${t.code}: ${t.name || '(no name)'}`);
     });
 
     // 3. Find missing trainings
     const missingCodes = detectedTrainings
-      .filter(t => !existingCodes.has(t.code))
-      .map(t => t.code);
+      .filter((t) => !existingCodes.has(t.code))
+      .map((t) => t.code);
 
     if (missingCodes.length === 0) {
       console.log('\n✅ All detected trainings already exist in database!');
       return;
     }
 
-    console.log(`\n⚠️  Found ${missingCodes.length} missing trainings to create`);
+    console.log(
+      `\n⚠️  Found ${missingCodes.length} missing trainings to create`
+    );
 
     // 4. Create missing trainings
     console.log('\n🚀 Creating missing trainings...');
@@ -188,7 +196,6 @@ async function main() {
       }
       console.log(`  Total required trainings: ${requiredCount}`);
     }
-
   } catch (error) {
     console.error('❌ Synchronization failed:', error);
     throw error;

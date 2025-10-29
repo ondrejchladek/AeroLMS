@@ -15,12 +15,9 @@ export async function PATCH(request: NextRequest, { params }: Props) {
   try {
     // Ověření přihlášení a admin práv
     const session = await getServerSession(authOptions);
-    
+
     if (!session || !session.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Kontrola admin práv pomocí role
@@ -33,12 +30,9 @@ export async function PATCH(request: NextRequest, { params }: Props) {
 
     const resolvedParams = await params;
     const userId = parseInt(resolvedParams.userId);
-    
+
     if (isNaN(userId)) {
-      return NextResponse.json(
-        { error: 'Invalid user ID' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
     }
 
     // Získat data z požadavku
@@ -57,7 +51,12 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       // Pokud je hodnota datum, převést na Date objekt
       if (key.includes('Datum') && value) {
         updateData[key] = new Date(value as string);
-      } else if (key === 'password' && value && typeof value === 'string' && value.trim() !== '') {
+      } else if (
+        key === 'password' &&
+        value &&
+        typeof value === 'string' &&
+        value.trim() !== ''
+      ) {
         // Hash hesla pomocí bcrypt
         const hashedPassword = await bcrypt.hash(value, 10);
         updateData[key] = hashedPassword;
@@ -83,14 +82,17 @@ export async function PATCH(request: NextRequest, { params }: Props) {
     });
   } catch (error) {
     console.error('Error updating user:', error);
-    
-    if (error instanceof Error && error.message.includes('Record to update not found')) {
+
+    if (
+      error instanceof Error &&
+      error.message.includes('Record to update not found')
+    ) {
       return NextResponse.json(
         { error: 'Uživatel nenalezen' },
         { status: 404 }
       );
     }
-    
+
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -3,11 +3,17 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isAdmin, isTrainer } from '@/types/roles';
+import {
+  ManualTestAttemptSchema,
+  validateRequestBody
+} from '@/lib/validation-schemas';
 
 // Function to generate unique certificate number
 function generateCertificateNumber(): string {
   const year = new Date().getFullYear();
-  const random = Math.floor(Math.random() * 100000).toString().padStart(5, '0');
+  const random = Math.floor(Math.random() * 100000)
+    .toString()
+    .padStart(5, '0');
   return `CERT-${year}-${random}`;
 }
 
@@ -21,30 +27,22 @@ export async function POST(request: NextRequest) {
 
     // Only trainers and admins can create manual test attempts
     if (!isAdmin(session.user.role) && !isTrainer(session.user.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Insufficient permissions' },
+        { status: 403 }
+      );
     }
 
-    const body = await request.json();
-    const {
-      userId,
-      testId,
-      score,
-      passed,
-      employeeCode,
-      employeeName,
-      department,
-      workPosition,
-      supervisor,
-      evaluator,
-      notes
-    } = body;
-
-    // Validate required fields
-    if (!userId || !testId || score === undefined || passed === undefined) {
-      return NextResponse.json({
-        error: 'Missing required fields: userId, testId, score, passed'
-      }, { status: 400 });
+    // Validate request body
+    const validation = await validateRequestBody(
+      request,
+      ManualTestAttemptSchema
+    );
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
     }
+
+    const { userId, testId, score, passed, notes } = validation.data;
 
     // Verify test exists and get training info
     const test = await prisma.test.findUnique({
@@ -77,9 +75,12 @@ export async function POST(request: NextRequest) {
       });
 
       if (!assignment) {
-        return NextResponse.json({
-          error: 'You are not assigned to this training'
-        }, { status: 403 });
+        return NextResponse.json(
+          {
+            error: 'You are not assigned to this training'
+          },
+          { status: 403 }
+        );
       }
     }
 
@@ -90,12 +91,6 @@ export async function POST(request: NextRequest) {
         userId,
         score,
         passed,
-        employeeCode: employeeCode || user.code,
-        employeeName: employeeName || user.name,
-        department,
-        workPosition,
-        supervisor,
-        evaluator: evaluator || session.user.name,
         startedAt: new Date(),
         completedAt: new Date(),
         answers: JSON.stringify({ manual: true, notes })
@@ -135,8 +130,7 @@ export async function POST(request: NextRequest) {
         testAttempt: {
           id: testAttempt.id,
           score,
-          passed,
-          evaluator: testAttempt.evaluator
+          passed
         },
         certificate: {
           id: certificate.id,
@@ -154,8 +148,7 @@ export async function POST(request: NextRequest) {
       testAttempt: {
         id: testAttempt.id,
         score,
-        passed,
-        evaluator: testAttempt.evaluator
+        passed
       },
       trainingDatesUpdated: false
     });
@@ -178,7 +171,10 @@ export async function GET(request: NextRequest) {
 
     // Only trainers and admins can view manual test attempts
     if (!isAdmin(session.user.role) && !isTrainer(session.user.role)) {
-      return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Insufficient permissions' },
+        { status: 403 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -186,7 +182,10 @@ export async function GET(request: NextRequest) {
     const trainingId = searchParams.get('trainingId');
 
     if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'userId is required' },
+        { status: 400 }
+      );
     }
 
     // Build where clause
@@ -213,7 +212,7 @@ export async function GET(request: NextRequest) {
         select: { trainingId: true }
       });
 
-      const assignedTrainingIds = assignments.map(a => a.trainingId);
+      const assignedTrainingIds = assignments.map((a) => a.trainingId);
 
       whereClause = {
         ...whereClause,
@@ -240,14 +239,13 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      attempts: manualAttempts.map(attempt => ({
+      attempts: manualAttempts.map((attempt) => ({
         id: attempt.id,
         testId: attempt.testId,
         testTitle: attempt.test.title,
         trainingName: attempt.test.training.name,
         score: attempt.score,
         passed: attempt.passed,
-        evaluator: attempt.evaluator,
         createdAt: attempt.createdAt,
         certificate: attempt.certificates[0] || null
       })),

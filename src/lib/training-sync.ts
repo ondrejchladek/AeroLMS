@@ -1,4 +1,8 @@
 import { prisma } from '@/lib/prisma';
+import {
+  validateTrainingCode,
+  VALID_TRAINING_CODES
+} from '@/lib/validation-schemas';
 
 interface TrainingColumn {
   code: string;
@@ -20,7 +24,7 @@ async function getUserTableColumns(): Promise<string[]> {
     ORDER BY ORDINAL_POSITION
   `;
 
-  return result.map(row => row.COLUMN_NAME);
+  return result.map((row) => row.COLUMN_NAME);
 }
 
 /**
@@ -41,7 +45,7 @@ export async function detectTrainingColumns(): Promise<TrainingColumn[]> {
             code,
             hasDatumPosl: true,
             hasDatumPristi: false,
-            hasPozadovano: false,
+            hasPozadovano: false
           });
         } else {
           trainings.get(code)!.hasDatumPosl = true;
@@ -56,7 +60,7 @@ export async function detectTrainingColumns(): Promise<TrainingColumn[]> {
             code,
             hasDatumPosl: false,
             hasDatumPristi: true,
-            hasPozadovano: false,
+            hasPozadovano: false
           });
         } else {
           trainings.get(code)!.hasDatumPristi = true;
@@ -71,7 +75,7 @@ export async function detectTrainingColumns(): Promise<TrainingColumn[]> {
             code,
             hasDatumPosl: false,
             hasDatumPristi: false,
-            hasPozadovano: true,
+            hasPozadovano: true
           });
         } else {
           trainings.get(code)!.hasPozadovano = true;
@@ -81,7 +85,7 @@ export async function detectTrainingColumns(): Promise<TrainingColumn[]> {
 
     // Filter out incomplete trainings (must have all 3 columns)
     const completeTrainings = Array.from(trainings.values()).filter(
-      t => t.hasDatumPosl && t.hasDatumPristi && t.hasPozadovano
+      (t) => t.hasDatumPosl && t.hasDatumPristi && t.hasPozadovano
     );
 
     return completeTrainings;
@@ -103,13 +107,13 @@ export async function syncTrainingsWithDatabase(): Promise<{
   const result = {
     created: [] as string[],
     existing: [] as string[],
-    errors: [] as string[],
+    errors: [] as string[]
   };
 
   try {
     // Get detected training codes from User columns
     const detectedTrainings = await detectTrainingColumns();
-    const detectedCodes = detectedTrainings.map(t => t.code);
+    const detectedCodes = detectedTrainings.map((t) => t.code);
 
     if (detectedCodes.length === 0) {
       console.log('No training columns detected in User table');
@@ -118,12 +122,14 @@ export async function syncTrainingsWithDatabase(): Promise<{
 
     // Get existing training codes from database
     const existingTrainings = await prisma.training.findMany({
-      select: { code: true },
+      select: { code: true }
     });
-    const existingCodes = new Set(existingTrainings.map(t => t.code));
+    const existingCodes = new Set(existingTrainings.map((t) => t.code));
 
     // Find missing trainings
-    const missingCodes = detectedCodes.filter(code => !existingCodes.has(code));
+    const missingCodes = detectedCodes.filter(
+      (code) => !existingCodes.has(code)
+    );
 
     // Create missing trainings
     for (const code of missingCodes) {
@@ -132,8 +138,8 @@ export async function syncTrainingsWithDatabase(): Promise<{
           data: {
             code,
             name: `Školení ${code}`, // Default name, trainer will update it
-            description: `Automaticky vytvořené školení pro kód ${code}`,
-          },
+            description: `Automaticky vytvořené školení pro kód ${code}`
+          }
         });
         result.created.push(code);
         console.log(`Created training: ${code}`);
@@ -144,13 +150,13 @@ export async function syncTrainingsWithDatabase(): Promise<{
     }
 
     // Track existing trainings
-    result.existing = detectedCodes.filter(code => existingCodes.has(code));
+    result.existing = detectedCodes.filter((code) => existingCodes.has(code));
 
     console.log('Training sync completed:', {
       detected: detectedCodes.length,
       created: result.created.length,
       existing: result.existing.length,
-      errors: result.errors.length,
+      errors: result.errors.length
     });
 
     return result;
@@ -173,31 +179,47 @@ export async function getUserTrainingData(
   pozadovano: boolean;
 } | null> {
   try {
+    // SECURITY: Validate training code against whitelist to prevent SQL injection
+    // This is CRITICAL because we're using dynamic column names in raw SQL
+    try {
+      validateTrainingCode(trainingCode);
+    } catch (error) {
+      console.error(`Invalid training code: ${trainingCode}`, error);
+      return null;
+    }
+
     const columnDatumPosl = `${trainingCode}DatumPosl`;
     const columnDatumPristi = `${trainingCode}DatumPristi`;
     const columnPozadovano = `${trainingCode}Pozadovano`;
 
     // Use raw query to dynamically access columns
-    const result = await prisma.$queryRawUnsafe<any[]>(`
+    // SAFE: trainingCode is validated against whitelist above
+    const result = await prisma.$queryRawUnsafe<any[]>(
+      `
       SELECT
         [${columnDatumPosl}] as datumPosl,
         [${columnDatumPristi}] as datumPristi,
         [${columnPozadovano}] as pozadovano
       FROM [User]
       WHERE UserID = @p0
-    `, userId);
+    `,
+      userId
+    );
 
     if (result.length > 0) {
       return {
         datumPosl: result[0].datumPosl,
         datumPristi: result[0].datumPristi,
-        pozadovano: result[0].pozadovano ?? false,
+        pozadovano: result[0].pozadovano ?? false
       };
     }
 
     return null;
   } catch (error) {
-    console.error(`Error getting user training data for ${trainingCode}:`, error);
+    console.error(
+      `Error getting user training data for ${trainingCode}:`,
+      error
+    );
     return null;
   }
 }
@@ -212,28 +234,50 @@ export async function updateUserTrainingData(
   datumPristi?: Date
 ): Promise<boolean> {
   try {
+    // SECURITY: Validate training code against whitelist to prevent SQL injection
+    // This is CRITICAL because we're using dynamic column names in raw SQL
+    try {
+      validateTrainingCode(trainingCode);
+    } catch (error) {
+      console.error(`Invalid training code: ${trainingCode}`, error);
+      return false;
+    }
+
     const columnDatumPosl = `${trainingCode}DatumPosl`;
     const columnDatumPristi = `${trainingCode}DatumPristi`;
 
+    // SAFE: trainingCode is validated against whitelist above
     if (datumPristi) {
-      await prisma.$executeRawUnsafe(`
+      await prisma.$executeRawUnsafe(
+        `
         UPDATE [User]
         SET
           [${columnDatumPosl}] = @p0,
           [${columnDatumPristi}] = @p1
         WHERE UserID = @p2
-      `, datumPosl, datumPristi, userId);
+      `,
+        datumPosl,
+        datumPristi,
+        userId
+      );
     } else {
-      await prisma.$executeRawUnsafe(`
+      await prisma.$executeRawUnsafe(
+        `
         UPDATE [User]
         SET [${columnDatumPosl}] = @p0
         WHERE UserID = @p1
-      `, datumPosl, userId);
+      `,
+        datumPosl,
+        userId
+      );
     }
 
     return true;
   } catch (error) {
-    console.error(`Error updating user training data for ${trainingCode}:`, error);
+    console.error(
+      `Error updating user training data for ${trainingCode}:`,
+      error
+    );
     return false;
   }
 }
@@ -241,22 +285,24 @@ export async function updateUserTrainingData(
 /**
  * Get all user trainings with their status
  */
-export async function getAllUserTrainings(userId: number): Promise<Array<{
-  code: string;
-  name: string;
-  datumPosl: Date | null;
-  datumPristi: Date | null;
-  pozadovano: boolean;
-  status: 'completed' | 'upcoming' | 'expired' | 'not_required';
-}>> {
+export async function getAllUserTrainings(userId: number): Promise<
+  Array<{
+    code: string;
+    name: string;
+    datumPosl: Date | null;
+    datumPristi: Date | null;
+    pozadovano: boolean;
+    status: 'completed' | 'upcoming' | 'expired' | 'not_required';
+  }>
+> {
   try {
     const detectedTrainings = await detectTrainingColumns();
     const trainings = await prisma.training.findMany({
       where: {
         code: {
-          in: detectedTrainings.map(t => t.code),
-        },
-      },
+          in: detectedTrainings.map((t) => t.code)
+        }
+      }
     });
 
     const userTrainings = [];
@@ -265,7 +311,8 @@ export async function getAllUserTrainings(userId: number): Promise<Array<{
     for (const training of trainings) {
       const userData = await getUserTrainingData(userId, training.code);
       if (userData) {
-        let status: 'completed' | 'upcoming' | 'expired' | 'not_required' = 'not_required';
+        let status: 'completed' | 'upcoming' | 'expired' | 'not_required' =
+          'not_required';
 
         if (userData.pozadovano) {
           if (!userData.datumPristi) {
@@ -285,7 +332,7 @@ export async function getAllUserTrainings(userId: number): Promise<Array<{
           datumPosl: userData.datumPosl,
           datumPristi: userData.datumPristi,
           pozadovano: userData.pozadovano,
-          status,
+          status
         });
       }
     }

@@ -11,7 +11,7 @@ export default function TestLayout({
     // Override the overflow-hidden from root layout
     document.body.style.overflow = 'auto';
     document.body.style.overscrollBehavior = 'auto';
-    
+
     return () => {
       // Restore original styles when leaving the page
       document.body.style.overflow = '';

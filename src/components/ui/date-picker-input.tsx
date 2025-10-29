@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import {
   Popover,
   PopoverContent,
-  PopoverTrigger,
+  PopoverTrigger
 } from '@/components/ui/popover';
 import { format, parse, isValid } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -41,7 +41,9 @@ export function DatePickerInput({
   );
 
   React.useEffect(() => {
-    setInputValue(dateValue ? format(dateValue, 'd. M. yyyy', { locale: cs }) : '');
+    setInputValue(
+      dateValue ? format(dateValue, 'd. M. yyyy', { locale: cs }) : ''
+    );
   }, [dateValue]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,7 +71,7 @@ export function DatePickerInput({
       <Input
         value={inputValue}
         placeholder={placeholder}
-        className="bg-background pr-7"
+        className='bg-background pr-7'
         onChange={handleInputChange}
         onKeyDown={(e) => {
           if (e.key === 'ArrowDown') {
@@ -81,26 +83,28 @@ export function DatePickerInput({
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
-            type="button"
-            variant="ghost"
-            className="absolute top-1/2 right-2.5 size-5 -translate-y-1/2 p-0 hover:bg-transparent"
+            type='button'
+            variant='ghost'
+            className='absolute top-1/2 right-2.5 size-5 -translate-y-1/2 p-0 hover:bg-transparent'
           >
-            <CalendarIcon className="size-3.5 text-muted-foreground" />
-            <span className="sr-only">Vybrat datum</span>
+            <CalendarIcon className='text-muted-foreground size-3.5' />
+            <span className='sr-only'>Vybrat datum</span>
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-auto overflow-hidden p-0"
-          align="end"
+          className='w-auto overflow-hidden p-0'
+          align='end'
           alignOffset={-8}
           sideOffset={10}
         >
           <Calendar
-            mode="single"
+            mode='single'
             selected={dateValue}
             onSelect={(date) => {
               onChange(date || null);
-              setInputValue(date ? format(date, 'd. M. yyyy', { locale: cs }) : '');
+              setInputValue(
+                date ? format(date, 'd. M. yyyy', { locale: cs }) : ''
+              );
               setOpen(false);
             }}
             locale={cs}

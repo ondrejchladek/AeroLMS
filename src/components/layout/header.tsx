@@ -17,9 +17,7 @@ export default function Header({ children }: HeaderProps) {
       </div>
 
       <div className='flex items-center gap-2 px-4'>
-        <div className='hidden md:flex'>
-
-        </div>
+        <div className='hidden md:flex'></div>
       </div>
     </header>
   );

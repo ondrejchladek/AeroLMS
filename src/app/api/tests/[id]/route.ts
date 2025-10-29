@@ -26,10 +26,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const testId = parseInt(id);
 
     if (isNaN(testId)) {
-      return NextResponse.json(
-        { error: 'Invalid test ID' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid test ID' }, { status: 400 });
     }
 
     const test = await prisma.test.findUnique({
@@ -49,10 +46,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     });
 
     if (!test) {
-      return NextResponse.json(
-        { error: 'Test nenalezen' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Test nenalezen' }, { status: 404 });
     }
 
     // Transform questions
@@ -90,10 +84,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const testId = parseInt(id);
 
     if (isNaN(testId)) {
-      return NextResponse.json(
-        { error: 'Invalid test ID' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid test ID' }, { status: 400 });
     }
 
     // Získej test s informací o školení
@@ -105,10 +96,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     });
 
     if (!test) {
-      return NextResponse.json(
-        { error: 'Test nenalezen' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Test nenalezen' }, { status: 404 });
     }
 
     // Ověř oprávnění
@@ -136,7 +124,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json();
-    const { title, description, passingScore, timeLimit, isActive, questions } = body;
+    const { title, description, passingScore, timeLimit, isActive, questions } =
+      body;
 
     // Aktualizuj test a otázky v transakci
     const updatedTest = await prisma.$transaction(async (tx) => {
@@ -167,7 +156,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
               order: q.order !== undefined ? q.order : index,
               type: q.type || 'single',
               question: q.question,
-              options: typeof q.options === 'string' ? q.options : JSON.stringify(q.options),
+              options:
+                typeof q.options === 'string'
+                  ? q.options
+                  : JSON.stringify(q.options),
               correctAnswer: q.correctAnswer || '',
               points: q.points || 1,
               required: q.required !== false
@@ -191,7 +183,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       success: true,
       test: updatedTest
     });
-
   } catch (error) {
     console.error('Update test error:', error);
     return NextResponse.json(
@@ -217,10 +208,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const testId = parseInt(id);
 
     if (isNaN(testId)) {
-      return NextResponse.json(
-        { error: 'Invalid test ID' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Invalid test ID' }, { status: 400 });
     }
 
     // Získej test s informací o školení
@@ -232,10 +220,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     });
 
     if (!test) {
-      return NextResponse.json(
-        { error: 'Test nenalezen' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Test nenalezen' }, { status: 404 });
     }
 
     // Ověř oprávnění
@@ -271,7 +256,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       success: true,
       message: 'Test byl smazán'
     });
-
   } catch (error) {
     console.error('Delete test error:', error);
     return NextResponse.json(

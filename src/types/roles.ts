@@ -1,7 +1,7 @@
 export const ROLES = {
   ADMIN: 'ADMIN',
   TRAINER: 'TRAINER',
-  WORKER: 'WORKER',
+  WORKER: 'WORKER'
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
@@ -24,7 +24,8 @@ export const canManageTraining = (
   userId?: number | null
 ): boolean => {
   if (isAdmin(role)) return true;
-  if (isTrainer(role) && trainerId && userId && trainerId === userId) return true;
+  if (isTrainer(role) && trainerId && userId && trainerId === userId)
+    return true;
   return false;
 };
 

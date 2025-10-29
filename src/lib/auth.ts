@@ -7,17 +7,17 @@ import type { User } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 
 export const authOptions: NextAuthOptions = {
-  session: { 
+  session: {
     strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60 // 30 days
   },
   jwt: {
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60 // 30 days
   },
   secret: process.env.NEXTAUTH_SECRET,
-  pages: { 
+  pages: {
     signIn: '/login',
-    error: '/login', // Error page
+    error: '/login' // Error page
   },
   debug: false,
 
@@ -79,7 +79,10 @@ export const authOptions: NextAuthOptions = {
             }
 
             // Ověření hesla
-            const isValidPassword = await bcrypt.compare(password, user.password);
+            const isValidPassword = await bcrypt.compare(
+              password,
+              user.password
+            );
             if (!isValidPassword) {
               return null;
             }
@@ -102,7 +105,17 @@ export const authOptions: NextAuthOptions = {
   ],
 
   callbacks: {
-    async jwt({ token, user, account, trigger }: { token: JWT; user?: User; account?: any; trigger?: any }) {
+    async jwt({
+      token,
+      user,
+      account,
+      trigger
+    }: {
+      token: JWT;
+      user?: User;
+      account?: any;
+      trigger?: any;
+    }) {
       try {
         // Při prvním přihlášení nebo refresh
         if (user) {
@@ -126,7 +139,8 @@ export const authOptions: NextAuthOptions = {
         }
 
         // Kontrola expirace tokenu
-        const tokenAge = Math.floor(Date.now() / 1000) - (token.iat as number || 0);
+        const tokenAge =
+          Math.floor(Date.now() / 1000) - ((token.iat as number) || 0);
         if (tokenAge > 30 * 24 * 60 * 60) {
           // Token je starší než 30 dní, vynutit re-login
           return {

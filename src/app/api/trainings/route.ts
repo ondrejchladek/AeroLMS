@@ -21,7 +21,8 @@ export async function GET(request: Request) {
   try {
     // Check if admin or trainer request for all trainings from database
     const url = new URL(request.url);
-    const isAdminOrTrainer = isAdmin(session.user.role) || isTrainer(session.user.role);
+    const isAdminOrTrainer =
+      isAdmin(session.user.role) || isTrainer(session.user.role);
     if (url.searchParams.get('admin') === 'true' && isAdminOrTrainer) {
       const trainings = await prisma.training.findMany({
         include: {
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
           createdAt: 'desc'
         }
       });
-      
+
       return NextResponse.json({
         trainings: trainings.map((t: any) => ({
           ...t,
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
     }
     // Získej data uživatele podle kódu nebo emailu
     let user;
-    
+
     if (session.user.code) {
       // Uživatel přihlášen kódem
       user = await prisma.user.findUnique({
@@ -57,7 +58,10 @@ export async function GET(request: Request) {
         }
       });
     } else {
-      return NextResponse.json({ error: 'User identifier not found' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'User identifier not found' },
+        { status: 401 }
+      );
     }
 
     if (!user) {

@@ -3,7 +3,13 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import PageContainer from '@/components/layout/page-container';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,7 +22,7 @@ import {
   TableCell,
   TableHead,
   TableHeader,
-  TableRow,
+  TableRow
 } from '@/components/ui/table';
 import {
   Dialog,
@@ -25,14 +31,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogTrigger
 } from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
+  SelectValue
 } from '@/components/ui/select';
 import {
   ArrowLeft,
@@ -64,7 +70,9 @@ interface Question {
   required: boolean;
 }
 
-export default function QuestionsManagementClient({ test }: QuestionsManagementClientProps) {
+export default function QuestionsManagementClient({
+  test
+}: QuestionsManagementClientProps) {
   const router = useRouter();
   const [questions, setQuestions] = useState<Question[]>(
     test.questions.map((q: any) => ({
@@ -126,7 +134,7 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
     }
 
     // Update order
-    newQuestions.forEach((q, i) => q.order = i);
+    newQuestions.forEach((q, i) => (q.order = i));
 
     setQuestions(newQuestions);
     setIsDialogOpen(false);
@@ -135,7 +143,7 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
   const handleDeleteQuestion = (index: number) => {
     if (confirm('Opravdu chcete smazat tuto otázku?')) {
       const newQuestions = questions.filter((_, i) => i !== index);
-      newQuestions.forEach((q, i) => q.order = i);
+      newQuestions.forEach((q, i) => (q.order = i));
       setQuestions(newQuestions);
     }
   };
@@ -145,8 +153,11 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
     const newIndex = direction === 'up' ? index - 1 : index + 1;
 
     if (newIndex >= 0 && newIndex < newQuestions.length) {
-      [newQuestions[index], newQuestions[newIndex]] = [newQuestions[newIndex], newQuestions[index]];
-      newQuestions.forEach((q, i) => q.order = i);
+      [newQuestions[index], newQuestions[newIndex]] = [
+        newQuestions[newIndex],
+        newQuestions[index]
+      ];
+      newQuestions.forEach((q, i) => (q.order = i));
       setQuestions(newQuestions);
     }
   };
@@ -158,14 +169,17 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
       const response = await fetch(`/api/tests/${test.id}`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          questions: questions.map(q => ({
+          questions: questions.map((q) => ({
             ...q,
             options: q.options ? JSON.stringify(q.options) : null,
-            correctAnswer: q.correctAnswer ?
-              (typeof q.correctAnswer === 'object' ? JSON.stringify(q.correctAnswer) : q.correctAnswer) : ''
+            correctAnswer: q.correctAnswer
+              ? typeof q.correctAnswer === 'object'
+                ? JSON.stringify(q.correctAnswer)
+                : q.correctAnswer
+              : ''
           }))
         })
       });
@@ -177,10 +191,11 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
 
       toast.success('Otázky byly úspěšně uloženy');
       router.refresh();
-
     } catch (error) {
       console.error('Save error:', error);
-      toast.error(error instanceof Error ? error.message : 'Chyba při ukládání otázek');
+      toast.error(
+        error instanceof Error ? error.message : 'Chyba při ukládání otázek'
+      );
     } finally {
       setIsSaving(false);
     }
@@ -196,24 +211,24 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
 
   return (
     <PageContainer>
-      <div className="space-y-6">
+      <div className='space-y-6'>
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className='flex items-center justify-between'>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Správa otázek</h1>
-            <p className="text-muted-foreground">
+            <h1 className='text-3xl font-bold tracking-tight'>Správa otázek</h1>
+            <p className='text-muted-foreground'>
               Test: {test.title} | Školení: {test.training.name}
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" asChild>
+          <div className='flex gap-2'>
+            <Button variant='outline' asChild>
               <Link href={`/trainer/training/${test.training.code}/tests`}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
+                <ArrowLeft className='mr-2 h-4 w-4' />
                 Zpět na testy
               </Link>
             </Button>
             <Button onClick={handleAddQuestion}>
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className='mr-2 h-4 w-4' />
               Nová otázka
             </Button>
             <Button
@@ -222,12 +237,12 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
             >
               {isSaving ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
                   Ukládám...
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className='mr-2 h-4 w-4' />
                   Uložit vše
                 </>
               )}
@@ -240,19 +255,20 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
           <CardHeader>
             <CardTitle>Seznam otázek</CardTitle>
             <CardDescription>
-              Celkem {questions.length} otázek, {questions.reduce((sum, q) => sum + q.points, 0)} bodů
+              Celkem {questions.length} otázek,{' '}
+              {questions.reduce((sum, q) => sum + q.points, 0)} bodů
             </CardDescription>
           </CardHeader>
           <CardContent>
             {questions.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className='text-muted-foreground py-8 text-center'>
                 Zatím nejsou vytvořeny žádné otázky
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-12">#</TableHead>
+                    <TableHead className='w-12'>#</TableHead>
                     <TableHead>Otázka</TableHead>
                     <TableHead>Typ</TableHead>
                     <TableHead>Body</TableHead>
@@ -264,43 +280,45 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
                   {questions.map((question, index) => (
                     <TableRow key={index}>
                       <TableCell>{index + 1}</TableCell>
-                      <TableCell className="max-w-md truncate">
+                      <TableCell className='max-w-md truncate'>
                         {question.question}
                       </TableCell>
-                      <TableCell>{getQuestionTypeLabel(question.type)}</TableCell>
+                      <TableCell>
+                        {getQuestionTypeLabel(question.type)}
+                      </TableCell>
                       <TableCell>{question.points}</TableCell>
                       <TableCell>{question.required ? 'Ano' : 'Ne'}</TableCell>
                       <TableCell>
-                        <div className="flex gap-1">
+                        <div className='flex gap-1'>
                           <Button
-                            size="sm"
-                            variant="ghost"
+                            size='sm'
+                            variant='ghost'
                             onClick={() => handleMoveQuestion(index, 'up')}
                             disabled={index === 0}
                           >
-                            <MoveUp className="h-4 w-4" />
+                            <MoveUp className='h-4 w-4' />
                           </Button>
                           <Button
-                            size="sm"
-                            variant="ghost"
+                            size='sm'
+                            variant='ghost'
                             onClick={() => handleMoveQuestion(index, 'down')}
                             disabled={index === questions.length - 1}
                           >
-                            <MoveDown className="h-4 w-4" />
+                            <MoveDown className='h-4 w-4' />
                           </Button>
                           <Button
-                            size="sm"
-                            variant="ghost"
+                            size='sm'
+                            variant='ghost'
                             onClick={() => handleEditQuestion(index)}
                           >
-                            <Edit className="h-4 w-4" />
+                            <Edit className='h-4 w-4' />
                           </Button>
                           <Button
-                            size="sm"
-                            variant="ghost"
+                            size='sm'
+                            variant='ghost'
                             onClick={() => handleDeleteQuestion(index)}
                           >
-                            <Trash2 className="h-4 w-4 text-red-500" />
+                            <Trash2 className='h-4 w-4 text-red-500' />
                           </Button>
                         </div>
                       </TableCell>
@@ -314,7 +332,7 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
 
         {/* Question dialog */}
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className='max-h-[90vh] max-w-3xl overflow-y-auto'>
             <DialogHeader>
               <DialogTitle>
                 {editingIndex !== null ? 'Upravit otázku' : 'Nová otázka'}
@@ -323,9 +341,9 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
                 Vytvořte nebo upravte testovou otázku
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="type">Typ otázky</Label>
+            <div className='grid gap-4 py-4'>
+              <div className='grid gap-2'>
+                <Label htmlFor='type'>Typ otázky</Label>
                 <Select
                   value={currentQuestion.type}
                   onValueChange={(value: QuestionType) =>
@@ -336,57 +354,75 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="single">Jedna odpověď</SelectItem>
-                    <SelectItem value="multiple">Více odpovědí</SelectItem>
+                    <SelectItem value='single'>Jedna odpověď</SelectItem>
+                    <SelectItem value='multiple'>Více odpovědí</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="question">Text otázky</Label>
+              <div className='grid gap-2'>
+                <Label htmlFor='question'>Text otázky</Label>
                 <Textarea
-                  id="question"
+                  id='question'
                   value={currentQuestion.question}
-                  onChange={(e) => setCurrentQuestion({
-                    ...currentQuestion,
-                    question: e.target.value
-                  })}
-                  placeholder="Zadejte znění otázky"
+                  onChange={(e) =>
+                    setCurrentQuestion({
+                      ...currentQuestion,
+                      question: e.target.value
+                    })
+                  }
+                  placeholder='Zadejte znění otázky'
                   rows={3}
                 />
               </div>
 
               {/* Options for single/multiple choice */}
-              {(currentQuestion.type === 'single' || currentQuestion.type === 'multiple') && (
-                <div className="grid gap-2">
+              {(currentQuestion.type === 'single' ||
+                currentQuestion.type === 'multiple') && (
+                <div className='grid gap-2'>
                   <Label>Možnosti odpovědí</Label>
                   {currentQuestion.options?.map((option, i) => (
-                    <div key={i} className="flex gap-2 items-center">
+                    <div key={i} className='flex items-center gap-2'>
                       <Input
                         value={option}
                         onChange={(e) => {
-                          const newOptions = [...(currentQuestion.options || [])];
+                          const newOptions = [
+                            ...(currentQuestion.options || [])
+                          ];
                           newOptions[i] = e.target.value;
-                          setCurrentQuestion({ ...currentQuestion, options: newOptions });
+                          setCurrentQuestion({
+                            ...currentQuestion,
+                            options: newOptions
+                          });
                         }}
                         placeholder={`Možnost ${i + 1}`}
                       />
                       {currentQuestion.type === 'single' ? (
                         <Checkbox
-                          checked={currentQuestion.correctAnswer === i.toString()}
+                          checked={
+                            currentQuestion.correctAnswer === i.toString()
+                          }
                           onCheckedChange={(checked) => {
                             if (checked) {
-                              setCurrentQuestion({ ...currentQuestion, correctAnswer: i.toString() });
+                              setCurrentQuestion({
+                                ...currentQuestion,
+                                correctAnswer: i.toString()
+                              });
                             }
                           }}
                         />
                       ) : (
                         <Checkbox
-                          checked={Array.isArray(currentQuestion.correctAnswer) &&
-                                 currentQuestion.correctAnswer.includes(i.toString())}
+                          checked={
+                            Array.isArray(currentQuestion.correctAnswer) &&
+                            currentQuestion.correctAnswer.includes(i.toString())
+                          }
                           onCheckedChange={(checked) => {
-                            const current = Array.isArray(currentQuestion.correctAnswer) ?
-                              currentQuestion.correctAnswer : [];
+                            const current = Array.isArray(
+                              currentQuestion.correctAnswer
+                            )
+                              ? currentQuestion.correctAnswer
+                              : [];
                             if (checked) {
                               setCurrentQuestion({
                                 ...currentQuestion,
@@ -395,7 +431,9 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
                             } else {
                               setCurrentQuestion({
                                 ...currentQuestion,
-                                correctAnswer: current.filter(x => x !== i.toString())
+                                correctAnswer: current.filter(
+                                  (x) => x !== i.toString()
+                                )
                               });
                             }
                           }}
@@ -406,34 +444,39 @@ export default function QuestionsManagementClient({ test }: QuestionsManagementC
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="points">Body</Label>
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='grid gap-2'>
+                  <Label htmlFor='points'>Body</Label>
                   <Input
-                    id="points"
-                    type="number"
-                    min="1"
+                    id='points'
+                    type='number'
+                    min='1'
                     value={currentQuestion.points}
-                    onChange={(e) => setCurrentQuestion({
-                      ...currentQuestion,
-                      points: parseInt(e.target.value) || 1
-                    })}
-                  />
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="required"
-                    checked={currentQuestion.required}
-                    onCheckedChange={(checked) =>
-                      setCurrentQuestion({ ...currentQuestion, required: !!checked })
+                    onChange={(e) =>
+                      setCurrentQuestion({
+                        ...currentQuestion,
+                        points: parseInt(e.target.value) || 1
+                      })
                     }
                   />
-                  <Label htmlFor="required">Povinná otázka</Label>
+                </div>
+                <div className='flex items-center space-x-2'>
+                  <Checkbox
+                    id='required'
+                    checked={currentQuestion.required}
+                    onCheckedChange={(checked) =>
+                      setCurrentQuestion({
+                        ...currentQuestion,
+                        required: !!checked
+                      })
+                    }
+                  />
+                  <Label htmlFor='required'>Povinná otázka</Label>
                 </div>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              <Button variant='outline' onClick={() => setIsDialogOpen(false)}>
                 Zrušit
               </Button>
               <Button onClick={handleSaveQuestion}>

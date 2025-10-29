@@ -204,19 +204,19 @@
 }
 
 /* Text alignment */
-.ProseMirror [data-text-align="left"] {
+.ProseMirror [data-text-align='left'] {
   text-align: left;
 }
 
-.ProseMirror [data-text-align="center"] {
+.ProseMirror [data-text-align='center'] {
   text-align: center;
 }
 
-.ProseMirror [data-text-align="right"] {
+.ProseMirror [data-text-align='right'] {
   text-align: right;
 }
 
-.ProseMirror [data-text-align="justify"] {
+.ProseMirror [data-text-align='justify'] {
   text-align: justify;
 }
 
@@ -233,7 +233,7 @@
 /* Hard break */
 .ProseMirror br {
   display: block;
-  content: "";
+  content: '';
   margin-top: 0.5em;
 }
 
@@ -245,7 +245,7 @@
 }
 
 .ProseMirror .ProseMirror-gapcursor:after {
-  content: "";
+  content: '';
   display: block;
   position: absolute;
   top: -2px;

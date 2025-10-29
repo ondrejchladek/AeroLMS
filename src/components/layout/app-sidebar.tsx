@@ -6,7 +6,7 @@ import { ROLES, isAdmin, isTrainer } from '@/types/roles';
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
+  CollapsibleTrigger
 } from '@/components/ui/collapsible';
 import {
   DropdownMenu,
@@ -15,7 +15,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import {
   Sidebar,
@@ -30,7 +30,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarRail,
+  SidebarRail
 } from '@/components/ui/sidebar';
 import { UserAvatarProfile } from '@/components/user-avatar-profile';
 import { navItems as staticNavItems } from '@/constants/data';
@@ -46,7 +46,7 @@ import {
   IconMoon,
   IconPhotoUp,
   IconSun,
-  IconUserCircle,
+  IconUserCircle
 } from '@tabler/icons-react';
 
 import Link from 'next/link';
@@ -60,12 +60,10 @@ import { useSession, signOut } from 'next-auth/react';
 export const company = {
   name: 'Aerotech Czech s.r.o.',
   logo: IconPhotoUp,
-  plan: 'Enterprise',
+  plan: 'Enterprise'
 };
 
-const tenants = [
-  { id: '1', name: 'Aerotech Czech s.r.o.' }
-];
+const tenants = [{ id: '1', name: 'Aerotech Czech s.r.o.' }];
 
 export default function AppSidebar() {
   const pathname = usePathname();
@@ -115,7 +113,7 @@ export default function AppSidebar() {
               items: []
             }))
           ];
-          
+
           // Vytvoř admin menu items pouze pro admina
           if (hasAdminAccess) {
             const adminItems: NavItem[] = [
@@ -248,64 +246,64 @@ export default function AppSidebar() {
 
         {/* Běžné Menu - zobrazí se jen pro workery (ne pro adminy a trenéry) */}
         {!hasAdminAccess && !hasTrainerAccess && (
-        <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
-          <SidebarMenu>
-            {navItems.map((item) => {
-              const Icon = item.icon ? Icons[item.icon] : Icons.logo;
+          <SidebarGroup>
+            <SidebarGroupLabel>Menu</SidebarGroupLabel>
+            <SidebarMenu>
+              {navItems.map((item) => {
+                const Icon = item.icon ? Icons[item.icon] : Icons.logo;
 
-              return item.items?.length ? (
-                <Collapsible
-                  key={item.title}
-                  asChild
-                  defaultOpen={item.isActive}
-                  className='group/collapsible'
-                >
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton
-                        tooltip={item.title}
-                        isActive={pathname === item.url}
-                      >
-                        {item.icon && <Icon />}
-                        <span>{item.title}</span>
-                        <IconChevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {item.items.map((sub) => (
-                          <SidebarMenuSubItem key={sub.title}>
-                            <SidebarMenuSubButton
-                              asChild
-                              isActive={pathname === sub.url}
-                            >
-                              <Link href={sub.url}>{sub.title}</Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </SidebarMenuItem>
-                </Collapsible>
-              ) : (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
+                return item.items?.length ? (
+                  <Collapsible
+                    key={item.title}
                     asChild
-                    tooltip={item.title}
-                    isActive={pathname === item.url}
+                    defaultOpen={item.isActive}
+                    className='group/collapsible'
                   >
-                    <Link href={item.url}>
-                      <Icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
-          </SidebarMenu>
-        </SidebarGroup>
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          tooltip={item.title}
+                          isActive={pathname === item.url}
+                        >
+                          {item.icon && <Icon />}
+                          <span>{item.title}</span>
+                          <IconChevronRight className='ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90' />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {item.items.map((sub) => (
+                            <SidebarMenuSubItem key={sub.title}>
+                              <SidebarMenuSubButton
+                                asChild
+                                isActive={pathname === sub.url}
+                              >
+                                <Link href={sub.url}>{sub.title}</Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+                ) : (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      tooltip={item.title}
+                      isActive={pathname === item.url}
+                    >
+                      <Link href={item.url}>
+                        <Icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
+            </SidebarMenu>
+          </SidebarGroup>
         )}
       </SidebarContent>
 
@@ -326,7 +324,7 @@ export default function AppSidebar() {
                       /* adaptace pro Next-Auth: předáme jméno a případně image */
                       user={{
                         fullName: user.name ?? 'User',
-                        imageUrl: (user as any).image ?? undefined,
+                        imageUrl: (user as any).image ?? undefined
                       }}
                     />
                   )}
@@ -348,7 +346,7 @@ export default function AppSidebar() {
                         showInfo
                         user={{
                           fullName: user.name ?? 'User',
-                          imageUrl: (user as any).image ?? undefined,
+                          imageUrl: (user as any).image ?? undefined
                         }}
                       />
                     )}
@@ -367,7 +365,11 @@ export default function AppSidebar() {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      setTheme(theme === 'dark' ? 'light' : 'dark')
+                    }
+                  >
                     {theme === 'dark' ? (
                       <IconSun className='mr-2 h-4 w-4' />
                     ) : (
@@ -379,7 +381,9 @@ export default function AppSidebar() {
 
                 <DropdownMenuSeparator />
 
-                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/login' })}>
+                <DropdownMenuItem
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                >
                   <IconLogout className='mr-2 h-4 w-4' />
                   Odhlásit
                 </DropdownMenuItem>

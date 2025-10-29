@@ -25,8 +25,8 @@ export async function GET(
       select: {
         name: true,
         description: true,
-        content: true,
-      },
+        content: true
+      }
     });
 
     if (!training) {
@@ -38,7 +38,7 @@ export async function GET(
     if (session.user.code) {
       const user = await prisma.user.findUnique({
         where: { code: session.user.code },
-        select: { name: true },
+        select: { name: true }
       });
       if (user) {
         userName = user.name;
@@ -46,7 +46,7 @@ export async function GET(
     } else if (session.user.email) {
       const user = await prisma.user.findUnique({
         where: { email: session.user.email },
-        select: { name: true },
+        select: { name: true }
       });
       if (user) {
         userName = user.name;
@@ -54,19 +54,21 @@ export async function GET(
     }
 
     // Parse content z JSON stringu
-    const parsedContent = training.content ? JSON.parse(training.content) : null;
+    const parsedContent = training.content
+      ? JSON.parse(training.content)
+      : null;
 
     // Vygeneruj PDF
     const TrainingPDF = TrainingPDFDocument({
       training: {
         name: training.name,
         description: training.description,
-        content: parsedContent,
+        content: parsedContent
       },
       userName,
-      generatedDate: new Date(),
+      generatedDate: new Date()
     });
-    
+
     const pdfBuffer = await renderToBuffer(TrainingPDF);
 
     // Vytvoř název souboru
@@ -77,8 +79,8 @@ export async function GET(
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${fileName}"`,
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-      },
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      }
     });
   } catch (error) {
     console.error('Error generating PDF:', error);

@@ -10,14 +10,12 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Kontrola oprávnění - admin nebo školitel
-    const canViewUsers = isAdmin(session.user.role) || isTrainer(session.user.role);
+    const canViewUsers =
+      isAdmin(session.user.role) || isTrainer(session.user.role);
 
     if (!canViewUsers) {
       return NextResponse.json(

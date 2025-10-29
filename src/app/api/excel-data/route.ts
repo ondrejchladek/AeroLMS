@@ -6,26 +6,28 @@ import fs from 'fs';
 export async function GET() {
   try {
     const filePath = path.join(process.cwd(), 'Sešit1-test.xlsx');
-    
+
     // Check if file exists
     if (!fs.existsSync(filePath)) {
       throw new Error(`File not found: ${filePath}`);
     }
-    
+
     // Read file as buffer
     const buffer = fs.readFileSync(filePath);
     const workbook = XLSX.read(buffer, { type: 'buffer' });
-    
+
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
     // Process data for timeline chart
     const timelineData: any[] = [];
-    
+
     // Sort data by time
     const sortedData = (jsonData as any[]).sort((a: any, b: any) => {
-      return new Date(a.datumcasOD).getTime() - new Date(b.datumcasOD).getTime();
+      return (
+        new Date(a.datumcasOD).getTime() - new Date(b.datumcasOD).getTime()
+      );
     });
 
     // Create timeline segments
@@ -33,23 +35,23 @@ export async function GET() {
       const intervalStart = new Date(row.datumcasOD);
       const intervalEnd = new Date(row.datumcasDO);
       const intervalDuration = intervalEnd.getTime() - intervalStart.getTime(); // 15 minutes in ms
-      
+
       const runValue = row.run || 0;
       const readyValue = row.ready || 0;
       const total = 899; // Total units representing 15 minutes
-      
+
       // If both run and ready values exist, create separate segments
       if (runValue > 0 && readyValue > 0) {
         // Running segment - starts at DatumCasRUN
         const runStartTime = new Date(row.DatumCasRUN);
         const runDuration = (runValue / total) * intervalDuration;
         const runEndTime = new Date(runStartTime.getTime() + runDuration);
-        
-        
+
         // Ready segment before running (if exists)
         if (runStartTime > intervalStart) {
-          const readyBeforeDuration = runStartTime.getTime() - intervalStart.getTime();
-          
+          const readyBeforeDuration =
+            runStartTime.getTime() - intervalStart.getTime();
+
           timelineData.push({
             x: 'Machine',
             y: [intervalStart.getTime(), runStartTime.getTime()],
@@ -60,7 +62,7 @@ export async function GET() {
             value: Math.round((readyBeforeDuration / intervalDuration) * total)
           });
         }
-        
+
         // Running segment
         timelineData.push({
           x: 'Machine',
@@ -71,11 +73,12 @@ export async function GET() {
           machineName: row.PopisStroj,
           value: runValue
         });
-        
+
         // Ready segment after running (if exists)
         if (runEndTime < intervalEnd) {
-          const readyAfterDuration = intervalEnd.getTime() - runEndTime.getTime();
-          
+          const readyAfterDuration =
+            intervalEnd.getTime() - runEndTime.getTime();
+
           timelineData.push({
             x: 'Machine',
             y: [runEndTime.getTime(), intervalEnd.getTime()],
@@ -91,7 +94,7 @@ export async function GET() {
         const runStartTime = new Date(row.DatumCasRUN);
         const runDuration = (runValue / total) * intervalDuration;
         const runEndTime = new Date(runStartTime.getTime() + runDuration);
-        
+
         timelineData.push({
           x: 'Machine',
           y: [runStartTime.getTime(), runEndTime.getTime()],
@@ -117,8 +120,10 @@ export async function GET() {
         } else {
           // Partial ready time
           const readyDuration = (readyValue / total) * intervalDuration;
-          const readyEndTime = new Date(intervalStart.getTime() + readyDuration);
-          
+          const readyEndTime = new Date(
+            intervalStart.getTime() + readyDuration
+          );
+
           timelineData.push({
             x: 'Machine',
             y: [intervalStart.getTime(), readyEndTime.getTime()],
@@ -142,17 +147,17 @@ export async function GET() {
         timeLabels.push(`${hourStr}:${minuteStr}`);
       }
     }
-    
+
     // Calculate the date range for 24 hours view
     let minTime: number;
     let maxTime: number;
-    
+
     if (sortedData.length > 0) {
       // Get the date from the first record
       const baseDate = new Date((sortedData[0] as any).datumcasOD);
       baseDate.setHours(0, 0, 0, 0); // Set to midnight
       minTime = baseDate.getTime();
-      
+
       const endDate = new Date(baseDate);
       endDate.setHours(23, 59, 59, 999); // Set to end of day
       maxTime = endDate.getTime();
@@ -161,7 +166,7 @@ export async function GET() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       minTime = today.getTime();
-      
+
       const endOfDay = new Date(today);
       endOfDay.setHours(23, 59, 59, 999);
       maxTime = endOfDay.getTime();
@@ -172,9 +177,11 @@ export async function GET() {
     timelineData.forEach((segment, idx) => {
       const start = new Date(segment.y[0]);
       const end = new Date(segment.y[1]);
-      console.log(`Segment ${idx}: ${segment.status} from ${start.toLocaleTimeString()} to ${end.toLocaleTimeString()}`);
+      console.log(
+        `Segment ${idx}: ${segment.status} from ${start.toLocaleTimeString()} to ${end.toLocaleTimeString()}`
+      );
     });
-    
+
     return NextResponse.json({
       timelineData: timelineData,
       timeLabels: timeLabels,

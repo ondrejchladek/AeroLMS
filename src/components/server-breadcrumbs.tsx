@@ -24,13 +24,15 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
 }
 
-async function getTrainingBySlugOrCode(slug: string): Promise<{ name: string; code: string } | null> {
+async function getTrainingBySlugOrCode(
+  slug: string
+): Promise<{ name: string; code: string } | null> {
   // Nejprve zkus najít školení podle přímého kódu
   const trainingByCode = await prisma.training.findUnique({
     where: { code: slug.toUpperCase() },
     select: { name: true, code: true }
   });
-  
+
   if (trainingByCode) {
     return trainingByCode;
   }
@@ -71,7 +73,7 @@ export async function ServerBreadcrumbs({ pathname }: ServerBreadcrumbsProps) {
   if (segments.length > 0) {
     const slug = segments[0];
     const training = await getTrainingBySlugOrCode(slug);
-    
+
     if (training) {
       items.push({
         title: training.name,

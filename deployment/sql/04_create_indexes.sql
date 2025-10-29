@@ -199,6 +199,20 @@ BEGIN TRY
         SET @SkippedCount = @SkippedCount + 1;
     END
 
+    -- Index on createdAt (for ordering by creation time)
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_TestAttempt_createdAt')
+    BEGIN
+        CREATE NONCLUSTERED INDEX [IX_TestAttempt_createdAt]
+        ON [dbo].[TestAttempt]([createdAt] DESC);
+        PRINT '  ✓ Created: IX_TestAttempt_createdAt';
+        SET @IndexCount = @IndexCount + 1;
+    END
+    ELSE
+    BEGIN
+        PRINT '  ⚠ Skipped: IX_TestAttempt_createdAt (already exists)';
+        SET @SkippedCount = @SkippedCount + 1;
+    END
+
     PRINT '';
 
     -- ============================================================================
@@ -243,6 +257,21 @@ BEGIN TRY
     ELSE
     BEGIN
         PRINT '  ⚠ Skipped: IX_Certificate_validUntil (already exists)';
+        SET @SkippedCount = @SkippedCount + 1;
+    END
+
+    -- Index on certificateNumber (for fast certificate lookup)
+    -- Note: certificateNumber has UNIQUE constraint, but explicit index improves lookup performance
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_Certificate_certificateNumber')
+    BEGIN
+        CREATE NONCLUSTERED INDEX [IX_Certificate_certificateNumber]
+        ON [dbo].[Certificate]([certificateNumber]);
+        PRINT '  ✓ Created: IX_Certificate_certificateNumber';
+        SET @IndexCount = @IndexCount + 1;
+    END
+    ELSE
+    BEGIN
+        PRINT '  ⚠ Skipped: IX_Certificate_certificateNumber (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 

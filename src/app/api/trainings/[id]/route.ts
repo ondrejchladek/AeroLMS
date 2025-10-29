@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isAdmin, isTrainer } from '@/types/roles';
+import {
+  UpdateTrainingSchema,
+  validateRequestBody
+} from '@/lib/validation-schemas';
 
 interface RouteParams {
   params: Promise<{
@@ -119,13 +123,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const body = await request.json();
-    const { name, description, content } = body;
+    // Validate request body
+    const validation = await validateRequestBody(request, UpdateTrainingSchema);
+    if (!validation.success) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
 
-    // Připrav data pro aktualizaci
-    const updateData: any = {};
+    const { name, description, content } = validation.data;
 
-    // Name může přepsat hodnotu z code
+    // Připrav data pro aktualizaci (již validované)
+    const updateData: Record<string, any> = {};
+
     if (name !== undefined) {
       updateData.name = name;
     }
@@ -136,7 +144,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     if (content !== undefined) {
       // Content je uložen jako JSON string
-      updateData.content = typeof content === 'string' ? content : JSON.stringify(content);
+      updateData.content =
+        typeof content === 'string' ? content : JSON.stringify(content);
     }
 
     // Aktualizuj školení
@@ -158,7 +167,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       success: true,
       training: updatedTraining
     });
-
   } catch (error) {
     console.error('Update training error:', error);
     return NextResponse.json(
@@ -206,7 +214,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       success: true,
       message: 'Školení bylo smazáno'
     });
-
   } catch (error) {
     console.error('Delete training error:', error);
     return NextResponse.json(
