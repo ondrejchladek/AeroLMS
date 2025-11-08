@@ -28,7 +28,7 @@ async function getUserTableColumns(): Promise<string[]> {
     `
     SELECT COLUMN_NAME
     FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_NAME = @p0
+    WHERE TABLE_NAME = @P1
       AND TABLE_SCHEMA = 'dbo'
     ORDER BY ORDINAL_POSITION
     `,
@@ -234,7 +234,7 @@ export async function getUserTrainingData(
         [${columnDatumPristi}] as datumPristi,
         [${columnPozadovano}] as pozadovano
       FROM [User]
-      WHERE [${idColumn}] = @p0
+      WHERE [${idColumn}] = @P1
     `,
       userId
     );
@@ -293,9 +293,9 @@ export async function updateUserTrainingData(
         `
         UPDATE [${targetTable}]
         SET
-          [${columnDatumPosl}] = @p0,
-          [${columnDatumPristi}] = @p1
-        WHERE [${idColumn}] = @p2
+          [${columnDatumPosl}] = @P1,
+          [${columnDatumPristi}] = @P2
+        WHERE [${idColumn}] = @P3
       `,
         datumPosl,
         datumPristi,
@@ -305,8 +305,8 @@ export async function updateUserTrainingData(
       await prisma.$executeRawUnsafe(
         `
         UPDATE [${targetTable}]
-        SET [${columnDatumPosl}] = @p0
-        WHERE [${idColumn}] = @p1
+        SET [${columnDatumPosl}] = @P1
+        WHERE [${idColumn}] = @P2
       `,
         datumPosl,
         userId
