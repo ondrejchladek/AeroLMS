@@ -30,19 +30,13 @@ export default async function DynamicPage({ params }: PageProps) {
     }
   });
 
-  // Vytvoř mapu code -> training pro rychlý přístup
-  const trainingsByCode = dbTrainings.reduce((acc: any, training: any) => {
-    acc[training.code] = training;
-    return acc;
-  }, {});
-
   // Pokud není žádná cesta, zobraz přehled
   if (node.length === 0) {
     // Načti data přihlášeného uživatele
     let user;
-    if (session!.user?.code) {
+    if (session!.user?.cislo) {
       user = await prisma.user.findUnique({
-        where: { code: session!.user.code }
+        where: { cislo: session!.user.cislo }
       });
     } else if (session!.user?.email) {
       user = await prisma.user.findUnique({
@@ -57,14 +51,15 @@ export default async function DynamicPage({ params }: PageProps) {
     // Připrav data všech školení pro tabulku ze skutečných dat uživatele
     const allTrainings = dbTrainings.map((training: any) => {
       // Dynamicky získej data o školení z databáze uživatele
+      // CRITICAL: Training columns have underscore prefix in database
       const lastDate = user[
-        `${training.code}DatumPosl` as keyof typeof user
+        `_${training.code}DatumPosl` as keyof typeof user
       ] as Date | null;
       const nextDate = user[
-        `${training.code}DatumPristi` as keyof typeof user
+        `_${training.code}DatumPristi` as keyof typeof user
       ] as Date | null;
       const required = Boolean(
-        user[`${training.code}Pozadovano` as keyof typeof user]
+        user[`_${training.code}Pozadovano` as keyof typeof user]
       );
 
       return {
@@ -214,11 +209,11 @@ export default async function DynamicPage({ params }: PageProps) {
   // Middleware garantuje, že session existuje a obsahuje buď code nebo email
   let user;
 
-  if (session!.user?.code) {
+  if (session!.user?.cislo) {
     // Uživatel přihlášen kódem
     user = await prisma.user.findUnique({
       where: {
-        code: session!.user.code
+        cislo: session!.user.cislo
       }
     });
   } else if (session!.user?.email) {
@@ -235,16 +230,17 @@ export default async function DynamicPage({ params }: PageProps) {
     redirect('/login');
   }
 
-  // Dynamicky získej data o školení (bez podtržítek v názvech polí)
+  // Dynamicky získej data o školení
+  // CRITICAL: Training columns have underscore prefix in database
   const trainingData = {
     datumPosl: user[
-      `${training.code}DatumPosl` as keyof typeof user
+      `_${training.code}DatumPosl` as keyof typeof user
     ] as Date | null,
     pozadovano: Boolean(
-      user[`${training.code}Pozadovano` as keyof typeof user]
+      user[`_${training.code}Pozadovano` as keyof typeof user]
     ),
     datumPristi: user[
-      `${training.code}DatumPristi` as keyof typeof user
+      `_${training.code}DatumPristi` as keyof typeof user
     ] as Date | null
   };
 

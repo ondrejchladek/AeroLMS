@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isAdmin } from '@/types/roles';
-import bcrypt from 'bcryptjs';
 
 interface Props {
   params: Promise<{
@@ -48,18 +47,22 @@ export async function PATCH(request: NextRequest, { params }: Props) {
         continue; // Skip computed fields
       }
 
+      // Skip computed name field (VIEW computes from firstName + lastName)
+      if (key === 'name') {
+        continue; // Skip computed fields
+      }
+
       // Pokud je hodnota datum, převést na Date objekt
       if (key.includes('Datum') && value) {
         updateData[key] = new Date(value as string);
       } else if (
-        key === 'password' &&
+        key === 'alias' &&
         value &&
         typeof value === 'string' &&
         value.trim() !== ''
       ) {
-        // Hash hesla pomocí bcrypt
-        const hashedPassword = await bcrypt.hash(value, 10);
-        updateData[key] = hashedPassword;
+        // Heslo v plain textu (Helios ERP constraint)
+        updateData[key] = value;
       } else {
         updateData[key] = value;
       }
@@ -81,8 +84,6 @@ export async function PATCH(request: NextRequest, { params }: Props) {
       message: 'Uživatel úspěšně aktualizován'
     });
   } catch (error) {
-    console.error('Error updating user:', error);
-
     if (
       error instanceof Error &&
       error.message.includes('Record to update not found')

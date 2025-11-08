@@ -29,7 +29,6 @@ export async function POST() {
       ...result
     });
   } catch (error) {
-    console.error('Training sync API error:', error);
     return NextResponse.json(
       { error: 'Failed to synchronize trainings' },
       { status: 500 }

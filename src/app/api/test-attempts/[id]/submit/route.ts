@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { updateUserTrainingData } from '@/lib/training-sync';
 import {
   SubmitTestSchema,
   validateRequestBody,
@@ -104,11 +105,6 @@ export async function POST(
             }
           });
 
-          // Check for missing correct answers
-          const missingCorrect = correctAnswer.filter(
-            (ans) => !userSet.has(ans)
-          ).length;
-
           // Award partial points based on correct selections
           // Full points only if all correct and no incorrect selections
           if (
@@ -147,16 +143,14 @@ export async function POST(
     if (passed) {
       const trainingCode = attempt.test.training.code;
 
-      // Update user's training completion date dynamically based on training code
+      // Update user's training completion date
+      // Uses validated function with environment detection and SQL injection protection
       // DatumPristi is automatically calculated by the database from DatumPosl
-      const datumPoslField = `${trainingCode}DatumPosl`;
-
-      await prisma.user.update({
-        where: { id: parseInt(session.user.id) },
-        data: {
-          [datumPoslField]: new Date()
-        }
-      });
+      await updateUserTrainingData(
+        parseInt(session.user.id),
+        trainingCode,
+        new Date() // DatumPosl - DatumPristi auto-calculated by database
+      );
 
       // Create certificate record
       const certificate = await prisma.certificate.create({
@@ -196,7 +190,6 @@ export async function POST(
       message: 'Bohužel jste test nesložili. Zkuste to prosím znovu.'
     });
   } catch (error) {
-    console.error('Error submitting test:', error);
     return NextResponse.json(
       { error: 'Failed to submit test' },
       { status: 500 }

@@ -24,8 +24,9 @@ export async function GET() {
         trainer: {
           select: {
             id: true,
-            code: true,
-            name: true,
+            cislo: true,
+            firstName: true,
+            lastName: true,
             email: true,
             role: true
           }
@@ -43,7 +44,6 @@ export async function GET() {
 
     return NextResponse.json({ assignments });
   } catch (error) {
-    console.error('Error fetching assignments:', error);
     return NextResponse.json(
       { error: 'Failed to fetch assignments' },
       { status: 500 }
@@ -99,8 +99,9 @@ export async function POST(request: Request) {
         trainer: {
           select: {
             id: true,
-            code: true,
-            name: true,
+            cislo: true,
+            firstName: true,
+            lastName: true,
             email: true
           }
         },
@@ -117,7 +118,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ assignment });
   } catch (error) {
-    console.error('Error creating assignment:', error);
     return NextResponse.json(
       { error: 'Failed to create assignment' },
       { status: 500 }
@@ -158,7 +158,6 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting assignment:', error);
     return NextResponse.json(
       { error: 'Failed to delete assignment' },
       { status: 500 }

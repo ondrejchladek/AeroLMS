@@ -186,69 +186,66 @@ export const TrainingIdQuerySchema = z.object({
 });
 
 // ============================================================================
-// TRAINING CODE WHITELIST
+// TRAINING CODE VALIDATION (SQL Injection Prevention Only)
 // ============================================================================
 
 /**
- * Whitelist platných training codes
- * DŮLEŽITÉ: Aktualizovat při přidání nových školení!
+ * DŮLEŽITÉ: Training kódy jsou DYNAMICKÉ!
+ *
+ * Školení jsou definována sloupci v databázi (TabCisZam_EXT):
+ * - DB admin ručně přidává sloupce: _{code}DatumPosl, _{code}DatumPristi, _{code}Pozadovano
+ * - Aplikace automaticky detekuje nové sloupce (detectTrainingColumns() v training-sync.ts)
+ * - ŽÁDNÝ statický whitelist - co je v DB, to je platné
+ *
+ * Tato validace slouží POUZE jako SQL injection ochrana:
+ * - Kontroluje jen alfanumerické znaky (A-Z, a-z, 0-9)
+ * - NEKONTROLUJE existenci školení v databázi
+ * - Pokud sloupec neexistuje, SQL dotaz selže s "Invalid column name"
+ *
+ * Pro získání seznamu platných kódů použij:
+ * import { detectTrainingColumns } from '@/lib/training-sync';
+ * const validCodes = await detectTrainingColumns();
  */
-export const VALID_TRAINING_CODES = [
-  'CMM',
-  'EDM',
-  'EleZnaceni',
-  'Geom',
-  'HPV',
-  'JakostVrt',
-  'KontrolMet',
-  'KvalitaProduktu',
-  'Lakovani',
-  'Lisovani',
-  'MericiProstredky',
-  'MetodaSPC',
-  'MontagePasov',
-  'NastrojePro',
-  'Navary',
-  'Obrobky',
-  'OCVS',
-  'OOP',
-  'OsobnOchPom',
-  'Palety',
-  'PovrchoveUpravy',
-  'Prislusenstvi',
-  'PrvniDil',
-  'Repas',
-  'SkladMat',
-  'SvarovaniBody',
-  'SvarovaniMIG',
-  'SystemJakosti',
-  'TrideniDilu',
-  'UdrzbaZarizeni',
-  'VizualKontrola',
-  'VyrobniProces',
-  'Zabezpeceni'
-] as const;
-
-// Cast readonly const array to mutable tuple for Zod enum
-export const TrainingCodeSchema = z.enum(
-  VALID_TRAINING_CODES as unknown as [string, ...string[]]
-);
-
-export type TrainingCode = z.infer<typeof TrainingCodeSchema>;
+const TRAINING_CODE_PATTERN = /^[A-Za-z0-9]+$/;
+const MIN_CODE_LENGTH = 2;
+const MAX_CODE_LENGTH = 50;
 
 /**
- * Validates training code against whitelist
- * @throws {Error} if code is invalid
+ * Validates training code format (SQL injection prevention ONLY)
+ *
+ * ⚠️ NEVALIDUJE EXISTENCI ŠKOLENÍ V DATABÁZI!
+ * Pouze kontroluje, že kód obsahuje jen bezpečné znaky (alfanumerické).
+ *
+ * @throws {Error} if code contains unsafe characters
+ *
+ * @example
+ * // ✅ POVOLENÉ (bezpečné znaky)
+ * validateTrainingCode('CMM');           // OK
+ * validateTrainingCode('EleZnaceni');    // OK
+ * validateTrainingCode('NovaSkupina');   // OK - i když neexistuje v DB
+ *
+ * // ❌ ZAKÁZANÉ (SQL injection risk)
+ * validateTrainingCode("CMM'; DROP--");  // THROW
+ * validateTrainingCode('../etc/passwd'); // THROW
+ * validateTrainingCode('CMM OR 1=1');    // THROW
  */
-export function validateTrainingCode(
-  code: string
-): asserts code is TrainingCode {
-  const result = TrainingCodeSchema.safeParse(code);
-  if (!result.success) {
+export function validateTrainingCode(code: string): void {
+  // Délka check
+  if (code.length < MIN_CODE_LENGTH || code.length > MAX_CODE_LENGTH) {
     throw new Error(
-      `Invalid training code: ${code}. Must be one of: ${VALID_TRAINING_CODES.join(', ')}`
+      `Training code must be between ${MIN_CODE_LENGTH} and ${MAX_CODE_LENGTH} characters, got: ${code.length}`
     );
   }
+
+  // Pattern check (SQL injection ochrana - POUZE alfanumerické znaky)
+  if (!TRAINING_CODE_PATTERN.test(code)) {
+    throw new Error(
+      `Invalid training code format: "${code}". Only alphanumeric characters (A-Z, a-z, 0-9) are allowed.`
+    );
+  }
+
+  // ⚠️ NEVALIDUJEME EXISTENCI V DB!
+  // Pokud sloupec neexistuje, SQL dotaz selže s "Invalid column name _${code}DatumPosl"
 }
 
 // ============================================================================
@@ -262,8 +259,7 @@ export function safeJsonParse<T = unknown>(json: string | null): T | null {
   if (!json) return null;
   try {
     return JSON.parse(json) as T;
-  } catch (error) {
-    console.error('Failed to parse JSON:', error);
+  } catch {
     return null;
   }
 }

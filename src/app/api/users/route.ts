@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isAdmin, isTrainer, ROLES } from '@/types/roles';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Ověření přihlášení
     const session = await getServerSession(authOptions);
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const users = await prisma.user.findMany({
       where: whereClause,
       orderBy: {
-        code: 'asc'
+        cislo: 'asc'
       }
     });
 
@@ -40,8 +40,7 @@ export async function GET(request: NextRequest) {
       users,
       count: users.length
     });
-  } catch (error) {
-    console.error('Error fetching users:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

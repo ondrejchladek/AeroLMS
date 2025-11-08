@@ -39,9 +39,6 @@ import {
   Edit,
   Trash2,
   FileText,
-  Clock,
-  CheckCircle,
-  XCircle,
   Loader2
 } from 'lucide-react';
 import Link from 'next/link';
@@ -57,7 +54,7 @@ export default function TestsManagementClient({
   training
 }: TestsManagementClientProps) {
   const router = useRouter();
-  const [tests, setTests] = useState(training.tests);
+  const [tests] = useState(training.tests);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -90,7 +87,7 @@ export default function TestsManagementClient({
         throw new Error(error.error || 'Chyba při vytváření testu');
       }
 
-      const data = await response.json();
+      await response.json();
       toast.success('Test byl úspěšně vytvořen');
 
       // Refresh page to get updated data
@@ -103,7 +100,6 @@ export default function TestsManagementClient({
         timeLimit: 0
       });
     } catch (error) {
-      console.error('Create test error:', error);
       toast.error(
         error instanceof Error ? error.message : 'Chyba při vytváření testu'
       );
@@ -134,7 +130,6 @@ export default function TestsManagementClient({
       );
       router.refresh();
     } catch (error) {
-      console.error('Toggle active error:', error);
       toast.error(
         error instanceof Error ? error.message : 'Chyba při změně stavu testu'
       );
@@ -161,7 +156,6 @@ export default function TestsManagementClient({
       toast.success('Test byl úspěšně smazán');
       router.refresh();
     } catch (error) {
-      console.error('Delete test error:', error);
       toast.error(
         error instanceof Error ? error.message : 'Chyba při mazání testu'
       );

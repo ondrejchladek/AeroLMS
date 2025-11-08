@@ -33,8 +33,9 @@ import {
 
 interface User {
   id: number;
-  name: string;
-  code: string;
+  firstName: string;
+  lastName: string;
+  cislo: number | null;
 }
 
 interface Training {
@@ -77,8 +78,8 @@ export function FirstTestsClient() {
           );
           setUsers(workers);
         }
-      } catch (error) {
-        console.error('Error fetching users:', error);
+      } catch {
+        // Error silently handled via UI state
       }
     };
     fetchUsers();
@@ -93,8 +94,8 @@ export function FirstTestsClient() {
           const data = await response.json();
           setTrainings(data.trainings || []);
         }
-      } catch (error) {
-        console.error('Error fetching trainings:', error);
+      } catch {
+        // Error silently handled via UI state
       }
     };
     fetchTrainings();
@@ -117,8 +118,8 @@ export function FirstTestsClient() {
           const data = await response.json();
           setTests(data.tests || []);
         }
-      } catch (error) {
-        console.error('Error fetching tests:', error);
+      } catch {
+        // Error silently handled via UI state
       } finally {
         setIsLoading(false);
       }
@@ -173,7 +174,6 @@ export function FirstTestsClient() {
       setPassed(false);
       setNotes('');
     } catch (error: any) {
-      console.error('Error submitting test result:', error);
       toast.error(error.message || 'Nepodařilo se uložit výsledek testu');
     } finally {
       setIsSubmitting(false);
@@ -216,7 +216,7 @@ export function FirstTestsClient() {
                 <SelectContent>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id.toString()}>
-                      {user.name} ({user.code})
+                      {`${user.firstName} ${user.lastName}`} ({user.cislo})
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -3,6 +3,7 @@
 
 import * as React from 'react';
 import { ROLES, isAdmin, isTrainer } from '@/types/roles';
+import { getFullNameSafe } from '@/lib/user-helpers';
 import {
   Collapsible,
   CollapsibleContent,
@@ -32,16 +33,13 @@ import {
   SidebarMenuSubItem,
   SidebarRail
 } from '@/components/ui/sidebar';
-import { UserAvatarProfile } from '@/components/user-avatar-profile';
+import { UserAvatarProfile } from '@/components/layout/user-avatar-profile';
 import { navItems as staticNavItems } from '@/constants/data';
-import { useMediaQuery } from '@/hooks/use-media-query';
 import { NavItem } from '@/types';
 
 import {
-  IconBell,
   IconChevronRight,
   IconChevronsDown,
-  IconCreditCard,
   IconLogout,
   IconMoon,
   IconPhotoUp,
@@ -52,8 +50,8 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Icons } from '../icons';
-import { OrgSwitcher } from '../org-switcher';
+import { Icons } from '../ui/icons';
+import { OrgSwitcher } from './org-switcher';
 
 import { useSession, signOut } from 'next-auth/react';
 
@@ -67,7 +65,6 @@ const tenants = [{ id: '1', name: 'Aerotech Czech s.r.o.' }];
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const { isOpen } = useMediaQuery();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
 
@@ -79,16 +76,11 @@ export default function AppSidebar() {
   const [navItems, setNavItems] = React.useState<NavItem[]>(staticNavItems);
   const [adminNavItems, setAdminNavItems] = React.useState<NavItem[]>([]);
   const [trainerNavItems, setTrainerNavItems] = React.useState<NavItem[]>([]);
-  const [isLoadingTrainings, setIsLoadingTrainings] = React.useState(true);
 
   // Check user role
   const userRole = session?.user?.role || ROLES.WORKER;
   const hasAdminAccess = isAdmin(userRole);
   const hasTrainerAccess = isTrainer(userRole);
-
-  const handleSwitchTenant = (_tenantId: string) => {
-    /* implementace tenant switchingu */
-  };
 
   const activeTenant = tenants[0];
 
@@ -165,29 +157,19 @@ export default function AppSidebar() {
 
           setNavItems(dynamicNavItems);
         }
-      } catch (error) {
-        console.error('Failed to fetch trainings:', error);
-      } finally {
-        setIsLoadingTrainings(false);
+      } catch {
+        // Silently fail - nav items will remain at default
       }
     };
 
     fetchTrainings();
   }, [session, hasAdminAccess, hasTrainerAccess]);
 
-  React.useEffect(() => {
-    /* případné side-effects na otevření/ zavření sidebaru */
-  }, [isOpen]);
-
   return (
     <Sidebar collapsible='icon'>
       {/* ---------- HLAVIČKA ---------- */}
       <SidebarHeader>
-        <OrgSwitcher
-          tenants={tenants}
-          defaultTenant={activeTenant}
-          onTenantSwitch={handleSwitchTenant}
-        />
+        <OrgSwitcher tenants={tenants} defaultTenant={activeTenant} />
       </SidebarHeader>
 
       {/* ---------- OBSAH ---------- */}
@@ -321,9 +303,12 @@ export default function AppSidebar() {
                     <UserAvatarProfile
                       className='h-8 w-8 rounded-lg'
                       showInfo
-                      /* adaptace pro Next-Auth: předáme jméno a případně image */
+                      /* adaptace pro Next-Auth: předáme jméno z firstName/lastName */
                       user={{
-                        fullName: user.name ?? 'User',
+                        fullName: getFullNameSafe({
+                          firstName: user.firstName,
+                          lastName: user.lastName
+                        }, 'User'),
                         imageUrl: (user as any).image ?? undefined
                       }}
                     />
@@ -345,7 +330,10 @@ export default function AppSidebar() {
                         className='h-8 w-8 rounded-lg'
                         showInfo
                         user={{
-                          fullName: user.name ?? 'User',
+                          fullName: getFullNameSafe({
+                            firstName: user.firstName,
+                            lastName: user.lastName
+                          }, 'User'),
                           imageUrl: (user as any).image ?? undefined
                         }}
                       />

@@ -149,7 +149,7 @@ export default function TestPage() {
       enabled: false
     },
     tooltip: {
-      custom: function ({ series, seriesIndex, dataPointIndex, w }: any) {
+      custom: function ({ dataPointIndex }: any) {
         const data = chartData?.timelineData[dataPointIndex];
         if (!data) return '';
 

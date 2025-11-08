@@ -73,7 +73,6 @@ export default function TrainingEditClient({
         router.push('/trainer');
       }, 1500);
     } catch (error) {
-      console.error('Save error:', error);
       toast.error(
         error instanceof Error ? error.message : 'Chyba při ukládání školení'
       );

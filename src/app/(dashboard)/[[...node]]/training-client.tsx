@@ -132,8 +132,7 @@ export function TrainingClient({
       setAttemptId(startData.attemptId);
       setViewMode('test');
       toast.success('Test byl úspěšně spuštěn');
-    } catch (error) {
-      console.error('Error starting test:', error);
+    } catch {
       toast.error('Nepodařilo se spustit test');
     }
   };
@@ -163,8 +162,7 @@ export function TrainingClient({
       } else {
         toast.error('Test nebyl úspěšný. Zkuste to prosím znovu.');
       }
-    } catch (error) {
-      console.error('Error submitting test:', error);
+    } catch {
       toast.error('Nepodařilo se odeslat test');
     }
   };
@@ -198,8 +196,7 @@ export function TrainingClient({
 
       setViewMode('test');
       toast.success('Test byl úspěšně spuštěn znovu');
-    } catch (error) {
-      console.error('Error restarting test:', error);
+    } catch {
       toast.error('Nepodařilo se znovu spustit test');
     }
   };
@@ -233,8 +230,7 @@ export function TrainingClient({
       document.body.removeChild(a);
 
       toast.success('PDF byl úspěšně stažen');
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
+    } catch {
       toast.error('Nepodařilo se stáhnout PDF');
     } finally {
       setIsDownloadingPdf(false);

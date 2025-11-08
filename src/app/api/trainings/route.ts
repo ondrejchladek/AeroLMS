@@ -43,11 +43,11 @@ export async function GET(request: Request) {
     // Získej data uživatele podle kódu nebo emailu
     let user;
 
-    if (session.user.code) {
+    if (session.user.cislo) {
       // Uživatel přihlášen kódem
       user = await prisma.user.findUnique({
         where: {
-          code: session.user.code
+          cislo: session.user.cislo
         }
       });
     } else if (session.user.email) {
@@ -78,8 +78,9 @@ export async function GET(request: Request) {
     // Pro každé školení z databáze zkontroluj, zda je požadováno pro uživatele
     const trainings = dbTrainings.map((training: any) => {
       const slug = training.code.toLowerCase(); // Použij code jako slug
+      // CRITICAL: Training columns have underscore prefix in database
       const pozadovano = Boolean(
-        user[`${training.code}Pozadovano` as keyof typeof user]
+        user[`_${training.code}Pozadovano` as keyof typeof user]
       );
       return {
         id: training.id,
@@ -102,7 +103,6 @@ export async function GET(request: Request) {
       allTrainings: trainings
     });
   } catch (error) {
-    console.error('Error fetching trainings:', error);
     return NextResponse.json(
       { error: 'Failed to fetch trainings' },
       { status: 500 }

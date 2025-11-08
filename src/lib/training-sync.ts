@@ -1,8 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import {
-  validateTrainingCode,
-  VALID_TRAINING_CODES
-} from '@/lib/validation-schemas';
+import { validateTrainingCode } from '@/lib/validation-schemas';
 
 interface TrainingColumn {
   code: string;
@@ -89,8 +86,7 @@ export async function detectTrainingColumns(): Promise<TrainingColumn[]> {
     );
 
     return completeTrainings;
-  } catch (error) {
-    console.error('Error detecting training columns:', error);
+  } catch {
     return [];
   }
 }
@@ -116,7 +112,6 @@ export async function syncTrainingsWithDatabase(): Promise<{
     const detectedCodes = detectedTrainings.map((t) => t.code);
 
     if (detectedCodes.length === 0) {
-      console.log('No training columns detected in User table');
       return result;
     }
 
@@ -142,9 +137,7 @@ export async function syncTrainingsWithDatabase(): Promise<{
           }
         });
         result.created.push(code);
-        console.log(`Created training: ${code}`);
-      } catch (error) {
-        console.error(`Error creating training ${code}:`, error);
+      } catch {
         result.errors.push(code);
       }
     }
@@ -152,23 +145,28 @@ export async function syncTrainingsWithDatabase(): Promise<{
     // Track existing trainings
     result.existing = detectedCodes.filter((code) => existingCodes.has(code));
 
-    console.log('Training sync completed:', {
-      detected: detectedCodes.length,
-      created: result.created.length,
-      existing: result.existing.length,
-      errors: result.errors.length
-    });
-
     return result;
-  } catch (error) {
-    console.error('Error syncing trainings:', error);
+  } catch {
     return result;
   }
 }
 
 /**
+ * Detect if running in production environment
+ * Production: Corporate SQL Server with Helios003 database
+ * Development: Local SQL Server Express with User table
+ */
+function isProductionEnvironment(): boolean {
+  return process.env.DB_ENVIRONMENT === 'production';
+}
+
+/**
  * Get user training data for specific training code
  * Returns the dates and required status for a user's training
+ *
+ * Environment-aware:
+ * - Dev: Queries User table directly
+ * - Prod: Queries User SYNONYM → InspiritUser VIEW → TabCisZam_EXT
  */
 export async function getUserTrainingData(
   userId: number,
@@ -183,17 +181,20 @@ export async function getUserTrainingData(
     // This is CRITICAL because we're using dynamic column names in raw SQL
     try {
       validateTrainingCode(trainingCode);
-    } catch (error) {
-      console.error(`Invalid training code: ${trainingCode}`, error);
+    } catch {
       return null;
     }
 
-    const columnDatumPosl = `${trainingCode}DatumPosl`;
-    const columnDatumPristi = `${trainingCode}DatumPristi`;
-    const columnPozadovano = `${trainingCode}Pozadovano`;
+    const columnDatumPosl = `_${trainingCode}DatumPosl`; // Note: _ prefix in database
+    const columnDatumPristi = `_${trainingCode}DatumPristi`;
+    const columnPozadovano = `_${trainingCode}Pozadovano`;
 
     // Use raw query to dynamically access columns
     // SAFE: trainingCode is validated against whitelist above
+    //
+    // Note: [User] works in both dev and prod:
+    // - Dev: Physical User table
+    // - Prod: User SYNONYM → InspiritCisZam VIEW → TabCisZam_EXT
     const result = await prisma.$queryRawUnsafe<any[]>(
       `
       SELECT
@@ -215,17 +216,17 @@ export async function getUserTrainingData(
     }
 
     return null;
-  } catch (error) {
-    console.error(
-      `Error getting user training data for ${trainingCode}:`,
-      error
-    );
+  } catch {
     return null;
   }
 }
 
 /**
  * Update user training data after test completion
+ *
+ * Environment-aware:
+ * - Dev: Updates User table directly
+ * - Prod: Updates TabCisZam_EXT directly (more efficient than via VIEW trigger)
  */
 export async function updateUserTrainingData(
   userId: number,
@@ -238,23 +239,31 @@ export async function updateUserTrainingData(
     // This is CRITICAL because we're using dynamic column names in raw SQL
     try {
       validateTrainingCode(trainingCode);
-    } catch (error) {
-      console.error(`Invalid training code: ${trainingCode}`, error);
+    } catch {
       return false;
     }
 
-    const columnDatumPosl = `${trainingCode}DatumPosl`;
-    const columnDatumPristi = `${trainingCode}DatumPristi`;
+    const isProd = isProductionEnvironment();
+
+    // Column names (with _ prefix in database)
+    const columnDatumPosl = `_${trainingCode}DatumPosl`;
+    const columnDatumPristi = `_${trainingCode}DatumPristi`;
+
+    // Determine target table and ID column based on environment
+    // Production: Update TabCisZam_EXT directly (more efficient than VIEW)
+    // Development: Update User table
+    const targetTable = isProd ? 'TabCisZam_EXT' : 'User';
+    const idColumn = isProd ? 'ID' : 'UserID';
 
     // SAFE: trainingCode is validated against whitelist above
     if (datumPristi) {
       await prisma.$executeRawUnsafe(
         `
-        UPDATE [User]
+        UPDATE [${targetTable}]
         SET
           [${columnDatumPosl}] = @p0,
           [${columnDatumPristi}] = @p1
-        WHERE UserID = @p2
+        WHERE [${idColumn}] = @p2
       `,
         datumPosl,
         datumPristi,
@@ -263,9 +272,9 @@ export async function updateUserTrainingData(
     } else {
       await prisma.$executeRawUnsafe(
         `
-        UPDATE [User]
+        UPDATE [${targetTable}]
         SET [${columnDatumPosl}] = @p0
-        WHERE UserID = @p1
+        WHERE [${idColumn}] = @p1
       `,
         datumPosl,
         userId
@@ -273,11 +282,7 @@ export async function updateUserTrainingData(
     }
 
     return true;
-  } catch (error) {
-    console.error(
-      `Error updating user training data for ${trainingCode}:`,
-      error
-    );
+  } catch {
     return false;
   }
 }
@@ -338,8 +343,7 @@ export async function getAllUserTrainings(userId: number): Promise<
     }
 
     return userTrainings;
-  } catch (error) {
-    console.error('Error getting all user trainings:', error);
+  } catch {
     return [];
   }
 }

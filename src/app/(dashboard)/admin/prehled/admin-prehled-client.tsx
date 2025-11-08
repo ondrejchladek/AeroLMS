@@ -31,8 +31,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-  DialogTrigger
+  DialogTitle
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import {
@@ -87,8 +86,9 @@ interface Training {
 
 interface User {
   id: number;
-  code: number;
-  name: string;
+  cislo: number | null;
+  firstName: string;
+  lastName: string;
   email: string | null;
   role: string;
   [key: string]: any; // Pro dynamické sloupce školení
@@ -101,10 +101,11 @@ interface EditingUser {
 
 interface GeneralUserEdit {
   id: number;
-  code: number;
-  name: string;
+  cislo: number | null;
+  firstName: string;
+  lastName: string;
   email: string;
-  password: string;
+  alias: string;
   role: string;
 }
 
@@ -174,7 +175,6 @@ export default function AdminPrehledClient() {
       const usersData = await usersResponse.json();
       setUsers(usersData.users || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
       setError(
         error instanceof Error ? error.message : 'Chyba při načítání dat'
       );
@@ -229,7 +229,7 @@ export default function AdminPrehledClient() {
         throw new Error('Nepodařilo se uložit změny');
       }
 
-      const data = await response.json();
+      await response.json();
 
       // Aktualizovat lokální data - pouze pro konkrétního uživatele
       setUsers((prevUsers) =>
@@ -242,7 +242,6 @@ export default function AdminPrehledClient() {
       setSuccess('Změny byly úspěšně uloženy');
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
-      console.error('Error saving user:', error);
       setError(error instanceof Error ? error.message : 'Chyba při ukládání');
     } finally {
       setSavingUser(null);
@@ -280,17 +279,17 @@ export default function AdminPrehledClient() {
         throw new Error('Nepodařilo se uložit změny');
       }
 
-      const data = await response.json();
+      await response.json();
 
       // Aktualizovat lokální data
       setTrainings((prevTrainings) =>
         prevTrainings.map((t) =>
           t.id === trainingEdit.id
             ? {
-                ...t,
-                name: trainingEdit.name,
-                description: trainingEdit.description
-              }
+              ...t,
+              name: trainingEdit.name,
+              description: trainingEdit.description
+            }
             : t
         )
       );
@@ -306,7 +305,6 @@ export default function AdminPrehledClient() {
       setSuccess('Školení bylo úspěšně aktualizováno');
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
-      console.error('Error saving training:', error);
       setError(error instanceof Error ? error.message : 'Chyba při ukládání');
     } finally {
       setSavingTraining(false);
@@ -316,10 +314,11 @@ export default function AdminPrehledClient() {
   const handleOpenGeneralEditDialog = (user: User) => {
     setGeneralUserEdit({
       id: user.id,
-      code: user.code,
-      name: user.name,
+      cislo: user.cislo,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email || '',
-      password: '', // Prázdné heslo = nebude změněno
+      alias: '', // Prázdné heslo = nebude změněno
       role: user.role
     });
     setIsEditDialogOpen(true);
@@ -334,15 +333,16 @@ export default function AdminPrehledClient() {
 
     try {
       const updateData: any = {
-        code: generalUserEdit.code,
-        name: generalUserEdit.name,
+        cislo: generalUserEdit.cislo,
+        firstName: generalUserEdit.firstName,
+        lastName: generalUserEdit.lastName,
         email: generalUserEdit.email,
         role: generalUserEdit.role
       };
 
       // Pouze pokud je vyplněno heslo, přidej ho do update
-      if (generalUserEdit.password && generalUserEdit.password.trim() !== '') {
-        updateData.password = generalUserEdit.password;
+      if (generalUserEdit.alias && generalUserEdit.alias.trim() !== '') {
+        updateData.alias = generalUserEdit.alias;
       }
 
       const response = await fetch(`/api/users/${generalUserEdit.id}`, {
@@ -360,12 +360,13 @@ export default function AdminPrehledClient() {
         users.map((u) =>
           u.id === generalUserEdit.id
             ? {
-                ...u,
-                code: generalUserEdit.code,
-                name: generalUserEdit.name,
-                email: generalUserEdit.email,
-                role: generalUserEdit.role
-              }
+              ...u,
+              cislo: generalUserEdit.cislo,
+              firstName: generalUserEdit.firstName,
+              lastName: generalUserEdit.lastName,
+              email: generalUserEdit.email,
+              role: generalUserEdit.role
+            }
             : u
         )
       );
@@ -375,7 +376,6 @@ export default function AdminPrehledClient() {
       setSuccess('Uživatel byl úspěšně aktualizován');
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
-      console.error('Error saving user:', error);
       setError(error instanceof Error ? error.message : 'Chyba při ukládání');
     } finally {
       setSavingGeneralUser(false);
@@ -735,8 +735,8 @@ export default function AdminPrehledClient() {
                 ) : (
                   users.map((user) => (
                     <TableRow key={user.id}>
-                      <TableCell className='font-mono'>{user.code}</TableCell>
-                      <TableCell className='font-medium'>{user.name}</TableCell>
+                      <TableCell className='font-mono'>{user.cislo}</TableCell>
+                      <TableCell className='font-medium'>{`${user.firstName} ${user.lastName}`}</TableCell>
                       <TableCell>{user.email || '-'}</TableCell>
                       <TableCell className='text-muted-foreground font-mono'>
                         ••••••••
@@ -869,32 +869,32 @@ export default function AdminPrehledClient() {
                         // Získat hodnoty pro vybrané školení
                         const pozadovano =
                           isEditing &&
-                          editingUser &&
-                          `${training}Pozadovano` in editingUser.changes
+                            editingUser &&
+                            `${training}Pozadovano` in editingUser.changes
                             ? editingUser.changes[`${training}Pozadovano`]
                             : user[`${training}Pozadovano`];
 
                         const datumPosl =
                           isEditing &&
-                          editingUser &&
-                          `${training}DatumPosl` in editingUser.changes
+                            editingUser &&
+                            `${training}DatumPosl` in editingUser.changes
                             ? editingUser.changes[`${training}DatumPosl`]
                             : user[`${training}DatumPosl`];
 
                         const datumPristi =
                           isEditing &&
-                          editingUser &&
-                          `${training}DatumPristi` in editingUser.changes
+                            editingUser &&
+                            `${training}DatumPristi` in editingUser.changes
                             ? editingUser.changes[`${training}DatumPristi`]
                             : user[`${training}DatumPristi`];
 
                         return (
                           <TableRow key={user.id}>
                             <TableCell className='font-mono'>
-                              {user.code}
+                              {user.cislo}
                             </TableCell>
                             <TableCell className='font-medium'>
-                              {user.name}
+                              {`${user.firstName} ${user.lastName}`}
                             </TableCell>
                             <TableCell>{user.email || '-'}</TableCell>
                             <TableCell>
@@ -942,8 +942,8 @@ export default function AdminPrehledClient() {
                               <div className='text-muted-foreground text-sm italic'>
                                 {datumPristi
                                   ? new Date(datumPristi).toLocaleDateString(
-                                      'cs-CZ'
-                                    )
+                                    'cs-CZ'
+                                  )
                                   : 'Neurčeno'}
                                 <span className='ml-1 text-xs'>(počítáno)</span>
                               </div>
@@ -1015,27 +1015,43 @@ export default function AdminPrehledClient() {
                   <Input
                     id='edit-code'
                     type='number'
-                    value={generalUserEdit.code}
+                    value={generalUserEdit.cislo || ''}
                     onChange={(e) =>
                       setGeneralUserEdit({
                         ...generalUserEdit,
-                        code: Number(e.target.value)
+                        cislo: Number(e.target.value)
                       })
                     }
                     className='col-span-3'
                   />
                 </div>
                 <div className='grid grid-cols-4 items-center gap-4'>
-                  <Label htmlFor='edit-name' className='text-right'>
-                    Jméno
+                  <Label htmlFor='edit-firstName' className='text-right'>
+                    Křestní jméno
                   </Label>
                   <Input
-                    id='edit-name'
-                    value={generalUserEdit.name}
+                    id='edit-firstName'
+                    value={generalUserEdit.firstName}
                     onChange={(e) =>
                       setGeneralUserEdit({
                         ...generalUserEdit,
-                        name: e.target.value
+                        firstName: e.target.value
+                      })
+                    }
+                    className='col-span-3'
+                  />
+                </div>
+                <div className='grid grid-cols-4 items-center gap-4'>
+                  <Label htmlFor='edit-lastName' className='text-right'>
+                    Příjmení
+                  </Label>
+                  <Input
+                    id='edit-lastName'
+                    value={generalUserEdit.lastName}
+                    onChange={(e) =>
+                      setGeneralUserEdit({
+                        ...generalUserEdit,
+                        lastName: e.target.value
                       })
                     }
                     className='col-span-3'
@@ -1065,11 +1081,11 @@ export default function AdminPrehledClient() {
                   <Input
                     id='edit-password'
                     type='password'
-                    value={generalUserEdit.password}
+                    value={generalUserEdit.alias}
                     onChange={(e) =>
                       setGeneralUserEdit({
                         ...generalUserEdit,
-                        password: e.target.value
+                        alias: e.target.value
                       })
                     }
                     placeholder='Ponechte prázdné pro zachování'

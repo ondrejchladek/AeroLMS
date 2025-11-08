@@ -52,8 +52,9 @@ interface TestAttempt {
 
 interface User {
   id: number;
-  name: string;
-  code: string;
+  firstName: string;
+  lastName: string;
+  cislo: number | null;
 }
 
 export function ResultsClient() {
@@ -74,8 +75,8 @@ export function ResultsClient() {
           const data = await response.json();
           setUsers(data.users || []);
         }
-      } catch (error) {
-        console.error('Error fetching users:', error);
+      } catch {
+        // Error silently handled via UI state
       }
     };
     fetchUsers();
@@ -100,8 +101,8 @@ export function ResultsClient() {
           setAttempts(data.attempts || []);
           setFilteredAttempts(data.attempts || []);
         }
-      } catch (error) {
-        console.error('Error fetching attempts:', error);
+      } catch {
+        // Error silently handled via UI state
       } finally {
         setIsLoading(false);
       }
@@ -167,7 +168,7 @@ export function ResultsClient() {
                 <SelectContent>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id.toString()}>
-                      {user.name} ({user.code})
+                      {`${user.firstName} ${user.lastName}`} ({user.cislo})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -199,7 +200,7 @@ export function ResultsClient() {
             <CardTitle className='flex items-center justify-between'>
               <div className='flex items-center gap-2'>
                 <FileText className='h-5 w-5' />
-                Výsledky - {selectedUser.name}
+                Výsledky - {selectedUser.firstName} {selectedUser.lastName}
               </div>
               <Badge variant='outline'>
                 {filteredAttempts.length}{' '}

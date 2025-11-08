@@ -98,8 +98,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       tests: transformedTests,
       count: transformedTests.length
     });
-  } catch (error) {
-    console.error('Error fetching tests:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Failed to fetch tests' },
       { status: 500 }
@@ -214,8 +213,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       success: true,
       test: test
     });
-  } catch (error) {
-    console.error('Error creating test:', error);
+  } catch {
     return NextResponse.json(
       { error: 'Failed to create test' },
       { status: 500 }

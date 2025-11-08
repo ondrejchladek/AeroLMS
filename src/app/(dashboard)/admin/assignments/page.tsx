@@ -24,8 +24,9 @@ export default async function AssignmentsPage() {
       },
       select: {
         id: true,
-        code: true,
-        name: true,
+        cislo: true,
+        firstName: true,
+        lastName: true,
         email: true
       }
     }),
@@ -42,8 +43,9 @@ export default async function AssignmentsPage() {
         trainer: {
           select: {
             id: true,
-            code: true,
-            name: true,
+            cislo: true,
+            firstName: true,
+            lastName: true,
             email: true
           }
         },

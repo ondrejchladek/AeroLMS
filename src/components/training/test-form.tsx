@@ -58,8 +58,8 @@ export function TestForm({ test, onSubmit }: TestFormProps) {
       await onSubmit({
         answers
       });
-    } catch (error) {
-      console.error('Error submitting test:', error);
+    } catch {
+      // Error is handled by parent component
     } finally {
       setIsSubmitting(false);
     }
@@ -239,7 +239,7 @@ export function TestForm({ test, onSubmit }: TestFormProps) {
                 </Label>
                 <Input
                   id='code'
-                  value={session?.user?.code || ''}
+                  value={session?.user?.cislo || ''}
                   disabled
                   className='bg-muted'
                 />
@@ -251,7 +251,7 @@ export function TestForm({ test, onSubmit }: TestFormProps) {
                 </Label>
                 <Input
                   id='name'
-                  value={session?.user?.name || ''}
+                  value={`${session?.user?.firstName || ''} ${session?.user?.lastName || ''}`.trim()}
                   disabled
                   className='bg-muted'
                 />

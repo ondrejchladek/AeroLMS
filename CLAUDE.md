@@ -63,12 +63,14 @@ The system dynamically generates training content based on database columns:
    - Run with: `node prisma/check-columns.js`
 
 ### Training Detection Pattern
-For each training, the system looks for three columns in User table:
-- `{code}DatumPosl` - Last completion date
-- `{code}DatumPristi` - Next due date
-- `{code}Pozadovano` - Required flag (boolean)
+For each training, the system looks for three columns in User table (production: TabCisZam_EXT):
+- `_{code}DatumPosl` - Last completion date
+- `_{code}DatumPristi` - Next due date
+- `_{code}Pozadovano` - Required flag (boolean)
 
-Example: `CMMDatumPosl`, `CMMDatumPristi`, `CMMPozadovano` → Creates training with code "CMM"
+**CRITICAL:** All training columns have `_` (underscore) prefix!
+
+Example: `_CMMDatumPosl`, `_CMMDatumPristi`, `_CMMPozadovano` → Creates training with code "CMM"
 
 ## 📚 Advanced Testing System
 
@@ -250,13 +252,55 @@ Components currently in the project:
 - Middleware protection in `src/middleware.ts`
 
 ### Database Architecture
-- **Database Server**: Microsoft SQL Server Express 2019 (local instance)
-- **Database Name**: AeroLMS
-- **Port**: 1433 (default SQL Server port)
-- **Authentication**: Windows Integrated Security
-- **ORM**: Prisma v6.11.1 with sqlserver provider
-- **Schema location**: `prisma/schema.prisma`
-- **Connection**: Uses `DATABASE_URL` environment variable
+
+**Production Architecture Overview:**
+The system uses a **hybrid database pattern** combining existing Helios ERP tables with new AeroLMS tables. This architecture is CRITICAL to understand for any database operations.
+
+**Key Components:**
+1. **TabCisZam** (Helios - ❌ DO NOT MODIFY)
+   - Employee master table with ID, Jmeno, Prijmeni, Cislo
+   - Managed by Helios ERP system
+   - AeroLMS has READ-ONLY access
+
+2. **TabCisZam_EXT** (Helios - ⚠️ UPDATE ONLY VIA APPROVED FUNCTIONS)
+   - Extended employee data with dynamic training columns (added by DB admin)
+   - Pattern: `_{code}DatumPosl`, `_{code}DatumPristi`, `_{code}Pozadovano`
+   - **CRITICAL**: All training columns have `_` (underscore) prefix
+   - **CRITICAL**: DatumPristi is AUTO-CALCULATED by database (+1 year from DatumPosl)
+   - Use ONLY `updateUserTrainingData()` from `lib/training-sync.ts` for updates
+
+3. **InspiritUserAuth** (AeroLMS - ✅ FULL ACCESS)
+   - Authentication table: ID, role, email, timestamps (NOT code or password!)
+   - Code (Cislo) and password (Alias) are in TabCisZam - plain text password (Helios constraint)
+   - 1:1 relationship with TabCisZam via ID field
+
+4. **InspiritCisZam VIEW** (Production - ALREADY EXISTS, augmented by AeroLMS)
+   - ✅ **Already exists in production** containing TabCisZam + TabCisZam_EXT
+   - 🔧 **Deployment script 03 augments** with LEFT JOIN to InspiritUserAuth
+   - Uses `CREATE OR ALTER VIEW` (preserves existing view, no data loss)
+   - INSTEAD OF triggers handle INSERT/UPDATE operations
+   - Routes auth data to InspiritUserAuth, preserves Helios data
+
+5. **User SYNONYM** (AeroLMS - Prisma compatibility layer)
+   - Maps Prisma User model → InspiritCisZam VIEW
+   - Allows Prisma to work with VIEW as if it were a table
+
+**Data Flow - Read Operations:**
+```
+Prisma Query → User SYNONYM → InspiritCisZam VIEW →
+  LEFT JOIN (TabCisZam + TabCisZam_EXT + InspiritUserAuth)
+```
+
+**Data Flow - Write Operations:**
+- **Auth fields** (email, role): Prisma update → INSTEAD OF trigger → InspiritUserAuth
+- **Password field** (Alias): In TabCisZam (plain text, Helios constraint)
+- **Training fields**: Direct to TabCisZam_EXT via `updateUserTrainingData()`
+- **Helios fields** (Jmeno, Prijmeni, Cislo): ❌ NEVER UPDATE (managed by Helios)
+
+**Environment Differences:**
+- **Development**: Simpler structure, User table contains all data
+- **Production**: Complex VIEW + SYNONYM + Triggers architecture
+- Code detects environment via `DB_ENVIRONMENT` variable
 
 ### Database Models
 - **User**: Employee records with:
@@ -285,6 +329,83 @@ Components currently in the project:
 - **TrainingAssignment**: Many-to-many relationship between trainers and trainings
   - Indexes: `trainerId`, `trainingId`
   - Unique constraint on `trainerId+trainingId` combination
+
+### Database Architecture - Critical Rules for Agents
+
+**⚠️ MANDATORY RULES - READ BEFORE ANY DATABASE OPERATION:**
+
+1. **NEVER Modify Helios Tables Directly**
+   - ❌ NEVER `UPDATE TabCisZam` - managed by Helios ERP
+   - ❌ NEVER `UPDATE TabCisZam_EXT` without using `updateUserTrainingData()`
+   - ❌ NEVER `INSERT` or `DELETE` from Helios tables
+   - ✅ ONLY use approved helper functions from `lib/training-sync.ts`
+
+2. **Training Column Access - SQL Injection Prevention**
+   - ❌ NEVER use dynamic training codes without validation
+   - ✅ ALWAYS call `validateTrainingCode(code)` BEFORE any raw SQL
+   - ✅ Import from: `import { validateTrainingCode } from '@/lib/validation-schemas'`
+   - ✅ Validates ONLY alfanumerické znaky (SQL injection ochrana)
+   - ✅ NEVALIDUJE existenci v DB - kódy jsou plně dynamické
+   - **Reason**: Production database (Helios003) is SHARED with other systems
+   - **Risk**: Unvalidated input could access/modify unrelated data
+
+3. **Underscore Prefix Requirement**
+   - All training columns in database have `_` prefix: `_CMMDatumPosl`, NOT `CMMDatumPosl`
+   - This applies to ALL training codes (dynamický počet)
+   - Common mistake: Forgetting underscore in SQL queries
+
+4. **Parameterized Queries Required**
+   - ✅ ALWAYS use `@p0, @p1, @p2` parameters in raw SQL
+   - ❌ NEVER use string interpolation: `` `WHERE UserID = ${userId}` ``
+   - ✅ CORRECT: `prisma.$queryRawUnsafe('... WHERE UserID = @p0', userId)`
+
+5. **Production VIEW Pattern**
+   - ✅ Use `CREATE OR ALTER VIEW` - preserves existing data
+   - ❌ NEVER `DROP VIEW` then `CREATE VIEW` - causes data loss
+   - Reason: Production database may have active connections
+
+6. **Training Data Updates**
+   - ✅ ONLY use `updateUserTrainingData(userId, trainingCode, datumPosl, datumPristi?)`
+   - Function handles environment detection (dev vs production)
+   - Function validates training code pattern (alfanumerické znaky only)
+   - Function uses correct table (TabCisZam_EXT in prod, User in dev)
+
+7. **Read Training Data**
+   - ✅ Use `getUserTrainingData(userId, trainingCode)` for single training
+   - ✅ Use `getAllUserTrainings(userId)` for all trainings
+   - Returns: `{ datumPosl, datumPristi, pozadovano, status }`
+
+8. **Auto-Calculated Fields**
+   - DatumPristi is AUTO-CALCULATED by database trigger (+1 year from DatumPosl)
+   - When calling `updateUserTrainingData()`, you CAN provide custom datumPristi but usually omit it
+   - Database will handle the calculation
+
+9. **Prisma Schema Design**
+   - Training columns are NOT in Prisma schema (intentional!)
+   - Allows dynamic training addition without code rebuild
+   - Access via raw SQL functions in `training-sync.ts`
+
+10. **Environment Detection**
+    - Use `isProductionEnvironment()` from `training-sync.ts`
+    - Checks `process.env.DB_ENVIRONMENT === 'production'`
+    - Returns correct table/column names based on environment
+
+**Quick Reference - Approved Functions:**
+```typescript
+// lib/training-sync.ts - USE THESE ONLY
+import {
+  detectTrainingColumns,        // Scan database for training columns
+  syncTrainingsWithDatabase,    // Create missing Training records
+  getUserTrainingData,          // Read single training data (validated)
+  updateUserTrainingData,       // Update training data (validated, env-aware)
+  getAllUserTrainings          // Read all training data for user
+} from '@/lib/training-sync';
+
+// lib/validation-schemas.ts - VALIDATE BEFORE RAW SQL
+import {
+  validateTrainingCode          // Validates pattern only (SQL injection prevention)
+} from '@/lib/validation-schemas';
+```
 
 ### Routing Structure
 - **App Router** with Next.js 15
@@ -380,35 +501,175 @@ src/features/     # Feature-based modules
 
 ## Security & Validation
 
+**🚨 CRITICAL SECURITY CONTEXT:**
+The production database (Helios003) is **SHARED** with other business systems. Improper database operations can:
+- Corrupt financial data in Helios ERP
+- Expose sensitive employee information
+- Cause production downtime affecting entire company
+- Violate data protection regulations
+
+**EVERY database operation MUST follow security protocols below.**
+
 ### Input Validation (Zod Schemas)
+
+**Directive: ALWAYS validate user input before database operations**
+
 All API endpoints use centralized validation schemas in `src/lib/validation-schemas.ts`:
 
-- **Training Codes Whitelist**: 33 valid training codes (CMM, EDM, EleZnaceni, etc.)
-  - `VALID_TRAINING_CODES` constant with all allowed codes
-  - `validateTrainingCode()` function for runtime validation
-  - Prevents SQL injection in dynamic column access
+**Training Codes Pattern Validation** (CRITICAL for SQL injection prevention):
+- Training codes are **DYNAMIC** - defined by database columns (added manually by DB admin)
+- `validateTrainingCode(code)` - validates pattern only (alfanumerické znaky A-Z, a-z, 0-9)
+- Does NOT validate existence in database - source of truth: `detectTrainingColumns()` from database
+- **WHY**: Training codes become SQL column names - MUST be validated for safe characters
 
-- **API Request Validation**:
-  - `CreateTestSchema` - Test creation with questions (max 100 questions)
-  - `SubmitTestSchema` - Test answer submission with signature data
-  - `UpdateTrainingSchema` - Training updates (name, description, content)
-  - `ManualTestAttemptSchema` - Manual test result entry by trainers
+**API Request Validation Schemas:**
+- `CreateTestSchema` - Test creation (max 100 questions, required fields validation)
+- `SubmitTestSchema` - Test submissions (answer format, signature data)
+- `UpdateTrainingSchema` - Training updates (content length limits, required fields)
+- `ManualTestAttemptSchema` - Manual test entry by trainers (score validation)
 
-- **Helper Functions**:
-  - `validateRequestBody()` - Async request body validation with error handling
-  - `safeJsonParse()` - Safe JSON parsing with fallback to null
+**Validation Helper Functions:**
+- `validateRequestBody(schema, request)` - Async body validation with error handling
+- `safeJsonParse(text)` - Safe JSON parsing with fallback to null
+- Both return structured errors for API responses
 
 ### SQL Injection Prevention
-- **training-sync.ts**: All functions using `$queryRawUnsafe` or `$executeRawUnsafe` validate training codes against whitelist
-  - `getUserTrainingData()` - Protected
-  - `updateUserTrainingData()` - Protected
-  - Shared database (Helios003) requires strict validation
+
+**Directive: Training code validation is MANDATORY before raw SQL**
+
+**Protected Functions in `training-sync.ts`:**
+All functions using `$queryRawUnsafe` or `$executeRawUnsafe` MUST:
+1. Call `validateTrainingCode(code)` first (throws if invalid)
+2. Use parameterized queries with `@p0, @p1, @p2`
+3. Never use string interpolation for SQL values
+
+**Example - CORRECT Implementation:**
+```typescript
+// ✅ SAFE - validation + parameterized query
+try {
+  validateTrainingCode(trainingCode); // Throws if pattern invalid (SQL injection prevention)
+} catch (error) {
+  console.error(`Invalid training code: ${trainingCode}`);
+  return null;
+}
+
+await prisma.$queryRawUnsafe(
+  `SELECT [_${trainingCode}DatumPosl] FROM [User] WHERE UserID = @p0`,
+  userId  // Parameterized - safe from injection
+);
+```
+
+**Example - WRONG Implementation:**
+```typescript
+// ❌ DANGEROUS - no validation, string interpolation
+await prisma.$queryRawUnsafe(
+  `SELECT [_${untrustedCode}DatumPosl] FROM [User] WHERE UserID = ${userId}`
+);
+// Allows SQL injection via untrustedCode or userId!
+```
+
+**Why This Matters:**
+- Production database contains payroll, financial, and personnel data
+- Single SQL injection could expose entire company database
+- Training codes are user-controllable (via API endpoints)
+- Whitelist validation is the ONLY safe approach
 
 ### Security Best Practices
-- **Shared Database**: Production database (Helios003) contains other systems
-- **Validation First**: All user input validated before database operations
-- **Parameterized Queries**: Use Prisma's parameterized queries (`@p0`, `@p1`) for user data
-- **Role-Based Access**: Admin/Trainer/Worker permissions enforced at API level
+
+**Database Access Rules:**
+1. **Shared Database Awareness**
+   - Helios003 contains tables for: Accounting, HR, Inventory, Manufacturing
+   - AeroLMS tables: Training, Test, Question, TestAttempt, Certificate, TrainingAssignment, InspiritUserAuth
+   - Helios tables: TabCisZam, TabCisZam_EXT (plus 50+ other Helios tables)
+   - **Never** query or modify tables outside AeroLMS scope
+
+2. **Validation First**
+   - All user input → Zod schema validation → database operation
+   - No exceptions, even for admin/trainer roles
+   - Validate at API boundary, not in components
+
+3. **Parameterized Queries**
+   - Prisma parameterized: `where: { id: userId }`
+   - Raw SQL parameterized: `@p0, @p1, @p2` placeholders
+   - Never: String interpolation in SQL
+
+4. **Role-Based Access Control**
+   - Check session role in EVERY API route
+   - Admin: Full access to all endpoints
+   - Trainer: Access to assigned trainings only
+   - Worker: Access to own data only
+   - Enforce at API level, not just UI level
+
+5. **Production Database Changes**
+   - **NEVER** run `prisma migrate` on production
+   - **ALWAYS** use manual SQL scripts from `deployment/sql/`
+   - **TEST** on local/staging database first
+   - **BACKUP** before any schema changes
+   - **USE** CREATE OR ALTER VIEW (not DROP VIEW)
+
+### Common Workflows - Agent Directives
+
+**Workflow 1: Reading User Training Data**
+```
+Directive: Use approved helper functions, not direct Prisma queries
+Pattern: getUserTrainingData(userId, trainingCode) → returns training status
+Why: Handles environment differences, validates training code, uses correct table
+```
+
+**Workflow 2: Updating Training After Test Completion**
+```
+Directive: ONLY use updateUserTrainingData() function
+Steps:
+1. User completes test successfully
+2. Call updateUserTrainingData(userId, trainingCode, new Date())
+3. Function handles: validation, environment detection, correct table selection
+4. Database auto-calculates DatumPristi (+1 year)
+Never: Direct UPDATE on TabCisZam_EXT or User table
+```
+
+**Workflow 3: Training Synchronization**
+```
+Directive: Use syncTrainingsWithDatabase() for automatic detection
+When: Application startup, manual admin trigger
+Process:
+1. detectTrainingColumns() scans User table for *DatumPosl/*DatumPristi/*Pozadovano
+2. Creates missing Training records in Training table
+3. Preserves existing training data (names, descriptions, content)
+Never: Delete or recreate existing Training records
+```
+
+**Workflow 4: Creating New User (Admin Only)**
+```
+Directive: Create in TabCisZam first (Helios), then add auth data
+Steps:
+1. Admin creates employee in Helios ERP (outside AeroLMS scope)
+2. ID is assigned by Helios in TabCisZam
+3. AeroLMS adds auth data via Prisma User create (triggers INSERT into InspiritUserAuth)
+4. INSTEAD OF trigger routes auth fields to correct table
+Never: Direct INSERT into TabCisZam or TabCisZam_EXT
+```
+
+**Workflow 5: User Login**
+```
+Directive: System auto-detects email vs personal code
+Pattern:
+- Input contains '@' → email login (admin/trainer)
+- Input is numeric → personal code login (worker)
+- NextAuth credentials provider handles both cases
+- Session includes: id, code, email, role
+Never: Require users to specify login type
+```
+
+**Workflow 6: Adding New Training Type**
+```
+Directive: Database-first approach (Helios adds columns)
+Process:
+1. Database admin adds 3 columns to TabCisZam_EXT: _{code}DatumPosl, _{code}DatumPristi, _{code}Pozadovano
+2. Run syncTrainingsWithDatabase() to auto-detect and create Training record
+3. Trainer can now edit training content via UI
+Note: Training codes are auto-detected from database - no code changes required!
+Never: Add training columns to Prisma schema
+```
 
 ## Key Implementation Patterns
 
@@ -702,7 +963,7 @@ npm install --save-dev @playwright/test
 
 ### Security Hardening (January 2025)
 1. **SQL Injection Fixes**:
-   - Added whitelist validation for training codes (33 valid codes)
+   - Added pattern-based validation for dynamic training codes (alfanumerické znaky only)
    - Protected `training-sync.ts` functions using `$queryRawUnsafe`
    - Created `src/lib/validation-schemas.ts` with centralized validation
    - Critical for shared database (Helios003) containing other systems
@@ -748,92 +1009,109 @@ npm install --save-dev @playwright/test
 
 ## Common Pitfalls to Avoid
 
-1. **Configuration Changes**: Don't modify global Next.js config without understanding implications
-2. **SQL Server Considerations**:
-   - Uses Windows Authentication (Integrated Security)
+**Database Operations (CRITICAL - Read First):**
+
+1. **Helios Table Modifications**
+   - ❌ NEVER: Direct UPDATE/INSERT/DELETE on TabCisZam or TabCisZam_EXT
+   - ❌ NEVER: Add columns to TabCisZam or TabCisZam_EXT from AeroLMS
+   - ✅ ALWAYS: Use `updateUserTrainingData()` for training updates
+   - **Why**: These tables are managed by Helios ERP system
+   - **Risk**: Could corrupt payroll, HR, or manufacturing data
+
+2. **Training Code Validation**
+   - ❌ NEVER: Use dynamic training code without `validateTrainingCode()`
+   - ❌ NEVER: String interpolation in raw SQL: `` `WHERE ${column} = ...` ``
+   - ✅ ALWAYS: Validate pattern with `validateTrainingCode()` before raw SQL (alfanumerické znaky only)
+   - ✅ ALWAYS: Use parameterized queries `@p0, @p1, @p2`
+   - **Note**: Validation checks format only - training codes are dynamic (DB admin adds columns)
+   - **Why**: Training codes become SQL column names
+   - **Risk**: SQL injection exposing entire company database (Helios003 is shared)
+
+3. **Underscore Prefix**
+   - ❌ COMMON MISTAKE: Forgetting `_` prefix: `CMMDatumPosl`
+   - ✅ CORRECT: All training columns have prefix: `_CMMDatumPosl`
+   - **Symptoms**: "Invalid column name" errors in production
+   - **Fix**: Always check database schema, not assumptions
+
+4. **DatumPristi Auto-Calculation**
+   - ❌ NEVER: Manually calculate or set DatumPristi to arbitrary date
+   - ✅ CORRECT: Let database trigger calculate (+1 year from DatumPosl)
+   - **Why**: Business rule enforced at database level
+   - **Exception**: Can override in `updateUserTrainingData()` if needed
+
+5. **Production Database Changes**
+   - ❌ NEVER: `prisma migrate deploy` on production
+   - ❌ NEVER: `DROP VIEW InspiritCisZam` then `CREATE VIEW`
+   - ✅ ALWAYS: Use `CREATE OR ALTER VIEW` (preserves connections)
+   - ✅ ALWAYS: Manual SQL scripts from `deployment/sql/`
+   - ✅ ALWAYS: Test on local/staging first, backup before changes
+   - **Why**: Helios003 is shared, has active connections, contains critical data
+
+6. **Prisma Schema Assumptions**
+   - ❌ WRONG: Expecting training columns in User model
+   - ✅ CORRECT: Training columns accessed via raw SQL functions only
+   - **Why**: Allows dynamic training addition without code rebuild
+   - **Design**: Intentional omission from Prisma schema
+
+**Application Development:**
+
+7. **SQL Server Connection**
+   - Uses Windows Authentication (Integrated Security) in development
    - Requires SQL Server Express 2019 running on localhost:1433
-   - Database name must be "AeroLMS"
+   - Database name must be "AeroLMS" (dev) or "Helios003" (prod)
    - Remember T-SQL syntax when writing raw queries
-   - **CRITICAL**: Production DB (Helios003) contains other systems - always validate input!
-3. **Security & Validation**:
-   - Always use Zod validation for user input
-   - Training codes must be in `VALID_TRAINING_CODES` whitelist
-   - Never use string interpolation with `$queryRawUnsafe` without validation
-   - Import validation schemas from `@/lib/validation-schemas`
-4. **Database Operations**:
-   - Run `npx prisma generate` after schema changes
-   - Use `npx dotenv -e .env.local -- prisma studio` for Prisma Studio
-   - Check indexes exist before adding duplicates
-5. **Parallel routes** in overview need independent error handling
-6. **Employee code** authentication is number-based, not string
-7. **Zustand stores** persist locally - consider privacy implications
-8. **React 19** is used - some libraries may have compatibility issues
-9. **Tailwind v4** uses different config format than v3
+
+8. **Prisma Studio**
+   - ❌ WRONG: `npx prisma studio` (missing DATABASE_URL)
+   - ✅ CORRECT: `npx dotenv -e .env.local -- prisma studio`
+   - **Why**: Loads correct environment variables
+
+9. **View Pattern in Production**
+   - Prisma queries User → SYNONYM → InspiritCisZam VIEW → 3 tables
+   - INSTEAD OF triggers handle writes
+   - Don't bypass this architecture
+
+10. **Component Architecture**
+    - Server components by default, `"use client"` only when needed
+    - Database queries ONLY in server components or API routes
+    - Employee code authentication is number-based, not string
+
+11. **Other Considerations**
+    - Parallel routes need independent error.tsx and loading.tsx
+    - Zustand stores persist locally - consider privacy implications
+    - React 19 compatibility - some libraries may have issues
+    - Tailwind v4 uses different config format than v3
+    - Run `npx prisma generate` after schema changes
 
 
-## Quick Component Examples And Patterns
+## Key Patterns and Directives
 
-### Using shadcn/ui Button
-```tsx
-import { Button } from "@/components/ui/button"
+### Component Development Patterns
 
-<Button variant="outline" size="sm">Click me</Button>
-```
+**UI Components:**
+- Use shadcn/ui components from `src/components/ui/`
+- Access latest implementations via Shadcn MCP server
+- Server components by default, add `"use client"` only when needed
 
-### Form with Validation
-```tsx
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import * as z from "zod"
+**Form Handling:**
+- React Hook Form + Zod validation pattern
+- Schema definitions in `features/*/utils/form-schema.ts`
+- Validate at API boundary, not in components
 
-const schema = z.object({
-  name: z.string().min(1, "Required")
-})
-```
+**Authentication:**
+- Server components: Use `getServerSession(authOptions)`
+- API routes: Check session first, return 401 if unauthorized
+- Middleware: Handles route protection in `src/middleware.ts`
 
-### Protected Page
-```tsx
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+**Data Fetching:**
+- Server components: Direct Prisma queries or fetch with cache
+- Client components: SWR or React Query for client-side fetching
+- API routes: Use Prisma client from `@/lib/prisma`
 
-export default async function ProtectedPage() {
-  const session = await getServerSession(authOptions)
-  if (!session) redirect("/login")
-  // ...
-}
-```
-
-### API Route Structure
-```typescript
-// app/api/[endpoint]/route.ts
-export async function GET/POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-  // Implementation
-}
-```
-
-### Server Component Pattern
-```typescript
-// Default - runs on server
-export default async function Page() {
-  const data = await fetch('...', { cache: 'force-cache' });
-  return <div>{/* UI */}</div>;
-}
-```
-
-### Client Component Pattern
-```typescript
-'use client';
-import { useState } from 'react';
-
-export function InteractiveComponent() {
-  const [state, setState] = useState();
-  // Client-side logic
-}
-```
+**Component Architecture:**
+- Server Components (default): Data fetching, DB queries
+- Client Components (`"use client"`): Interactivity, state, effects
+- Never mix: Keep DB queries in server components only
 
 ## Database Troubleshooting
 

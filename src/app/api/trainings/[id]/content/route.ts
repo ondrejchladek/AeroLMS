@@ -35,7 +35,6 @@ export async function GET(
       updatedAt: training.updatedAt
     });
   } catch (error) {
-    console.error('Error fetching training content:', error);
     return NextResponse.json(
       { error: 'Failed to fetch training content' },
       { status: 500 }

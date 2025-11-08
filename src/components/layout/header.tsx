@@ -1,7 +1,6 @@
 import React from 'react';
 import { SidebarTrigger } from '../ui/sidebar';
 import { Separator } from '../ui/separator';
-import SearchInput from '../search-input';
 
 interface HeaderProps {
   children?: React.ReactNode;

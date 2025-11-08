@@ -1,26 +1,30 @@
 /*******************************************************************************
- * AeroLMS - Create New Tables Script
+ * AeroLMS - Create AeroLMS Application Tables (PRODUCTION)
  *
- * Purpose: Create all required tables for AeroLMS (except User table)
+ * Purpose: Create all required tables for AeroLMS application logic
  * Safe: Uses IF NOT EXISTS pattern, won't drop existing tables
  *
  * Tables created:
- *   - Training
- *   - Test
- *   - Question
- *   - TestAttempt
- *   - Certificate
- *   - TrainingAssignment
+ *   - Training (training modules)
+ *   - Test (assessments per training)
+ *   - Question (test questions)
+ *   - TestAttempt (user test results)
+ *   - Certificate (training certificates)
+ *   - TrainingAssignment (trainer-training assignments)
  *
- * Run AFTER: 01_pre_deployment_check.sql
- * Run BEFORE: 03_alter_user_table.sql
+ * Foreign Keys:
+ *   - User FK references point to TabCisZam.ID (physical table)
+ *   - Application uses [User] SYNONYM → InspiritCisZam VIEW for queries
+ *
+ * Run AFTER: 03_create_inspirit_view.sql
+ * Run BEFORE: 05_create_indexes.sql
  ******************************************************************************/
 
 SET NOCOUNT ON;
 SET XACT_ABORT ON; -- Rollback entire transaction on error
 
 PRINT '========================================';
-PRINT 'AeroLMS - Creating New Tables';
+PRINT 'AeroLMS - Creating Application Tables';
 PRINT 'Database: ' + DB_NAME();
 PRINT 'Date: ' + CONVERT(VARCHAR, GETDATE(), 120);
 PRINT '========================================';
@@ -180,16 +184,38 @@ BEGIN TRY
             ON UPDATE NO ACTION;
         END
 
-        -- Foreign key to User (if exists)
-        IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
-                   WHERE TABLE_NAME = 'User' AND TABLE_SCHEMA = 'dbo')
+        -- Foreign key to User (via SYNONYM → InspiritCisZam VIEW → TabCisZam)
+        -- Note: FK references physical table TabCisZam.ID, not VIEW
+        IF EXISTS (SELECT * FROM sys.synonyms WHERE name = 'User')
+           OR EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
+                      WHERE TABLE_NAME = 'User' AND TABLE_SCHEMA = 'dbo')
         BEGIN
-            ALTER TABLE [dbo].[TestAttempt]
-            ADD CONSTRAINT [TestAttempt_userId_fkey]
-            FOREIGN KEY ([userId])
-            REFERENCES [dbo].[User]([UserID])
-            ON DELETE NO ACTION
-            ON UPDATE NO ACTION;
+            -- In production: User SYNONYM → InspiritCisZam VIEW → TabCisZam.ID
+            -- In dev: User table directly
+            -- FK must reference the actual base table, not VIEW
+            IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
+                       WHERE TABLE_NAME = 'TabCisZam' AND TABLE_SCHEMA = 'dbo')
+            BEGIN
+                -- Production: FK to TabCisZam (base table under the VIEW)
+                ALTER TABLE [dbo].[TestAttempt]
+                ADD CONSTRAINT [TestAttempt_userId_fkey]
+                FOREIGN KEY ([userId])
+                REFERENCES [dbo].[TabCisZam]([ID])
+                ON DELETE NO ACTION
+                ON UPDATE NO ACTION;
+                PRINT '  → FK to TabCisZam.ID (production mode)';
+            END
+            ELSE
+            BEGIN
+                -- Development: FK to User table directly
+                ALTER TABLE [dbo].[TestAttempt]
+                ADD CONSTRAINT [TestAttempt_userId_fkey]
+                FOREIGN KEY ([userId])
+                REFERENCES [dbo].[User]([UserID])
+                ON DELETE NO ACTION
+                ON UPDATE NO ACTION;
+                PRINT '  → FK to User.UserID (development mode)';
+            END
         END
 
         PRINT '✓ TestAttempt table created';
@@ -225,10 +251,22 @@ BEGIN TRY
             CONSTRAINT [Certificate_certificateNumber_key] UNIQUE NONCLUSTERED ([certificateNumber])
         );
 
-        -- Foreign keys
+        -- Foreign key to User
         IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
-                   WHERE TABLE_NAME = 'User' AND TABLE_SCHEMA = 'dbo')
+                   WHERE TABLE_NAME = 'TabCisZam' AND TABLE_SCHEMA = 'dbo')
         BEGIN
+            -- Production: FK to TabCisZam
+            ALTER TABLE [dbo].[Certificate]
+            ADD CONSTRAINT [Certificate_userId_fkey]
+            FOREIGN KEY ([userId])
+            REFERENCES [dbo].[TabCisZam]([ID])
+            ON DELETE NO ACTION
+            ON UPDATE NO ACTION;
+        END
+        ELSE IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
+                        WHERE TABLE_NAME = 'User' AND TABLE_SCHEMA = 'dbo')
+        BEGIN
+            -- Development: FK to User table
             ALTER TABLE [dbo].[Certificate]
             ADD CONSTRAINT [Certificate_userId_fkey]
             FOREIGN KEY ([userId])
@@ -237,6 +275,7 @@ BEGIN TRY
             ON UPDATE NO ACTION;
         END
 
+        -- Foreign key to Training
         IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
                    WHERE TABLE_NAME = 'Training' AND TABLE_SCHEMA = 'dbo')
         BEGIN
@@ -248,6 +287,7 @@ BEGIN TRY
             ON UPDATE NO ACTION;
         END
 
+        -- Foreign key to TestAttempt
         IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
                    WHERE TABLE_NAME = 'TestAttempt' AND TABLE_SCHEMA = 'dbo')
         BEGIN
@@ -285,10 +325,22 @@ BEGIN TRY
             CONSTRAINT [TrainingAssignment_trainerId_trainingId_key] UNIQUE NONCLUSTERED ([trainerId], [trainingId])
         );
 
-        -- Foreign keys
+        -- Foreign key to User (trainer)
         IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
-                   WHERE TABLE_NAME = 'User' AND TABLE_SCHEMA = 'dbo')
+                   WHERE TABLE_NAME = 'TabCisZam' AND TABLE_SCHEMA = 'dbo')
         BEGIN
+            -- Production: FK to TabCisZam
+            ALTER TABLE [dbo].[TrainingAssignment]
+            ADD CONSTRAINT [TrainingAssignment_trainerId_fkey]
+            FOREIGN KEY ([trainerId])
+            REFERENCES [dbo].[TabCisZam]([ID])
+            ON DELETE NO ACTION
+            ON UPDATE NO ACTION;
+        END
+        ELSE IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
+                        WHERE TABLE_NAME = 'User' AND TABLE_SCHEMA = 'dbo')
+        BEGIN
+            -- Development: FK to User table
             ALTER TABLE [dbo].[TrainingAssignment]
             ADD CONSTRAINT [TrainingAssignment_trainerId_fkey]
             FOREIGN KEY ([trainerId])
@@ -297,6 +349,7 @@ BEGIN TRY
             ON UPDATE NO ACTION;
         END
 
+        -- Foreign key to Training
         IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
                    WHERE TABLE_NAME = 'Training' AND TABLE_SCHEMA = 'dbo')
         BEGIN
@@ -323,10 +376,10 @@ BEGIN TRY
     COMMIT TRANSACTION;
 
     PRINT '========================================';
-    PRINT '✓ All tables created successfully!';
+    PRINT '✓ All AeroLMS tables created successfully!';
     PRINT '========================================';
     PRINT '';
-    PRINT 'Next step: Run 03_alter_user_table.sql';
+    PRINT 'Next step: Run 05_create_indexes.sql';
     PRINT '';
 
 END TRY

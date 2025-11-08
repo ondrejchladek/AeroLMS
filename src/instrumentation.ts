@@ -27,9 +27,7 @@ export async function register() {
       try {
         const { initializeTrainings } = await import('@/lib/init-trainings');
         await initializeTrainings();
-        console.log('[Server] Training initialization complete');
-      } catch (error) {
-        console.error('[Server] Failed to initialize trainings:', error);
+      } catch {
         // Continue starting the app even if training init fails
       }
     }

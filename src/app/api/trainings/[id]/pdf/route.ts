@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { TrainingPDFDocument } from '@/components/training/training-pdf-document';
+import { getFullNameSafe } from '@/lib/user-helpers';
 
 export async function GET(
   request: NextRequest,
@@ -33,25 +33,14 @@ export async function GET(
       return new NextResponse('Training not found', { status: 404 });
     }
 
-    // Získej jméno uživatele
-    let userName = 'Uživatel';
-    if (session.user.code) {
-      const user = await prisma.user.findUnique({
-        where: { code: session.user.code },
-        select: { name: true }
-      });
-      if (user) {
-        userName = user.name;
-      }
-    } else if (session.user.email) {
-      const user = await prisma.user.findUnique({
-        where: { email: session.user.email },
-        select: { name: true }
-      });
-      if (user) {
-        userName = user.name;
-      }
-    }
+    // Získej jméno uživatele ze session
+    const userName = getFullNameSafe(
+      {
+        firstName: session.user.firstName,
+        lastName: session.user.lastName
+      },
+      'Uživatel'
+    );
 
     // Parse content z JSON stringu
     const parsedContent = training.content
@@ -82,8 +71,7 @@ export async function GET(
         'Cache-Control': 'no-cache, no-store, must-revalidate'
       }
     });
-  } catch (error) {
-    console.error('Error generating PDF:', error);
+  } catch {
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

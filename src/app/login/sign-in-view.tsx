@@ -13,13 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
-import { GitHubLogoIcon } from '@radix-ui/react-icons';
-import {
-  IconStar,
-  IconMail,
-  IconIdBadge,
-  IconAlertCircle
-} from '@tabler/icons-react';
+import { IconAlertCircle } from '@tabler/icons-react';
 import Link from 'next/link';
 
 export default function SignInViewPage() {
@@ -72,10 +66,7 @@ export default function SignInViewPage() {
         callbackUrl: callbackUrl
       });
 
-      console.log('[LOGIN] Signin response:', res);
-
       if (res?.error) {
-        console.error('[LOGIN] Signin error:', res.error);
         setLoginError('Neplatné přihlašovací údaje');
       } else if (res?.ok) {
         // Získat session pro určení role
@@ -94,11 +85,9 @@ export default function SignInViewPage() {
           // WORKER zůstane na '/'
         }
 
-        console.log('[LOGIN] Signin success, redirecting to:', redirectPath);
         router.push(redirectPath);
       }
-    } catch (error) {
-      console.error('[LOGIN] Signin exception:', error);
+    } catch {
       setLoginError('Chyba při přihlašování');
     } finally {
       setIsLoading(false);

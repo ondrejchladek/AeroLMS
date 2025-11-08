@@ -49,8 +49,9 @@ import { cs } from 'date-fns/locale';
 
 interface Trainer {
   id: number;
-  code: number | null;
-  name: string;
+  cislo: number | null;
+  firstName: string;
+  lastName: string;
   email: string | null;
 }
 
@@ -66,10 +67,12 @@ interface Assignment {
   trainerId: number;
   trainingId: number;
   assignedAt: string;
+  updatedAt: string;
   trainer: {
     id: number;
-    code: number | null;
-    name: string;
+    cislo: number | null;
+    firstName: string;
+    lastName: string;
     email: string | null;
   };
   training: {
@@ -140,7 +143,6 @@ export default function AssignmentsClient({
       setSelectedTraining('');
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
-      console.error('Error creating assignment:', error);
       setError(
         error instanceof Error ? error.message : 'Chyba při vytváření přiřazení'
       );
@@ -173,7 +175,6 @@ export default function AssignmentsClient({
       setSuccess('Přiřazení bylo úspěšně odstraněno');
       setTimeout(() => setSuccess(null), 3000);
     } catch (error) {
-      console.error('Error deleting assignment:', error);
       setError(
         error instanceof Error
           ? error.message
@@ -183,22 +184,6 @@ export default function AssignmentsClient({
       setLoading(false);
     }
   };
-
-  // Group assignments by trainer
-  const assignmentsByTrainer = assignments.reduce(
-    (acc, assignment) => {
-      const trainerId = assignment.trainerId;
-      if (!acc[trainerId]) {
-        acc[trainerId] = {
-          trainer: assignment.trainer,
-          trainings: []
-        };
-      }
-      acc[trainerId].trainings.push(assignment.training);
-      return acc;
-    },
-    {} as Record<number, { trainer: any; trainings: any[] }>
-  );
 
   return (
     <PageContainer>
@@ -304,10 +289,10 @@ export default function AssignmentsClient({
                   assignments.map((assignment) => (
                     <TableRow key={assignment.id}>
                       <TableCell className='font-medium'>
-                        {assignment.trainer.name}
-                        {assignment.trainer.code && (
+                        {assignment.trainer.firstName} {assignment.trainer.lastName}
+                        {assignment.trainer.cislo && (
                           <span className='text-muted-foreground ml-2'>
-                            ({assignment.trainer.code})
+                            ({assignment.trainer.cislo})
                           </span>
                         )}
                       </TableCell>
@@ -368,7 +353,7 @@ export default function AssignmentsClient({
                         key={trainer.id}
                         value={trainer.id.toString()}
                       >
-                        {trainer.name} {trainer.email && `(${trainer.email})`}
+                        {trainer.firstName} {trainer.lastName} {trainer.email && `(${trainer.email})`}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -50,9 +50,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             trainer: {
               select: {
                 id: true,
-                name: true,
+                firstName: true,
+                lastName: true,
                 email: true,
-                code: true
+                cislo: true
               }
             }
           }
@@ -69,7 +70,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(training);
   } catch (error) {
-    console.error('Get training error:', error);
     return NextResponse.json(
       { error: 'Chyba při načítání školení' },
       { status: 500 }
@@ -168,7 +168,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       training: updatedTraining
     });
   } catch (error) {
-    console.error('Update training error:', error);
     return NextResponse.json(
       { error: 'Chyba při aktualizaci školení' },
       { status: 500 }
@@ -215,7 +214,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       message: 'Školení bylo smazáno'
     });
   } catch (error) {
-    console.error('Delete training error:', error);
     return NextResponse.json(
       { error: 'Chyba při mazání školení' },
       { status: 500 }

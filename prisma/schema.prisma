@@ -7,109 +7,207 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id                                              Int                   @id @default(autoincrement()) @map("UserID")
-  code                                            Int?                  @unique
-  name                                            String
-  role                                            String                @default("WORKER")
-  createdAt                                       DateTime              @default(now())
-  email                                           String?               @unique
-  password                                        String?
-  updatedAt                                       DateTime              @updatedAt
+// ============================================================================
+// HELIOS ERP TABLES (Simulated in dev, Real in production)
+// ============================================================================
 
-  CMMDatumPosl                                    DateTime?     @map("_CMMDatumPosl")
-  CMMDatumPristi                                  DateTime?     @map("_CMMDatumPristi")
-  CMMPozadovano                                   Boolean       @default(false) @map("_CMMPozadovano")
-  EDMDatumPosl                                    DateTime?     @map("_EDMDatumPosl")
-  EDMDatumPristi                                  DateTime?     @map("_EDMDatumPristi")
-  EDMPozadovano                                   Boolean       @default(false) @map("_EDMPozadovano")
-  EleZnaceniDatumPosl                             DateTime?     @map("_EleZnaceniDatumPosl")
-  EleZnaceniDatumPristi                           DateTime?     @map("_EleZnaceniDatumPristi")
-  EleZnaceniPozadovano                            Boolean       @default(false) @map("_EleZnaceniPozadovano")
-  ITBezpecnostDatumPosl                           DateTime?     @map("_ITBezpecnostDatumPosl")
-  ITBezpecnostDatumPristi                         DateTime?     @map("_ITBezpecnostDatumPristi")
-  ITBezpecnostPozadovano                          Boolean       @default(false) @map("_ITBezpecnostPozadovano")
-  KnihaStrojeDatumPosl                            DateTime?     @map("_KnihaStrojeDatumPosl")
-  KnihaStrojeDatumPristi                          DateTime?     @map("_KnihaStrojeDatumPristi")
-  KnihaStrojePozadovano                           Boolean       @default(false) @map("_KnihaStrojePozadovano")
-  KontrPrijZbozDatumPosl                          DateTime?     @map("_KontrPrijZbozDatumPosl")
-  KontrPrijZbozDatumPristi                        DateTime?     @map("_KontrPrijZbozDatumPristi")
-  KontrPrijZbozPozadovano                         Boolean       @default(false) @map("_KontrPrijZbozPozadovano")
-  MerAVyhodOpotrebeniDatumPosl                    DateTime?     @map("_MerAVyhodOpotrebeniDatumPosl")
-  MerAVyhodOpotrebeniDatumPristi                  DateTime?     @map("_MerAVyhodOpotrebeniDatumPristi")
-  MerAVyhodOpotrebeniPozadovano                   Boolean       @default(false) @map("_MerAVyhodOpotrebeniPozadovano")
-  MeridlaDatumPosl                                DateTime?     @map("_MeridlaDatumPosl")
-  MeridlaDatumPristi                              DateTime?     @map("_MeridlaDatumPristi")
-  MeridlaPozadovano                               Boolean       @default(false) @map("_MeridlaPozadovano")
-  MonitorVyraCMTDiluDatumPosl                     DateTime?     @map("_MonitorVyraCMTDiluDatumPosl")
-  MonitorVyraCMTDiluDatumPristi                   DateTime?     @map("_MonitorVyraCMTDiluDatumPristi")
-  MonitorVyraCMTDiluPozadovano                    Boolean       @default(false) @map("_MonitorVyraCMTDiluPozadovano")
-  NakladaniLatkamiDatumPosl                       DateTime?     @map("_NakladaniLatkamiDatumPosl")
-  NakladaniLatkamiDatumPristi                     DateTime?     @map("_NakladaniLatkamiDatumPristi")
-  NakladaniLatkamiPozadovano                      Boolean       @default(false) @map("_NakladaniLatkamiPozadovano")
-  OpotrebeniNastrojuuCMTDatumPosl                 DateTime?     @map("_OpotrebeniNastrojuuCMTDatumPosl")
-  OpotrebeniNastrojuuCMTDatumPristi               DateTime?     @map("_OpotrebeniNastrojuuCMTDatumPristi")
-  OpotrebeniNastrojuuCMTPozadovano                Boolean       @default(false) @map("_OpotrebeniNastrojuuCMTPozadovano")
-  PouzitiNatsrojuDatumPosl                        DateTime?     @map("_PouzitiNatsrojuDatumPosl")
-  PouzitiNatsrojuDatumPristi                      DateTime?     @map("_PouzitiNatsrojuDatumPristi")
-  PouzitiNatsrojuPozadovano                       Boolean       @default(false) @map("_PouzitiNatsrojuPozadovano")
-  PozdavkyEN10204DodakDatumPosl                   DateTime?     @map("_PozdavkyEN10204DodakDatumPosl")
-  PozdavkyEN10204DodakDatumPristi                 DateTime?     @map("_PozdavkyEN10204DodakDatumPristi")
-  PozdavkyEN10204DodakPozadovano                  Boolean       @default(false) @map("_PozdavkyEN10204DodakPozadovano")
-  PraceKonProduktDatumPosl                        DateTime?     @map("_PraceKonProduktDatumPosl")
-  PraceKonProduktDatumPristi                      DateTime?     @map("_PraceKonProduktDatumPristi")
-  PraceKonProduktPozadovano                       Boolean       @default(false) @map("_PraceKonProduktPozadovano")
-  PruvodkaDatumPosl                               DateTime?     @map("_PruvodkaDatumPosl")
-  PruvodkaDatumPristi                             DateTime?     @map("_PruvodkaDatumPristi")
-  PruvodkaPozadovano                              Boolean       @default(false) @map("_PruvodkaPozadovano")
-  RazK1KDatumPosl                                 DateTime?     @map("_RazK1KDatumPosl")
-  RazK1KDatumPristi                               DateTime?     @map("_RazK1KDatumPristi")
-  RazK1KPozadovano                                Boolean       @default(false) @map("_RazK1KPozadovano")
-  RegulacniKartyDatumPosl                         DateTime?     @map("_RegulacniKartyDatumPosl")
-  RegulacniKartyDatumPristi                       DateTime?     @map("_RegulacniKartyDatumPristi")
-  RegulacniKartyPozadovano                        Boolean       @default(false) @map("_RegulacniKartyPozadovano")
-  SamokontrolaDatumPosl                           DateTime?     @map("_SamokontrolaDatumPosl")
-  SamokontrolaDatumPristi                         DateTime?     @map("_SamokontrolaDatumPristi")
-  SamokontrolaPozadovano                          Boolean       @default(false) @map("_SamokontrolaPozadovano")
-  SeriovaCislaDatumPosl                           DateTime?     @map("_SeriovaCislaDatumPosl")
-  SeriovaCislaDatumPristi                         DateTime?     @map("_SeriovaCislaDatumPristi")
-  SeriovaCislaPozadovano                          Boolean       @default(false) @map("_SeriovaCislaPozadovano")
-  SymbolyvBBDatumPosl                             DateTime?     @map("_SymbolyvBBDatumPosl")
-  SymbolyvBBDatumPristi                           DateTime?     @map("_SymbolyvBBDatumPristi")
-  SymbolyvBBPozadovano                            Boolean       @default(false) @map("_SymbolyvBBPozadovano")
-  SystemmanagemenntuKvalityCilepodnikuDatumPosl   DateTime?     @map("_SystemmanagemenntuKvalityCilepodnikuDatumPosl")
-  SystemmanagemenntuKvalityCilepodnikuDatumPristi DateTime?     @map("_SystemmanagemenntuKvalityCilepodnikuDatumPristi")
-  SystemmanagemenntuKvalityCilepodnikuPozadovano  Boolean       @default(false) @map("_SystemmanagemenntuKvalityCilepodnikuPozadovano")
-  TrideniOdpaduDatumPosl                          DateTime?     @map("_TrideniOdpaduDatumPosl")
-  TrideniOdpaduDatumPristi                        DateTime?     @map("_TrideniOdpaduDatumPristi")
-  TrideniOdpaduPozadovano                         Boolean       @default(false) @map("_TrideniOdpaduPozadovano")
-  UdrzbaStrojuPracovnikyDilnyDatumPosl            DateTime?     @map("_UdrzbaStrojuPracovnikyDilnyDatumPosl")
-  UdrzbaStrojuPracovnikyDilnyDatumPristi          DateTime?     @map("_UdrzbaStrojuPracovnikyDilnyDatumPristi")
-  UdrzbaStrojuPracovnikyDilnyPozadovano           Boolean       @default(false) @map("_UdrzbaStrojuPracovnikyDilnyPozadovano")
-  VizualniKontrolaDatumPosl                       DateTime?     @map("_VizualniKontrolaDatumPosl")
-  VizualniKontrolaDatumPristi                     DateTime?     @map("_VizualniKontrolaDatumPristi")
-  VizualniKontrolaPozadovano                      Boolean       @default(false) @map("_VizualniKontrolaPozadovano")
-  VrtaniKritDilyDatumPosl                         DateTime?     @map("_VrtaniKritDilyDatumPosl")
-  VrtaniKritDilyDatumPristi                       DateTime?     @map("_VrtaniKritDilyDatumPristi")
-  VrtaniKritDilyPozadovano                        Boolean       @default(false) @map("_VrtaniKritDilyPozadovano")
-  VzorovaniDatumPosl                              DateTime?     @map("_VzorovaniDatumPosl")
-  VzorovaniDatumPristi                            DateTime?     @map("_VzorovaniDatumPristi")
-  VzorovaniPozadovano                             Boolean       @default(false) @map("_VzorovaniPozadovano")
-  ZkouskaTvrdostiDatumPosl                        DateTime?     @map("_ZkouskaTvrdostiDatumPosl")
-  ZkouskaTvrdostiDatumPristi                      DateTime?     @map("_ZkouskaTvrdostiDatumPristi")
-  ZkouskaTvrdostiPozadovano                       Boolean       @default(false) @map("_ZkouskaTvrdostiPozadovano")
-  ZlomeniNastrojeDatumPosl                        DateTime?     @map("_ZlomeniNastrojeDatumPosl")
-  ZlomeniNastrojeDatumPristi                      DateTime?     @map("_ZlomeniNastrojeDatumPristi")
-  ZlomeniNastrojePozadovano                       Boolean       @default(false) @map("_ZlomeniNastrojePozadovano")
-  ZnaceniDatumPosl                                DateTime?     @map("_ZnaceniDatumPosl")
-  ZnaceniDatumPristi                              DateTime?     @map("_ZnaceniDatumPristi")
-  ZnaceniPozadovano                               Boolean       @default(false) @map("_ZnaceniPozadovano")
+// TabCisZam - Helios ERP Employee Master Table
+//
+// PURPOSE:
+//   - Development: Simulated Helios table for Prisma Studio visualization
+//   - Production: Physical Helios ERP table (READ-ONLY for AeroLMS)
+//
+// USAGE IN APPLICATION:
+//   - ❌ NOT used directly by application code
+//   - ✅ Data accessed via User SYNONYM → InspiritCisZam VIEW
+//   - 📊 Visible in Prisma Studio for development debugging
+//
+// FIELDS:
+//   - ID: Employee unique identifier (auto-increment in Helios)
+//   - Cislo: Personal employee code for login (unique)
+//   - Alias: Plain text password for login (Helios ERP constraint)
+//   - Jmeno, Prijmeni: Employee name from Helios HR system
+//
+// RELATIONS:
+//   - ext: 1:1 with TabCisZam_EXT (training data)
+//   - auth: 1:1 with InspiritUserAuth (AeroLMS authentication)
+//   - Note: Application relations (testAttempts, certificates, etc.) are on User model
+model TabCisZam {
+  id       Int     @id @default(autoincrement()) @map("ID")
+  cislo    Int     @unique @map("Cislo") // Personal code (employee number, for login)
+  jmeno    String  @map("Jmeno") @db.NVarChar(100) // First name
+  prijmeni String  @map("Prijmeni") @db.NVarChar(100) // Last name
+  alias    String? @map("Alias") @db.NVarChar(255) // Plain text password (for login)
 
-  testAttempts                                    TestAttempt[]
-  trainingAssignments                             TrainingAssignment[]
-  certificates                                    Certificate[]
+  // Relations (internal Helios structure only)
+  ext  TabCisZam_EXT?
+  auth InspiritUserAuth?
+
+  @@map("TabCisZam")
 }
 
+// TabCisZam_EXT - Helios ERP Extended Table with Training Columns
+//
+// PURPOSE:
+//   - Development: Simulated Helios extended table for Prisma Studio visualization
+//   - Production: Physical Helios ERP table with training completion tracking
+//
+// USAGE IN APPLICATION:
+//   - ✅ DIRECTLY WRITTEN by updateUserTrainingData() in training-sync.ts
+//   - ✅ READ via User SYNONYM → InspiritCisZam VIEW
+//   - 🔧 Updates training dates after successful test completion
+//
+// CRITICAL SECURITY:
+//   - NEVER update directly with raw SQL without validateTrainingCode()
+//   - Training codes are whitelisted to prevent SQL injection
+//   - All column names have underscore prefix: _CMMDatumPosl (not CMMDatumPosl)
+//
+// COLUMN PATTERN (dynamic - added by DB admin):
+//   - _{code}DatumPosl: Last completion date (DATE)
+//   - _{code}DatumPristi: Next due date (DATE, auto-calculated +1 year)
+//   - _{code}Pozadovano: Required flag (BOOLEAN, default false)
+//
+// WRITE STRATEGY:
+//   - Production: Direct UPDATE to TabCisZam_EXT (more efficient than VIEW triggers)
+//   - Development: UPDATE to User table (simpler structure)
+//
+// IMPORTANT - DYNAMIC COLUMNS:
+//   Training columns (_{code}DatumPosl, _{code}DatumPristi, _{code}Pozadovano) are:
+//   - Added dynamically by database administrator in production
+//   - Detected at runtime via training-sync.ts (detectTrainingColumns function)
+//   - NOT defined in this Prisma model to allow flexibility
+//   - Accessed via raw SQL queries with validated training codes
+//
+// This minimal model definition allows:
+//   - Prisma to recognize the table exists
+//   - Runtime detection of available training columns
+//   - No need to rebuild Prisma client when trainings are added/removed
+model TabCisZam_EXT {
+  id Int @id @map("ID")
+
+  // Relation to TabCisZam (1:1 via ID)
+  employee TabCisZam @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@map("TabCisZam_EXT")
+}
+
+// InspiritUserAuth - AeroLMS Authentication Table
+//
+// PURPOSE:
+//   - Development: Physical table for Prisma Studio visualization
+//   - Production: Physical table storing AeroLMS-specific authentication data
+//
+// USAGE IN APPLICATION:
+//   - ✅ WRITTEN via User SYNONYM → InspiritCisZam VIEW → INSTEAD OF triggers
+//   - ✅ READ via User SYNONYM → InspiritCisZam VIEW (LEFT JOIN)
+//   - 🔐 Stores role and email (Cislo and Alias are in TabCisZam)
+//
+// FIELDS:
+//   - ID: Foreign key to TabCisZam.ID (1:1 relationship)
+//   - role: User role (ADMIN | TRAINER | WORKER)
+//   - email: Email address for admin/trainer login (optional, unique)
+//   - createdAt, updatedAt: Audit timestamps
+//
+// WRITE FLOW (Production):
+//   Application: prisma.user.update({ email: "new@email.com" })
+//        ↓
+//   User SYNONYM → InspiritCisZam VIEW
+//        ↓
+//   INSTEAD OF UPDATE trigger (deployment/sql/03_create_inspirit_view.sql)
+//        ↓
+//   UPDATE InspiritUserAuth SET email = ..., updatedAt = CURRENT_TIMESTAMP
+//
+// NOTE: Cislo (login code) and Alias (password) are in TabCisZam (Helios table)
+model InspiritUserAuth {
+  id        Int       @id @map("ID")
+  role      String    @default("WORKER") @db.NVarChar(50)
+  email     String?   @unique @db.NVarChar(255)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  // Relation to TabCisZam (1:1 via ID)
+  employee TabCisZam @relation(fields: [id], references: [id], onDelete: Cascade)
+
+  @@index([role])
+  @@map("InspiritUserAuth")
+}
+
+// ============================================================================
+// AEROLMS APPLICATION TABLES
+// ============================================================================
+
+// User - Primary Application Model (Maps to SYNONYM → VIEW)
+//
+// PURPOSE:
+//   This is the MAIN model that application code uses for all user operations.
+//
+// ARCHITECTURE:
+//   Development:
+//     - User table is a physical table containing all user data
+//     - Simple structure for local development
+//
+//   Production (Helios003 database):
+//     - User is a SYNONYM pointing to InspiritCisZam VIEW
+//     - VIEW combines 3 tables via LEFT JOIN:
+//         1. TabCisZam (Helios ERP - ID, Cislo, Alias, Jmeno, Prijmeni) - READ ONLY
+//         2. TabCisZam_EXT (Helios ERP - training columns with _ prefix) - WRITTEN via updateUserTrainingData()
+//         3. InspiritUserAuth (AeroLMS - role, email, timestamps) - WRITTEN via INSTEAD OF triggers
+//
+// DATA FLOW - READ:
+//   prisma.user.findMany()
+//     ↓
+//   User SYNONYM → InspiritCisZam VIEW
+//     ↓
+//   LEFT JOIN (TabCisZam + TabCisZam_EXT + InspiritUserAuth)
+//     ↓
+//   Returns combined data (Cislo, Alias, Jmeno, Prijmeni, role, email, timestamps)
+//
+// DATA FLOW - WRITE (Auth data):
+//   prisma.user.update({ email: "new@email.com" })
+//     ↓
+//   User SYNONYM → InspiritCisZam VIEW
+//     ↓
+//   INSTEAD OF UPDATE trigger (deployment/sql/03_create_inspirit_view.sql)
+//     ↓
+//   UPDATE InspiritUserAuth SET email = ..., updatedAt = CURRENT_TIMESTAMP
+//
+// DATA FLOW - WRITE (Training data):
+//   updateUserTrainingData(userId, trainingCode, datumPosl)
+//     ↓
+//   Direct UPDATE to TabCisZam_EXT (bypasses VIEW for efficiency)
+//     ↓
+//   UPDATE TabCisZam_EXT SET _CMMDatumPosl = ..., _CMMDatumPristi = ...
+//
+// FIELDS MAPPING:
+//   - id, cislo, firstName, lastName, alias: from TabCisZam (Helios ERP)
+//   - role, email, createdAt, updatedAt: from InspiritUserAuth (AeroLMS)
+//   - Training columns (_{code}DatumPosl, etc.): NOT in this model, accessed via raw SQL
+//
+// CRITICAL:
+//   - NEVER run `prisma migrate` on production!
+//   - Always use manual SQL scripts from deployment/sql/
+//   - Training columns are dynamic and detected at runtime via training-sync.ts
+model User {
+  id        Int      @id @default(autoincrement()) @map("UserID")
+  cislo     Int?     @unique @map("Cislo") // Personal code (employee number, for login) - from TabCisZam
+  firstName String   @map("Jmeno") // First name - from TabCisZam
+  lastName  String   @map("Prijmeni") // Last name - from TabCisZam
+  alias     String?  @map("Alias") // Plain text password (for login) - from TabCisZam
+  role      String   @default("WORKER") // Role - from InspiritUserAuth
+  email     String?  @unique // Email - from InspiritUserAuth
+  createdAt DateTime @default(now()) // Created timestamp - from InspiritUserAuth
+  updatedAt DateTime @updatedAt // Updated timestamp - from InspiritUserAuth
+
+  testAttempts        TestAttempt[]
+  trainingAssignments TrainingAssignment[]
+  certificates        Certificate[]
+
+  @@map("User")
+}
+
+// Training modules - auto-synchronized from TabCisZam_EXT columns via training-sync.ts
+// Database admin adds columns with pattern: _{code}DatumPosl, _{code}DatumPristi, _{code}Pozadovano
+// System detects new columns at runtime and creates corresponding Training records
 model Training {
   id                  Int                   @id @default(autoincrement())
   code                String                @unique
@@ -123,6 +221,9 @@ model Training {
   certificates        Certificate[]
 }
 
+// Assessment tests - multiple tests per training supported
+// Workers see only active tests, trainers/admins see all
+// Composite index [trainingId, isActive] optimizes active tests query
 model Test {
   id           Int           @id @default(autoincrement())
   trainingId   Int
@@ -141,8 +242,11 @@ model Test {
 
   @@index([trainingId])
   @@index([isActive])
+  @@index([trainingId, isActive])
 }
 
+// Test questions with multiple answer types (single, multiple, yes/no, text)
+// Composite index [testId, order] ensures efficient ordered retrieval
 model Question {
   id            Int      @id @default(autoincrement())
   testId        Int
@@ -156,8 +260,14 @@ model Question {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   test          Test     @relation(fields: [testId], references: [id])
+
+  @@index([testId])
+  @@index([testId, order])
 }
 
+// User test attempts - tracks all test submissions and results
+// Index [createdAt DESC] optimizes recent attempts queries
+// Index [completedAt] supports filtering by completion status
 model TestAttempt {
   id            Int       @id @default(autoincrement())
   testId        Int
@@ -176,9 +286,13 @@ model TestAttempt {
   @@index([userId])
   @@index([testId])
   @@index([userId, testId])
-  @@index([createdAt])
+  @@index([createdAt(sort: Desc)])
+  @@index([completedAt])
 }
 
+// PDF certificates for completed trainings - generated on successful test completion
+// Index [validUntil] supports expiration queries and renewal notifications
+// Index [certificateNumber] enables fast lookup by certificate number
 model Certificate {
   id                Int          @id @default(autoincrement())
   userId            Int
@@ -198,6 +312,7 @@ model Certificate {
   @@index([userId])
   @@index([trainingId])
   @@index([certificateNumber])
+  @@index([validUntil])
 }
 
 model TrainingAssignment {

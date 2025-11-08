@@ -61,7 +61,6 @@ export default function TestEditClient({ test }: TestEditClientProps) {
       toast.success('Test byl úspěšně aktualizován');
       router.push(`/trainer/training/${test.training.code}/tests`);
     } catch (error) {
-      console.error('Save error:', error);
       toast.error(
         error instanceof Error ? error.message : 'Chyba při ukládání testu'
       );

@@ -19,15 +19,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import {
-  BookOpen,
-  FileText,
-  Edit,
-  Users,
-  CheckCircle,
-  XCircle,
-  Clock
-} from 'lucide-react';
+import { BookOpen, FileText, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';

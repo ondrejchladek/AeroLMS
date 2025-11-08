@@ -60,7 +60,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(transformedTest);
   } catch (error) {
-    console.error('Get test error:', error);
     return NextResponse.json(
       { error: 'Chyba při načítání testu' },
       { status: 500 }
@@ -130,7 +129,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Aktualizuj test a otázky v transakci
     const updatedTest = await prisma.$transaction(async (tx) => {
       // Aktualizuj test
-      const updated = await tx.test.update({
+      await tx.test.update({
         where: { id: testId },
         data: {
           ...(title !== undefined && { title }),
@@ -184,7 +183,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       test: updatedTest
     });
   } catch (error) {
-    console.error('Update test error:', error);
     return NextResponse.json(
       { error: 'Chyba při aktualizaci testu' },
       { status: 500 }
@@ -257,7 +255,6 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       message: 'Test byl smazán'
     });
   } catch (error) {
-    console.error('Delete test error:', error);
     return NextResponse.json(
       { error: 'Chyba při mazání testu' },
       { status: 500 }

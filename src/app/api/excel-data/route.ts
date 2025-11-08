@@ -172,16 +172,6 @@ export async function GET() {
       maxTime = endOfDay.getTime();
     }
 
-    // Log timeline data for debugging
-    console.log('Timeline segments generated:', timelineData.length);
-    timelineData.forEach((segment, idx) => {
-      const start = new Date(segment.y[0]);
-      const end = new Date(segment.y[1]);
-      console.log(
-        `Segment ${idx}: ${segment.status} from ${start.toLocaleTimeString()} to ${end.toLocaleTimeString()}`
-      );
-    });
-
     return NextResponse.json({
       timelineData: timelineData,
       timeLabels: timeLabels,
@@ -190,7 +180,6 @@ export async function GET() {
       rawData: jsonData // Include all raw data
     });
   } catch (error) {
-    console.error('Error reading Excel file:', error);
     return NextResponse.json(
       { error: 'Failed to read Excel file' },
       { status: 500 }

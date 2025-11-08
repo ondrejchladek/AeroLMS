@@ -1,6 +1,7 @@
 // src/features/profil/components/profile-view-page.tsx
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { getFullNameSafe } from '@/lib/user-helpers';
 
 export default async function ProfileViewPage() {
   const session = await getServerSession(authOptions);
@@ -13,10 +14,14 @@ export default async function ProfileViewPage() {
       {user ? (
         <div className='space-y-1'>
           <p>
-            <span className='font-medium'>Jméno:</span> {user.name}
+            <span className='font-medium'>Jméno:</span>{' '}
+            {getFullNameSafe({
+              firstName: user.firstName,
+              lastName: user.lastName
+            }, 'Uživatel')}
           </p>
           <p>
-            <span className='font-medium'>Kód zaměstnance:</span> {user.code}
+            <span className='font-medium'>Kód zaměstnance:</span> {user.cislo}
           </p>
         </div>
       ) : (

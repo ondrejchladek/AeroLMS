@@ -11,7 +11,6 @@ import {
   XCircle,
   Award,
   AlertTriangle,
-  Download,
   RefreshCw,
   Home,
   TrendingUp,

@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
@@ -30,8 +29,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
-  DialogTrigger
+  DialogTitle
 } from '@/components/ui/dialog';
 import {
   Select,
@@ -192,7 +190,6 @@ export default function QuestionsManagementClient({
       toast.success('Otázky byly úspěšně uloženy');
       router.refresh();
     } catch (error) {
-      console.error('Save error:', error);
       toast.error(
         error instanceof Error ? error.message : 'Chyba při ukládání otázek'
       );

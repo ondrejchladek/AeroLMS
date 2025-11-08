@@ -2,7 +2,6 @@
 import { type NextAuthOptions } from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { prisma } from '@/lib/prisma';
-import bcrypt from 'bcryptjs';
 import type { User } from 'next-auth';
 import type { JWT } from 'next-auth/jwt';
 
@@ -49,17 +48,18 @@ export const authOptions: NextAuthOptions = {
           if (!email || !password) return null;
 
           const user = await prisma.user.findUnique({ where: { email } });
-          if (!user || !user.password) return null;
+          if (!user || !user.alias) return null;
 
-          // Ověření hesla
-          const isValidPassword = await bcrypt.compare(password, user.password);
+          // Ověření hesla (plain text - Helios constraint)
+          const isValidPassword = password === user.alias;
           if (!isValidPassword) return null;
 
           return {
             id: String(user.id),
-            name: user.name,
+            firstName: user.firstName,
+            lastName: user.lastName,
             email: user.email,
-            code: user.code,
+            cislo: user.cislo,
             role: user.role
           } satisfies User;
         } else if (credentials.loginType === 'code') {
@@ -72,26 +72,24 @@ export const authOptions: NextAuthOptions = {
           }
 
           try {
-            const user = await prisma.user.findUnique({ where: { code } });
+            const user = await prisma.user.findUnique({ where: { cislo: code } });
 
-            if (!user || !user.password) {
+            if (!user || !user.alias) {
               return null;
             }
 
-            // Ověření hesla
-            const isValidPassword = await bcrypt.compare(
-              password,
-              user.password
-            );
+            // Ověření hesla (plain text - Helios constraint)
+            const isValidPassword = password === user.alias;
             if (!isValidPassword) {
               return null;
             }
 
             return {
               id: String(user.id),
-              name: user.name || null,
+              firstName: user.firstName,
+              lastName: user.lastName,
               email: user.email || null,
-              code: user.code,
+              cislo: user.cislo,
               role: user.role
             } satisfies User;
           } catch (error) {
@@ -107,20 +105,18 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({
       token,
-      user,
-      account,
-      trigger
+      user
     }: {
       token: JWT;
       user?: User;
-      account?: any;
-      trigger?: any;
     }) {
       try {
         // Při prvním přihlášení nebo refresh
         if (user) {
           token.id = user.id;
-          token.code = (user as any).code;
+          token.cislo = (user as any).cislo;
+          token.firstName = (user as any).firstName;
+          token.lastName = (user as any).lastName;
           token.email = (user as any).email;
           token.role = (user as any).role;
           // Přidáme timestamp pro tracking
@@ -132,7 +128,7 @@ export const authOptions: NextAuthOptions = {
           return {
             ...token,
             id: '',
-            code: null,
+            cislo: null,
             email: null,
             role: 'WORKER'
           };
@@ -146,7 +142,7 @@ export const authOptions: NextAuthOptions = {
           return {
             ...token,
             id: '',
-            code: null,
+            cislo: null,
             email: null,
             role: 'WORKER',
             expired: true
@@ -159,7 +155,7 @@ export const authOptions: NextAuthOptions = {
         return {
           ...token,
           id: '',
-          code: null,
+          cislo: null,
           email: null,
           role: 'WORKER',
           error: true
@@ -181,7 +177,9 @@ export const authOptions: NextAuthOptions = {
 
         if (session.user) {
           session.user.id = token.id as string;
-          session.user.code = token.code as number | null;
+          session.user.cislo = token.cislo as number | null;
+          session.user.firstName = token.firstName as string | null;
+          session.user.lastName = token.lastName as string | null;
           session.user.email = token.email as string | null;
           session.user.role = token.role as string;
         }

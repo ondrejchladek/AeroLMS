@@ -1,7 +1,7 @@
 import KBar from '@/components/kbar';
 import AppSidebar from '@/components/layout/app-sidebar';
 import Header from '@/components/layout/header';
-import { DynamicBreadcrumbs } from '@/components/dynamic-breadcrumbs';
+import { DynamicBreadcrumbs } from '@/components/layout/dynamic-breadcrumbs';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import type { Metadata } from 'next';
 import { cookies } from 'next/headers';

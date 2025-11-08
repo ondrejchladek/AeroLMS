@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { updateUserTrainingData } from '@/lib/training-sync';
 import { isAdmin, isTrainer } from '@/types/roles';
 import {
   ManualTestAttemptSchema,
@@ -100,16 +101,15 @@ export async function POST(request: NextRequest) {
     // If passed, update user's training dates and create certificate
     if (passed) {
       const trainingCode = test.training.code;
-      const datumPoslField = `${trainingCode}DatumPosl`;
 
       // Update user's training completion date
+      // Uses validated function with environment detection and SQL injection protection
       // DatumPristi is automatically calculated by the database from DatumPosl
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          [datumPoslField]: new Date()
-        }
-      });
+      await updateUserTrainingData(
+        userId,
+        trainingCode,
+        new Date() // DatumPosl - DatumPristi auto-calculated by database
+      );
 
       // Create certificate
       const certificate = await prisma.certificate.create({
@@ -153,7 +153,6 @@ export async function POST(request: NextRequest) {
       trainingDatesUpdated: false
     });
   } catch (error) {
-    console.error('Error creating manual test attempt:', error);
     return NextResponse.json(
       { error: 'Failed to create manual test attempt' },
       { status: 500 }
@@ -252,7 +251,6 @@ export async function GET(request: NextRequest) {
       count: manualAttempts.length
     });
   } catch (error) {
-    console.error('Error fetching manual test attempts:', error);
     return NextResponse.json(
       { error: 'Failed to fetch manual test attempts' },
       { status: 500 }
