@@ -31,7 +31,7 @@ export default async function TestEditPage({ params }: PageProps) {
   }
 
   // Get test with training info
-  const test = await prisma.test.findUnique({
+  const test = await prisma.inspiritTest.findUnique({
     where: { id: testId },
     include: {
       training: {
@@ -53,7 +53,7 @@ export default async function TestEditPage({ params }: PageProps) {
 
   // Verify trainer has access to this test's training
   if (isTrainer(session.user.role) && !isAdmin(session.user.role)) {
-    const assignment = await prisma.trainingAssignment.findFirst({
+    const assignment = await prisma.inspiritTrainingAssignment.findFirst({
       where: {
         trainerId: parseInt(session.user.id),
         trainingId: test.trainingId

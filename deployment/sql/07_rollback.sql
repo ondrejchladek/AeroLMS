@@ -152,45 +152,45 @@ BEGIN TRY
     -- Certificate → TestAttempt → Test → Question → Training
     -- TrainingAssignment → Training
 
-    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Certificate')
+    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'InspiritCertificate')
     BEGIN
-        DROP TABLE [dbo].[Certificate];
-        PRINT '  ✓ Certificate table dropped';
+        DROP TABLE [dbo].[InspiritCertificate];
+        PRINT '  ✓ InspiritCertificate table dropped';
         SET @DropCount = @DropCount + 1;
     END
 
-    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TrainingAssignment')
+    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'InspiritTrainingAssignment')
     BEGIN
-        DROP TABLE [dbo].[TrainingAssignment];
-        PRINT '  ✓ TrainingAssignment table dropped';
+        DROP TABLE [dbo].[InspiritTrainingAssignment];
+        PRINT '  ✓ InspiritTrainingAssignment table dropped';
         SET @DropCount = @DropCount + 1;
     END
 
-    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TestAttempt')
+    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'InspiritTestAttempt')
     BEGIN
         DROP TABLE [dbo].[TestAttempt];
         PRINT '  ✓ TestAttempt table dropped';
         SET @DropCount = @DropCount + 1;
     END
 
-    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Question')
+    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'InspiritQuestion')
     BEGIN
-        DROP TABLE [dbo].[Question];
-        PRINT '  ✓ Question table dropped';
+        DROP TABLE [dbo].[InspiritQuestion];
+        PRINT '  ✓ InspiritQuestion table dropped';
         SET @DropCount = @DropCount + 1;
     END
 
-    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Test')
+    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'InspiritTest')
     BEGIN
-        DROP TABLE [dbo].[Test];
-        PRINT '  ✓ Test table dropped';
+        DROP TABLE [dbo].[InspiritTest];
+        PRINT '  ✓ InspiritTest table dropped';
         SET @DropCount = @DropCount + 1;
     END
 
-    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Training')
+    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'InspiritTraining')
     BEGIN
-        DROP TABLE [dbo].[Training];
-        PRINT '  ✓ Training table dropped';
+        DROP TABLE [dbo].[InspiritTraining];
+        PRINT '  ✓ InspiritTraining table dropped';
         SET @DropCount = @DropCount + 1;
     END
 

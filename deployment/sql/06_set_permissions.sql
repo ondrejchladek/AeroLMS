@@ -108,29 +108,29 @@ PRINT '';
 PRINT '3. Configuring permissions for AeroLMS tables...';
 PRINT '----------------------------------------';
 
--- Training table
-GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[Training] TO [AeroLMS];
-PRINT '  ✓ Training: Full CRUD access granted';
+-- InspiritTraining table
+GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[InspiritTraining] TO [AeroLMS];
+PRINT '  ✓ InspiritTraining: Full CRUD access granted';
 
--- Test table
-GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[Test] TO [AeroLMS];
-PRINT '  ✓ Test: Full CRUD access granted';
+-- InspiritTest table
+GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[InspiritTest] TO [AeroLMS];
+PRINT '  ✓ InspiritTest: Full CRUD access granted';
 
--- Question table
-GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[Question] TO [AeroLMS];
-PRINT '  ✓ Question: Full CRUD access granted';
+-- InspiritQuestion table
+GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[InspiritQuestion] TO [AeroLMS];
+PRINT '  ✓ InspiritQuestion: Full CRUD access granted';
 
--- TestAttempt table
-GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[TestAttempt] TO [AeroLMS];
-PRINT '  ✓ TestAttempt: Full CRUD access granted';
+-- InspiritTestAttempt table
+GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[InspiritTestAttempt] TO [AeroLMS];
+PRINT '  ✓ InspiritTestAttempt: Full CRUD access granted';
 
--- Certificate table
-GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[Certificate] TO [AeroLMS];
-PRINT '  ✓ Certificate: Full CRUD access granted';
+-- InspiritCertificate table
+GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[InspiritCertificate] TO [AeroLMS];
+PRINT '  ✓ InspiritCertificate: Full CRUD access granted';
 
--- TrainingAssignment table
-GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[TrainingAssignment] TO [AeroLMS];
-PRINT '  ✓ TrainingAssignment: Full CRUD access granted';
+-- InspiritTrainingAssignment table
+GRANT SELECT, INSERT, UPDATE, DELETE ON [dbo].[InspiritTrainingAssignment] TO [AeroLMS];
+PRINT '  ✓ InspiritTrainingAssignment: Full CRUD access granted';
 
 PRINT '';
 

@@ -30,7 +30,7 @@ export default async function AssignmentsPage() {
         email: true
       }
     }),
-    prisma.training.findMany({
+    prisma.inspiritTraining.findMany({
       select: {
         id: true,
         code: true,
@@ -38,7 +38,7 @@ export default async function AssignmentsPage() {
         description: true
       }
     }),
-    prisma.trainingAssignment.findMany({
+    prisma.inspiritTrainingAssignment.findMany({
       include: {
         trainer: {
           select: {

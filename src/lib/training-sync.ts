@@ -116,7 +116,7 @@ export async function syncTrainingsWithDatabase(): Promise<{
     }
 
     // Get existing training codes from database
-    const existingTrainings = await prisma.training.findMany({
+    const existingTrainings = await prisma.inspiritTraining.findMany({
       select: { code: true }
     });
     const existingCodes = new Set(existingTrainings.map((t) => t.code));
@@ -129,7 +129,7 @@ export async function syncTrainingsWithDatabase(): Promise<{
     // Create missing trainings
     for (const code of missingCodes) {
       try {
-        await prisma.training.create({
+        await prisma.inspiritTraining.create({
           data: {
             code,
             name: `Školení ${code}`, // Default name, trainer will update it
@@ -302,7 +302,7 @@ export async function getAllUserTrainings(userId: number): Promise<
 > {
   try {
     const detectedTrainings = await detectTrainingColumns();
-    const trainings = await prisma.training.findMany({
+    const trainings = await prisma.inspiritTraining.findMany({
       where: {
         code: {
           in: detectedTrainings.map((t) => t.code)

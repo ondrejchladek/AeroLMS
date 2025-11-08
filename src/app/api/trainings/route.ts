@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     const isAdminOrTrainer =
       isAdmin(session.user.role) || isTrainer(session.user.role);
     if (url.searchParams.get('admin') === 'true' && isAdminOrTrainer) {
-      const trainings = await prisma.training.findMany({
+      const trainings = await prisma.inspiritTraining.findMany({
         include: {
           tests: true
         },
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     }
 
     // Načti všechna školení z databáze
-    const dbTrainings = await prisma.training.findMany({
+    const dbTrainings = await prisma.inspiritTraining.findMany({
       orderBy: {
         name: 'asc'
       }

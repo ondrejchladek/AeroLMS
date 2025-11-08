@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     const { userId, testId, score, passed, notes } = validation.data;
 
     // Verify test exists and get training info
-    const test = await prisma.test.findUnique({
+    const test = await prisma.inspiritTest.findUnique({
       where: { id: testId },
       include: {
         training: true
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     // If trainer, check if they're assigned to this training
     if (isTrainer(session.user.role)) {
-      const assignment = await prisma.trainingAssignment.findFirst({
+      const assignment = await prisma.inspiritTrainingAssignment.findFirst({
         where: {
           trainerId: parseInt(session.user.id),
           trainingId: test.trainingId
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create manual test attempt
-    const testAttempt = await prisma.testAttempt.create({
+    const testAttempt = await prisma.inspiritTestAttempt.create({
       data: {
         testId,
         userId,
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
       );
 
       // Create certificate
-      const certificate = await prisma.certificate.create({
+      const certificate = await prisma.inspiritCertificate.create({
         data: {
           userId,
           trainingId: test.trainingId,
@@ -206,7 +206,7 @@ export async function GET(request: NextRequest) {
 
     // If trainer, filter to their assigned trainings
     if (isTrainer(session.user.role)) {
-      const assignments = await prisma.trainingAssignment.findMany({
+      const assignments = await prisma.inspiritTrainingAssignment.findMany({
         where: { trainerId: parseInt(session.user.id) },
         select: { trainingId: true }
       });
@@ -222,7 +222,7 @@ export async function GET(request: NextRequest) {
       };
     }
 
-    const manualAttempts = await prisma.testAttempt.findMany({
+    const manualAttempts = await prisma.inspiritTestAttempt.findMany({
       where: whereClause,
       include: {
         test: {

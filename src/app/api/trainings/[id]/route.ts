@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const training = await prisma.training.findUnique({
+    const training = await prisma.inspiritTraining.findUnique({
       where: { id: trainingId },
       include: {
         tests: {
@@ -107,7 +107,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       canEdit = true;
     } else if (isTrainer(session.user.role)) {
       // Trainer může editovat pouze přiřazená školení
-      const assignment = await prisma.trainingAssignment.findFirst({
+      const assignment = await prisma.inspiritTrainingAssignment.findFirst({
         where: {
           trainerId: parseInt(session.user.id),
           trainingId: trainingId
@@ -149,7 +149,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Aktualizuj školení
-    const updatedTraining = await prisma.training.update({
+    const updatedTraining = await prisma.inspiritTraining.update({
       where: { id: trainingId },
       data: updateData,
       include: {
@@ -205,7 +205,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Smaž školení (cascade delete smaže i související záznamy)
-    await prisma.training.delete({
+    await prisma.inspiritTraining.delete({
       where: { id: trainingId }
     });
 

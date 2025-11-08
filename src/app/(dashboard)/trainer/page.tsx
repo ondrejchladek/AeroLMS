@@ -18,7 +18,7 @@ export default async function TrainerPage() {
   }
 
   // Get trainer's assigned trainings
-  const assignments = await prisma.trainingAssignment.findMany({
+  const assignments = await prisma.inspiritTrainingAssignment.findMany({
     where: {
       trainerId: parseInt(session.user.id)
     },

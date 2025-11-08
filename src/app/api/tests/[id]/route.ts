@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid test ID' }, { status: 400 });
     }
 
-    const test = await prisma.test.findUnique({
+    const test = await prisma.inspiritTest.findUnique({
       where: { id: testId },
       include: {
         questions: {
@@ -87,7 +87,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     // Získej test s informací o školení
-    const test = await prisma.test.findUnique({
+    const test = await prisma.inspiritTest.findUnique({
       where: { id: testId },
       include: {
         training: true
@@ -106,7 +106,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       canEdit = true;
     } else if (isTrainer(session.user.role)) {
       // Trainer může editovat testy svých školení
-      const assignment = await prisma.trainingAssignment.findFirst({
+      const assignment = await prisma.inspiritTrainingAssignment.findFirst({
         where: {
           trainerId: parseInt(session.user.id),
           trainingId: test.trainingId
@@ -129,7 +129,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Aktualizuj test a otázky v transakci
     const updatedTest = await prisma.$transaction(async (tx) => {
       // Aktualizuj test
-      await tx.test.update({
+      await tx.inspiritTest.update({
         where: { id: testId },
         data: {
           ...(title !== undefined && { title }),
@@ -143,13 +143,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       // Pokud jsou dodány nové otázky, nahraď je
       if (questions && Array.isArray(questions)) {
         // Smaž staré otázky
-        await tx.question.deleteMany({
+        await tx.inspiritQuestion.deleteMany({
           where: { testId: testId }
         });
 
         // Vytvoř nové otázky
         if (questions.length > 0) {
-          await tx.question.createMany({
+          await tx.inspiritQuestion.createMany({
             data: questions.map((q: any, index: number) => ({
               testId: testId,
               order: q.order !== undefined ? q.order : index,
@@ -168,7 +168,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
 
       // Vrať aktualizovaný test s otázkami
-      return await tx.test.findUnique({
+      return await tx.inspiritTest.findUnique({
         where: { id: testId },
         include: {
           questions: {
@@ -210,7 +210,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Získej test s informací o školení
-    const test = await prisma.test.findUnique({
+    const test = await prisma.inspiritTest.findUnique({
       where: { id: testId },
       include: {
         training: true
@@ -229,7 +229,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       canDelete = true;
     } else if (isTrainer(session.user.role)) {
       // Trainer může mazat testy svých školení
-      const assignment = await prisma.trainingAssignment.findFirst({
+      const assignment = await prisma.inspiritTrainingAssignment.findFirst({
         where: {
           trainerId: parseInt(session.user.id),
           trainingId: test.trainingId
@@ -246,7 +246,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Smaž test (cascade delete smaže i otázky a pokusy)
-    await prisma.test.delete({
+    await prisma.inspiritTest.delete({
       where: { id: testId }
     });
 

@@ -14,7 +14,7 @@ export async function GET(
     }
 
     const { code } = await params;
-    const training = await prisma.training.findUnique({
+    const training = await prisma.inspiritTraining.findUnique({
       where: { code },
       include: {
         tests: true
@@ -29,7 +29,7 @@ export async function GET(
     }
 
     // Check if user has completed this training
-    const lastAttempt = await prisma.testAttempt.findFirst({
+    const lastAttempt = await prisma.inspiritTestAttempt.findFirst({
       where: {
         userId: parseInt(session.user.id),
         test: {

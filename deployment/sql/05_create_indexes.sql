@@ -53,7 +53,7 @@ BEGIN TRY
     -- ============================================================================
     -- TRAINING TABLE INDEXES
     -- ============================================================================
-    PRINT '2. Training table indexes...';
+    PRINT '2. InspiritTraining table indexes...';
     PRINT '----------------------------------------';
 
     -- Already has unique index on code (from constraint)
@@ -68,42 +68,42 @@ BEGIN TRY
     PRINT '----------------------------------------';
 
     -- Index on trainingId (foreign key)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_Test_trainingId' AND object_id = OBJECT_ID('Test'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritTest_trainingId' AND object_id = OBJECT_ID('InspiritTest'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_Test_trainingId] ON [dbo].[Test]([trainingId]);
-        PRINT '  ✓ Created: IX_Test_trainingId';
+        CREATE NONCLUSTERED INDEX [IX_InspiritTest_trainingId] ON [dbo].[InspiritTest]([trainingId]);
+        PRINT '  ✓ Created: IX_InspiritTest_trainingId';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_Test_trainingId (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritTest_trainingId (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
     -- Index on isActive (for filtering active tests)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_Test_isActive' AND object_id = OBJECT_ID('Test'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritTest_isActive' AND object_id = OBJECT_ID('InspiritTest'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_Test_isActive] ON [dbo].[Test]([isActive]);
-        PRINT '  ✓ Created: IX_Test_isActive';
+        CREATE NONCLUSTERED INDEX [IX_InspiritTest_isActive] ON [dbo].[InspiritTest]([isActive]);
+        PRINT '  ✓ Created: IX_InspiritTest_isActive';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_Test_isActive (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritTest_isActive (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
     -- Composite index on trainingId + isActive (common query)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_Test_trainingId_isActive' AND object_id = OBJECT_ID('Test'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritTest_trainingId_isActive' AND object_id = OBJECT_ID('InspiritTest'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_Test_trainingId_isActive]
-        ON [dbo].[Test]([trainingId], [isActive]);
-        PRINT '  ✓ Created: IX_Test_trainingId_isActive';
+        CREATE NONCLUSTERED INDEX [IX_InspiritTest_trainingId_isActive]
+        ON [dbo].[InspiritTest]([trainingId], [isActive]);
+        PRINT '  ✓ Created: IX_InspiritTest_trainingId_isActive';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_Test_trainingId_isActive (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritTest_trainingId_isActive (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
@@ -116,29 +116,29 @@ BEGIN TRY
     PRINT '----------------------------------------';
 
     -- Index on testId (foreign key)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_Question_testId' AND object_id = OBJECT_ID('Question'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritQuestion_testId' AND object_id = OBJECT_ID('InspiritQuestion'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_Question_testId] ON [dbo].[Question]([testId]);
-        PRINT '  ✓ Created: IX_Question_testId';
+        CREATE NONCLUSTERED INDEX [IX_InspiritQuestion_testId] ON [dbo].[InspiritQuestion]([testId]);
+        PRINT '  ✓ Created: IX_InspiritQuestion_testId';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_Question_testId (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritQuestion_testId (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
     -- Composite index on testId + order (for ordered retrieval)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_Question_testId_order' AND object_id = OBJECT_ID('Question'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritQuestion_testId_order' AND object_id = OBJECT_ID('InspiritQuestion'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_Question_testId_order]
-        ON [dbo].[Question]([testId], [order]);
-        PRINT '  ✓ Created: IX_Question_testId_order';
+        CREATE NONCLUSTERED INDEX [IX_InspiritQuestion_testId_order]
+        ON [dbo].[InspiritQuestion]([testId], [order]);
+        PRINT '  ✓ Created: IX_InspiritQuestion_testId_order';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_Question_testId_order (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritQuestion_testId_order (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
@@ -151,69 +151,69 @@ BEGIN TRY
     PRINT '----------------------------------------';
 
     -- Index on testId (foreign key)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_TestAttempt_testId' AND object_id = OBJECT_ID('TestAttempt'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritTestAttempt_testId' AND object_id = OBJECT_ID('InspiritTestAttempt'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_TestAttempt_testId] ON [dbo].[TestAttempt]([testId]);
-        PRINT '  ✓ Created: IX_TestAttempt_testId';
+        CREATE NONCLUSTERED INDEX [IX_InspiritTestAttempt_testId] ON [dbo].[InspiritTestAttempt]([testId]);
+        PRINT '  ✓ Created: IX_InspiritTestAttempt_testId';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_TestAttempt_testId (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritTestAttempt_testId (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
     -- Index on userId (foreign key)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_TestAttempt_userId' AND object_id = OBJECT_ID('TestAttempt'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritTestAttempt_userId' AND object_id = OBJECT_ID('InspiritTestAttempt'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_TestAttempt_userId] ON [dbo].[TestAttempt]([userId]);
-        PRINT '  ✓ Created: IX_TestAttempt_userId';
+        CREATE NONCLUSTERED INDEX [IX_InspiritTestAttempt_userId] ON [dbo].[InspiritTestAttempt]([userId]);
+        PRINT '  ✓ Created: IX_InspiritTestAttempt_userId';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_TestAttempt_userId (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritTestAttempt_userId (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
     -- Index on completedAt (for filtering completed vs in-progress)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_TestAttempt_completedAt' AND object_id = OBJECT_ID('TestAttempt'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritTestAttempt_completedAt' AND object_id = OBJECT_ID('InspiritTestAttempt'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_TestAttempt_completedAt] ON [dbo].[TestAttempt]([completedAt]);
-        PRINT '  ✓ Created: IX_TestAttempt_completedAt';
+        CREATE NONCLUSTERED INDEX [IX_InspiritTestAttempt_completedAt] ON [dbo].[InspiritTestAttempt]([completedAt]);
+        PRINT '  ✓ Created: IX_InspiritTestAttempt_completedAt';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_TestAttempt_completedAt (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritTestAttempt_completedAt (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
     -- Composite index on userId + testId (for user-specific test history)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_TestAttempt_userId_testId' AND object_id = OBJECT_ID('TestAttempt'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritTestAttempt_userId_testId' AND object_id = OBJECT_ID('InspiritTestAttempt'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_TestAttempt_userId_testId]
-        ON [dbo].[TestAttempt]([userId], [testId]);
-        PRINT '  ✓ Created: IX_TestAttempt_userId_testId';
+        CREATE NONCLUSTERED INDEX [IX_InspiritTestAttempt_userId_testId]
+        ON [dbo].[InspiritTestAttempt]([userId], [testId]);
+        PRINT '  ✓ Created: IX_InspiritTestAttempt_userId_testId';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_TestAttempt_userId_testId (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritTestAttempt_userId_testId (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
     -- Index on createdAt (for ordering by creation time)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_TestAttempt_createdAt' AND object_id = OBJECT_ID('TestAttempt'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritTestAttempt_createdAt' AND object_id = OBJECT_ID('InspiritTestAttempt'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_TestAttempt_createdAt]
-        ON [dbo].[TestAttempt]([createdAt] DESC);
-        PRINT '  ✓ Created: IX_TestAttempt_createdAt';
+        CREATE NONCLUSTERED INDEX [IX_InspiritTestAttempt_createdAt]
+        ON [dbo].[InspiritTestAttempt]([createdAt] DESC);
+        PRINT '  ✓ Created: IX_InspiritTestAttempt_createdAt';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_TestAttempt_createdAt (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritTestAttempt_createdAt (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
@@ -226,41 +226,41 @@ BEGIN TRY
     PRINT '----------------------------------------';
 
     -- Index on userId (foreign key)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_Certificate_userId' AND object_id = OBJECT_ID('Certificate'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritCertificate_userId' AND object_id = OBJECT_ID('InspiritCertificate'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_Certificate_userId] ON [dbo].[Certificate]([userId]);
-        PRINT '  ✓ Created: IX_Certificate_userId';
+        CREATE NONCLUSTERED INDEX [IX_InspiritCertificate_userId] ON [dbo].[InspiritCertificate]([userId]);
+        PRINT '  ✓ Created: IX_InspiritCertificate_userId';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_Certificate_userId (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritCertificate_userId (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
     -- Index on trainingId (foreign key)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_Certificate_trainingId' AND object_id = OBJECT_ID('Certificate'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritCertificate_trainingId' AND object_id = OBJECT_ID('InspiritCertificate'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_Certificate_trainingId] ON [dbo].[Certificate]([trainingId]);
-        PRINT '  ✓ Created: IX_Certificate_trainingId';
+        CREATE NONCLUSTERED INDEX [IX_InspiritCertificate_trainingId] ON [dbo].[InspiritCertificate]([trainingId]);
+        PRINT '  ✓ Created: IX_InspiritCertificate_trainingId';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_Certificate_trainingId (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritCertificate_trainingId (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
     -- Index on validUntil (for filtering expiring certificates)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_Certificate_validUntil' AND object_id = OBJECT_ID('Certificate'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritCertificate_validUntil' AND object_id = OBJECT_ID('InspiritCertificate'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_Certificate_validUntil] ON [dbo].[Certificate]([validUntil]);
-        PRINT '  ✓ Created: IX_Certificate_validUntil';
+        CREATE NONCLUSTERED INDEX [IX_InspiritCertificate_validUntil] ON [dbo].[InspiritCertificate]([validUntil]);
+        PRINT '  ✓ Created: IX_InspiritCertificate_validUntil';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_Certificate_validUntil (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritCertificate_validUntil (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
@@ -272,34 +272,34 @@ BEGIN TRY
     -- ============================================================================
     -- TRAININGASSIGNMENT TABLE INDEXES
     -- ============================================================================
-    PRINT '7. TrainingAssignment table indexes...';
+    PRINT '7. InspiritTrainingAssignment table indexes...';
     PRINT '----------------------------------------';
 
     -- Index on trainerId (foreign key)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_TrainingAssignment_trainerId' AND object_id = OBJECT_ID('TrainingAssignment'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritTrainingAssignment_trainerId' AND object_id = OBJECT_ID('InspiritTrainingAssignment'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_TrainingAssignment_trainerId]
-        ON [dbo].[TrainingAssignment]([trainerId]);
-        PRINT '  ✓ Created: IX_TrainingAssignment_trainerId';
+        CREATE NONCLUSTERED INDEX [IX_InspiritTrainingAssignment_trainerId]
+        ON [dbo].[InspiritTrainingAssignment]([trainerId]);
+        PRINT '  ✓ Created: IX_InspiritTrainingAssignment_trainerId';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_TrainingAssignment_trainerId (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritTrainingAssignment_trainerId (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 
     -- Index on trainingId (foreign key)
-    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_TrainingAssignment_trainingId' AND object_id = OBJECT_ID('TrainingAssignment'))
+    IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name='IX_InspiritTrainingAssignment_trainingId' AND object_id = OBJECT_ID('InspiritTrainingAssignment'))
     BEGIN
-        CREATE NONCLUSTERED INDEX [IX_TrainingAssignment_trainingId]
-        ON [dbo].[TrainingAssignment]([trainingId]);
-        PRINT '  ✓ Created: IX_TrainingAssignment_trainingId';
+        CREATE NONCLUSTERED INDEX [IX_InspiritTrainingAssignment_trainingId]
+        ON [dbo].[InspiritTrainingAssignment]([trainingId]);
+        PRINT '  ✓ Created: IX_InspiritTrainingAssignment_trainingId';
         SET @IndexCount = @IndexCount + 1;
     END
     ELSE
     BEGIN
-        PRINT '  ⚠ Skipped: IX_TrainingAssignment_trainingId (already exists)';
+        PRINT '  ⚠ Skipped: IX_InspiritTrainingAssignment_trainingId (already exists)';
         SET @SkippedCount = @SkippedCount + 1;
     END
 

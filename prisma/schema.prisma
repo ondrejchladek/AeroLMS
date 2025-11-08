@@ -198,9 +198,9 @@ model User {
   createdAt DateTime @default(now()) // Created timestamp - from InspiritUserAuth
   updatedAt DateTime @updatedAt // Updated timestamp - from InspiritUserAuth
 
-  testAttempts        TestAttempt[]
-  trainingAssignments TrainingAssignment[]
-  certificates        Certificate[]
+  testAttempts        InspiritTestAttempt[]
+  trainingAssignments InspiritTrainingAssignment[]
+  certificates        InspiritCertificate[]
 
   @@map("User")
 }
@@ -208,124 +208,131 @@ model User {
 // Training modules - auto-synchronized from TabCisZam_EXT columns via training-sync.ts
 // Database admin adds columns with pattern: _{code}DatumPosl, _{code}DatumPristi, _{code}Pozadovano
 // System detects new columns at runtime and creates corresponding Training records
-model Training {
-  id                  Int                   @id @default(autoincrement())
-  code                String                @unique
+model InspiritTraining {
+  id                  Int                          @id @default(autoincrement())
+  code                String                       @unique
   name                String
-  description         String?               @db.NVarChar(Max)
-  content             String?               @db.NVarChar(Max)
-  createdAt           DateTime              @default(now())
-  updatedAt           DateTime              @updatedAt
-  tests               Test[]
-  trainingAssignments TrainingAssignment[]
-  certificates        Certificate[]
+  description         String?                      @db.NVarChar(Max)
+  content             String?                      @db.NVarChar(Max)
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
+  tests               InspiritTest[]
+  trainingAssignments InspiritTrainingAssignment[]
+  certificates        InspiritCertificate[]
+
+  @@map("InspiritTraining")
 }
 
 // Assessment tests - multiple tests per training supported
 // Workers see only active tests, trainers/admins see all
 // Composite index [trainingId, isActive] optimizes active tests query
-model Test {
-  id           Int           @id @default(autoincrement())
+model InspiritTest {
+  id           Int                    @id @default(autoincrement())
   trainingId   Int
   title        String
-  description  String?       @db.NVarChar(Max)
-  isActive     Boolean       @default(true)
+  description  String?                @db.NVarChar(Max)
+  isActive     Boolean                @default(true)
   validFrom    DateTime?
   validTo      DateTime?
-  passingScore Int           @default(75)
-  timeLimit    Int?          @default(15)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  questions    Question[]
-  training     Training      @relation(fields: [trainingId], references: [id])
-  testAttempts TestAttempt[]
+  passingScore Int                    @default(75)
+  timeLimit    Int?                   @default(15)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  questions    InspiritQuestion[]
+  training     InspiritTraining       @relation(fields: [trainingId], references: [id])
+  testAttempts InspiritTestAttempt[]
 
   @@index([trainingId])
   @@index([isActive])
   @@index([trainingId, isActive])
+  @@map("InspiritTest")
 }
 
 // Test questions with multiple answer types (single, multiple, yes/no, text)
 // Composite index [testId, order] ensures efficient ordered retrieval
-model Question {
-  id            Int      @id @default(autoincrement())
+model InspiritQuestion {
+  id            Int            @id @default(autoincrement())
   testId        Int
   order         Int
   type          String
-  question      String   @db.NVarChar(Max)
-  options       String?  @db.NVarChar(Max)
-  correctAnswer String?  @db.NVarChar(Max)
-  points        Int      @default(1)
-  required      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  test          Test     @relation(fields: [testId], references: [id])
+  question      String         @db.NVarChar(Max)
+  options       String?        @db.NVarChar(Max)
+  correctAnswer String?        @db.NVarChar(Max)
+  points        Int            @default(1)
+  required      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  test          InspiritTest   @relation(fields: [testId], references: [id])
 
   @@index([testId])
   @@index([testId, order])
+  @@map("InspiritQuestion")
 }
 
 // User test attempts - tracks all test submissions and results
 // Index [createdAt DESC] optimizes recent attempts queries
 // Index [completedAt] supports filtering by completion status
-model TestAttempt {
-  id            Int       @id @default(autoincrement())
+model InspiritTestAttempt {
+  id            Int                   @id @default(autoincrement())
   testId        Int
   userId        Int
-  startedAt     DateTime  @default(now())
+  startedAt     DateTime              @default(now())
   completedAt   DateTime?
   score         Float?
   passed        Boolean?
-  answers       String?   @db.NVarChar(Max)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  test          Test      @relation(fields: [testId], references: [id])
-  user          User      @relation(fields: [userId], references: [id])
-  certificates  Certificate[]
+  answers       String?               @db.NVarChar(Max)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  test          InspiritTest          @relation(fields: [testId], references: [id])
+  user          User                  @relation(fields: [userId], references: [id])
+  certificates  InspiritCertificate[]
 
   @@index([userId])
   @@index([testId])
   @@index([userId, testId])
   @@index([createdAt(sort: Desc)])
   @@index([completedAt])
+  @@map("InspiritTestAttempt")
 }
 
 // PDF certificates for completed trainings - generated on successful test completion
 // Index [validUntil] supports expiration queries and renewal notifications
 // Index [certificateNumber] enables fast lookup by certificate number
-model Certificate {
-  id                Int          @id @default(autoincrement())
+model InspiritCertificate {
+  id                Int                   @id @default(autoincrement())
   userId            Int
   trainingId        Int
-  testAttemptId     Int          @unique
-  certificateNumber String       @unique
-  issuedAt          DateTime     @default(now())
+  testAttemptId     Int                   @unique
+  certificateNumber String                @unique
+  issuedAt          DateTime              @default(now())
   validUntil        DateTime
-  pdfData           String?      @db.NVarChar(Max)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  pdfData           String?               @db.NVarChar(Max)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
-  user              User         @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  training          Training     @relation(fields: [trainingId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  testAttempt       TestAttempt  @relation(fields: [testAttemptId], references: [id], onDelete: Cascade)
+  user              User                  @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  training          InspiritTraining      @relation(fields: [trainingId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  testAttempt       InspiritTestAttempt   @relation(fields: [testAttemptId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([trainingId])
   @@index([certificateNumber])
   @@index([validUntil])
+  @@map("InspiritCertificate")
 }
 
-model TrainingAssignment {
-  id         Int      @id @default(autoincrement())
+model InspiritTrainingAssignment {
+  id         Int              @id @default(autoincrement())
   trainerId  Int
   trainingId Int
-  assignedAt DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  assignedAt DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
-  trainer    User     @relation(fields: [trainerId], references: [id])
-  training   Training @relation(fields: [trainingId], references: [id])
+  trainer    User             @relation(fields: [trainerId], references: [id])
+  training   InspiritTraining @relation(fields: [trainingId], references: [id])
 
   @@unique([trainerId, trainingId])
   @@index([trainerId])
   @@index([trainingId])
+  @@map("InspiritTrainingAssignment")
 }

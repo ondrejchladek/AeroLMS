@@ -39,7 +39,7 @@ export async function POST(
     const attemptId = parseInt(id);
 
     // Get test attempt with test, questions and training
-    const attempt = await prisma.testAttempt.findUnique({
+    const attempt = await prisma.inspiritTestAttempt.findUnique({
       where: { id: attemptId },
       include: {
         test: {
@@ -129,7 +129,7 @@ export async function POST(
     const passed = score >= attempt.test.passingScore;
 
     // Update test attempt
-    await prisma.testAttempt.update({
+    await prisma.inspiritTestAttempt.update({
       where: { id: attemptId },
       data: {
         completedAt: new Date(),
@@ -153,7 +153,7 @@ export async function POST(
       );
 
       // Create certificate record
-      const certificate = await prisma.certificate.create({
+      const certificate = await prisma.inspiritCertificate.create({
         data: {
           userId: parseInt(session.user.id),
           trainingId: attempt.test.trainingId,

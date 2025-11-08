@@ -19,7 +19,7 @@ export async function GET() {
       );
     }
 
-    const assignments = await prisma.trainingAssignment.findMany({
+    const assignments = await prisma.inspiritTrainingAssignment.findMany({
       include: {
         trainer: {
           select: {
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
     }
 
     // Check if assignment already exists
-    const existing = await prisma.trainingAssignment.findFirst({
+    const existing = await prisma.inspiritTrainingAssignment.findFirst({
       where: {
         trainerId,
         trainingId
@@ -90,7 +90,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const assignment = await prisma.trainingAssignment.create({
+    const assignment = await prisma.inspiritTrainingAssignment.create({
       data: {
         trainerId,
         trainingId
@@ -150,7 +150,7 @@ export async function DELETE(request: Request) {
       );
     }
 
-    await prisma.trainingAssignment.delete({
+    await prisma.inspiritTrainingAssignment.delete({
       where: {
         id: parseInt(assignmentId)
       }

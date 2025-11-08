@@ -24,7 +24,7 @@ export default async function DynamicPage({ params }: PageProps) {
   const node = resolvedParams.node || [];
 
   // Načti všechna školení z databáze pro použití v celé aplikaci
-  const dbTrainings = await prisma.training.findMany({
+  const dbTrainings = await prisma.inspiritTraining.findMany({
     orderBy: {
       name: 'asc'
     }
@@ -245,7 +245,7 @@ export default async function DynamicPage({ params }: PageProps) {
   };
 
   // Načti detaily školení včetně testů
-  const trainingWithTests = await prisma.training.findUnique({
+  const trainingWithTests = await prisma.inspiritTraining.findUnique({
     where: { code: training.code },
     include: {
       tests: {
@@ -303,7 +303,7 @@ export async function generateMetadata({
 
   // Načti školení z databáze pro získání názvu
   // SQL Server automaticky dělá case-insensitive porovnání
-  const training = await prisma.training.findFirst({
+  const training = await prisma.inspiritTraining.findFirst({
     where: {
       code: slug.toUpperCase() // Převeď na uppercase pro SQL Server
     }

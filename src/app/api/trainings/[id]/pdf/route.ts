@@ -20,7 +20,7 @@ export async function GET(
     const trainingId = parseInt(id);
 
     // Načti data školení z databáze
-    const training = await prisma.training.findUnique({
+    const training = await prisma.inspiritTraining.findUnique({
       where: { id: trainingId },
       select: {
         name: true,

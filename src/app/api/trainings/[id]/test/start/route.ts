@@ -28,7 +28,7 @@ export async function POST(
     }
 
     // Verify test exists and belongs to this training
-    const test = await prisma.test.findFirst({
+    const test = await prisma.inspiritTest.findFirst({
       where: {
         id: testId,
         trainingId: trainingId,
@@ -111,7 +111,7 @@ export async function POST(
         }
 
         // Check number of failed attempts
-        const failedAttempts = await prisma.testAttempt.findMany({
+        const failedAttempts = await prisma.inspiritTestAttempt.findMany({
           where: {
             testId: testId,
             userId: parseInt(session.user.id),
@@ -137,7 +137,7 @@ export async function POST(
     }
 
     // Check if there's an unfinished attempt for this specific test
-    const existingAttempt = await prisma.testAttempt.findFirst({
+    const existingAttempt = await prisma.inspiritTestAttempt.findFirst({
       where: {
         testId: testId,
         userId: parseInt(session.user.id),
@@ -154,7 +154,7 @@ export async function POST(
     }
 
     // Create new test attempt
-    const newAttempt = await prisma.testAttempt.create({
+    const newAttempt = await prisma.inspiritTestAttempt.create({
       data: {
         testId: testId,
         userId: parseInt(session.user.id),

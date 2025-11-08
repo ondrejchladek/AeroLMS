@@ -51,7 +51,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           };
 
     // Získej testy podle role
-    const tests = await prisma.test.findMany({
+    const tests = await prisma.inspiritTest.findMany({
       where: whereClause,
       include: {
         questions: {
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       canCreate = true;
     } else if (isTrainer(session.user.role)) {
       // Trainer může vytvářet testy pouze pro svá školení
-      const assignment = await prisma.trainingAssignment.findFirst({
+      const assignment = await prisma.inspiritTrainingAssignment.findFirst({
         where: {
           trainerId: parseInt(session.user.id),
           trainingId: trainingId
@@ -166,7 +166,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Vytvoř test s otázkami v transakci
     const test = await prisma.$transaction(async (tx) => {
       // Vytvoř test
-      const newTest = await tx.test.create({
+      const newTest = await tx.inspiritTest.create({
         data: {
           trainingId,
           title,
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
       // Vytvoř otázky (již validované v schema)
       if (questions && questions.length > 0) {
-        await tx.question.createMany({
+        await tx.inspiritQuestion.createMany({
           data: questions.map((q, index: number) => ({
             testId: newTest.id,
             order: index,
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
 
       // Vrať test s otázkami
-      return await tx.test.findUnique({
+      return await tx.inspiritTest.findUnique({
         where: { id: newTest.id },
         include: {
           questions: {
