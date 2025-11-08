@@ -14,6 +14,9 @@
  * Run this script FIRST to understand what already exists in production DB
  ******************************************************************************/
 
+USE Helios003;
+GO
+
 SET NOCOUNT ON;
 
 PRINT '========================================';
@@ -38,14 +41,14 @@ BEGIN
     -- Verify required columns
     DECLARE @TabCisZamColumns TABLE (
         ColumnName VARCHAR(100),
-        Exists BIT
+        [Exists] BIT
     );
 
-    INSERT INTO @TabCisZamColumns (ColumnName, Exists)
+    INSERT INTO @TabCisZamColumns (ColumnName, [Exists])
     VALUES ('ID', 0), ('Cislo', 0), ('Alias', 0), ('Jmeno', 0), ('Prijmeni', 0);
 
     UPDATE tc
-    SET tc.Exists = CASE WHEN c.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END
+    SET tc.[Exists] = CASE WHEN c.COLUMN_NAME IS NOT NULL THEN 1 ELSE 0 END
     FROM @TabCisZamColumns tc
     LEFT JOIN INFORMATION_SCHEMA.COLUMNS c
         ON c.TABLE_NAME = 'TabCisZam'
@@ -55,7 +58,7 @@ BEGIN
     PRINT '';
     PRINT '  Required columns:';
     SELECT '    ' + ColumnName + ': ' +
-           CASE WHEN Exists = 1 THEN '✓' ELSE '✗ MISSING!' END as [Status]
+           CASE WHEN [Exists] = 1 THEN '✓' ELSE '✗ MISSING!' END as [Status]
     FROM @TabCisZamColumns;
 
     -- Count employees
@@ -102,7 +105,7 @@ BEGIN
     PRINT '  Detecting training columns (_{code}DatumPosl/DatumPristi/Pozadovano):';
 
     SELECT DISTINCT
-        REPLACE(REPLACE(REPLACE(
+        REPLACE(REPLACE(REPLACE(REPLACE(
             COLUMN_NAME,
             '_', ''),
             'DatumPosl', ''),
@@ -120,7 +123,7 @@ BEGIN
 
     DECLARE @TrainingCount INT;
     SELECT @TrainingCount = COUNT(DISTINCT
-        REPLACE(REPLACE(REPLACE(
+        REPLACE(REPLACE(REPLACE(REPLACE(
             COLUMN_NAME,
             '_', ''),
             'DatumPosl', ''),
@@ -242,21 +245,21 @@ PRINT '----------------------------------------';
 
 DECLARE @AppTables TABLE (
     TableName VARCHAR(100),
-    Exists BIT
+    [Exists] BIT
 );
 
-INSERT INTO @AppTables (TableName, Exists)
+INSERT INTO @AppTables (TableName, [Exists])
 VALUES
-    ('Training', 0),
-    ('Test', 0),
-    ('Question', 0),
-    ('TestAttempt', 0),
-    ('Certificate', 0),
-    ('TrainingAssignment', 0);
+    ('InspiritTraining', 0),
+    ('InspiritTest', 0),
+    ('InspiritQuestion', 0),
+    ('InspiritTestAttempt', 0),
+    ('InspiritCertificate', 0),
+    ('InspiritTrainingAssignment', 0);
 
 -- Check which tables exist
 UPDATE at
-SET at.Exists = CASE WHEN t.TABLE_NAME IS NOT NULL THEN 1 ELSE 0 END
+SET at.[Exists] = CASE WHEN t.TABLE_NAME IS NOT NULL THEN 1 ELSE 0 END
 FROM @AppTables at
 LEFT JOIN INFORMATION_SCHEMA.TABLES t
     ON t.TABLE_NAME = at.TableName
@@ -264,7 +267,7 @@ LEFT JOIN INFORMATION_SCHEMA.TABLES t
 
 SELECT
     TableName as [Table],
-    CASE WHEN Exists = 1 THEN '⚠ ALREADY EXISTS' ELSE '✓ Will be created' END as [Status]
+    CASE WHEN [Exists] = 1 THEN '⚠ ALREADY EXISTS' ELSE '✓ Will be created' END as [Status]
 FROM @AppTables
 ORDER BY TableName;
 

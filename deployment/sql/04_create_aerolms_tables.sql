@@ -20,6 +20,9 @@
  * Run BEFORE: 05_create_indexes.sql
  ******************************************************************************/
 
+USE Helios003;
+GO
+
 SET NOCOUNT ON;
 SET XACT_ABORT ON; -- Rollback entire transaction on error
 

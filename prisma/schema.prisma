@@ -188,7 +188,7 @@ model InspiritUserAuth {
 //   - Always use manual SQL scripts from deployment/sql/
 //   - Training columns are dynamic and detected at runtime via training-sync.ts
 model User {
-  id        Int      @id @default(autoincrement()) @map("UserID")
+  id        Int      @id @map("ID") // Employee ID - from TabCisZam.ID (production) or User.ID (dev)
   cislo     Int?     @unique @map("Cislo") // Personal code (employee number, for login) - from TabCisZam
   firstName String   @map("Jmeno") // First name - from TabCisZam
   lastName  String   @map("Prijmeni") // Last name - from TabCisZam

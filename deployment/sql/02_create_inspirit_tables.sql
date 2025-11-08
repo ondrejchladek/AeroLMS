@@ -17,6 +17,9 @@
  *              For local development, use Prisma migrations instead.
  ******************************************************************************/
 
+USE Helios003;
+GO
+
 SET NOCOUNT ON;
 SET XACT_ABORT ON; -- Rollback entire transaction on error
 
