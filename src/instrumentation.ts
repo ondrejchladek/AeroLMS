@@ -18,23 +18,25 @@ const sentryOptions: Sentry.NodeOptions | Sentry.EdgeOptions = {
 };
 
 export async function register() {
+  // Initialize Sentry if not disabled
   if (!process.env.NEXT_PUBLIC_SENTRY_DISABLED) {
     if (process.env.NEXT_RUNTIME === 'nodejs') {
-      // Node.js Sentry configuration
       Sentry.init(sentryOptions);
-
-      // Initialize trainings from database columns
-      try {
-        const { initializeTrainings } = await import('@/lib/init-trainings');
-        await initializeTrainings();
-      } catch {
-        // Continue starting the app even if training init fails
-      }
     }
 
     if (process.env.NEXT_RUNTIME === 'edge') {
-      // Edge Sentry configuration
       Sentry.init(sentryOptions);
+    }
+  }
+
+  // Initialize trainings from database columns (runs ALWAYS, regardless of Sentry)
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    try {
+      const { initializeTrainings } = await import('@/lib/init-trainings');
+      await initializeTrainings();
+    } catch (error) {
+      // Log error but continue starting the app
+      console.error('Failed to initialize trainings:', error);
     }
   }
 }

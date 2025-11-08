@@ -9,17 +9,31 @@ interface TrainingColumn {
 }
 
 /**
- * Get all column names from the User table
+ * Get all column names from the User table/view
  * Uses raw SQL query to access database metadata
+ *
+ * Environment-aware:
+ * - Development: Queries User table
+ * - Production: Queries InspiritCisZam VIEW (User SYNONYM points to it)
  */
 async function getUserTableColumns(): Promise<string[]> {
-  const result = await prisma.$queryRaw<Array<{ COLUMN_NAME: string }>>`
+  // Detect environment
+  const isProd = process.env.DB_ENVIRONMENT === 'production';
+
+  // In production, query the VIEW directly (User is a SYNONYM which INFORMATION_SCHEMA can't see)
+  // In development, query the User table
+  const tableName = isProd ? 'InspiritCisZam' : 'User';
+
+  const result = await prisma.$queryRawUnsafe<Array<{ COLUMN_NAME: string }>>(
+    `
     SELECT COLUMN_NAME
     FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_NAME = 'User'
+    WHERE TABLE_NAME = @p0
       AND TABLE_SCHEMA = 'dbo'
     ORDER BY ORDINAL_POSITION
-  `;
+    `,
+    tableName
+  );
 
   return result.map((row) => row.COLUMN_NAME);
 }
@@ -36,7 +50,11 @@ export async function detectTrainingColumns(): Promise<TrainingColumn[]> {
     for (const column of columns) {
       // Check for DatumPosl pattern
       if (column.endsWith('DatumPosl')) {
-        const code = column.substring(0, column.length - 9); // Remove 'DatumPosl'
+        let code = column.substring(0, column.length - 9); // Remove 'DatumPosl'
+        // Remove underscore prefix if present (production: _CMMDatumPosl -> CMM)
+        if (code.startsWith('_')) {
+          code = code.substring(1);
+        }
         if (!trainings.has(code)) {
           trainings.set(code, {
             code,
@@ -51,7 +69,11 @@ export async function detectTrainingColumns(): Promise<TrainingColumn[]> {
 
       // Check for DatumPristi pattern
       else if (column.endsWith('DatumPristi')) {
-        const code = column.substring(0, column.length - 11); // Remove 'DatumPristi'
+        let code = column.substring(0, column.length - 11); // Remove 'DatumPristi'
+        // Remove underscore prefix if present (production: _CMMDatumPristi -> CMM)
+        if (code.startsWith('_')) {
+          code = code.substring(1);
+        }
         if (!trainings.has(code)) {
           trainings.set(code, {
             code,
@@ -66,7 +88,11 @@ export async function detectTrainingColumns(): Promise<TrainingColumn[]> {
 
       // Check for Pozadovano pattern
       else if (column.endsWith('Pozadovano')) {
-        const code = column.substring(0, column.length - 10); // Remove 'Pozadovano'
+        let code = column.substring(0, column.length - 10); // Remove 'Pozadovano'
+        // Remove underscore prefix if present (production: _CMMPozadovano -> CMM)
+        if (code.startsWith('_')) {
+          code = code.substring(1);
+        }
         if (!trainings.has(code)) {
           trainings.set(code, {
             code,
@@ -189,6 +215,12 @@ export async function getUserTrainingData(
     const columnDatumPristi = `_${trainingCode}DatumPristi`;
     const columnPozadovano = `_${trainingCode}Pozadovano`;
 
+    // Determine ID column based on environment
+    // Production: ID (from TabCisZam/InspiritCisZam VIEW)
+    // Development: UserID (from User table)
+    const isProd = isProductionEnvironment();
+    const idColumn = isProd ? 'ID' : 'UserID';
+
     // Use raw query to dynamically access columns
     // SAFE: trainingCode is validated against whitelist above
     //
@@ -202,7 +234,7 @@ export async function getUserTrainingData(
         [${columnDatumPristi}] as datumPristi,
         [${columnPozadovano}] as pozadovano
       FROM [User]
-      WHERE UserID = @p0
+      WHERE [${idColumn}] = @p0
     `,
       userId
     );

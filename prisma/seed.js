@@ -22,23 +22,27 @@ async function main() {
   // ============================================================================
   console.log('🧹 Cleaning up old data...');
 
-  await prisma.trainingAssignment.deleteMany({});
+  await prisma.inspiritTrainingAssignment.deleteMany({});
   console.log('  ✓ Deleted TrainingAssignment records');
 
-  await prisma.certificate.deleteMany({});
+  await prisma.inspiritCertificate.deleteMany({});
   console.log('  ✓ Deleted Certificate records');
 
-  await prisma.testAttempt.deleteMany({});
+  await prisma.inspiritTestAttempt.deleteMany({});
   console.log('  ✓ Deleted TestAttempt records');
 
-  await prisma.question.deleteMany({});
+  await prisma.inspiritQuestion.deleteMany({});
   console.log('  ✓ Deleted Question records');
 
-  await prisma.test.deleteMany({});
+  await prisma.inspiritTest.deleteMany({});
   console.log('  ✓ Deleted Test records');
 
-  await prisma.training.deleteMany({});
+  await prisma.inspiritTraining.deleteMany({});
   console.log('  ✓ Deleted Training records');
+
+  // Delete User data first (has FK to TabCisZam)
+  await prisma.$executeRaw`DELETE FROM [User]`;
+  console.log('  ✓ Deleted User records');
 
   // Delete auth data via raw SQL (InspiritUserAuth)
   await prisma.$executeRaw`DELETE FROM [InspiritUserAuth]`;
@@ -60,7 +64,7 @@ async function main() {
 
   const plainPassword = 'heslo'; // Plain text password (Helios ERP constraint)
 
-  // Insert 3 employees into TabCisZam (simulated Helios table)
+  // Insert 4 employees into TabCisZam (simulated Helios table)
   await prisma.$executeRaw`
     SET IDENTITY_INSERT [TabCisZam] ON;
 
@@ -68,14 +72,16 @@ async function main() {
     VALUES
       (1, 999999, N'Admin', N'Testovací', ${plainPassword}),
       (2, 888888, N'Školitel', N'Testovací', ${plainPassword}),
-      (3, 123456, N'Pracovník', N'Testovací', ${plainPassword});
+      (3, 123456, N'Pracovník', N'Testovací', ${plainPassword}),
+      (801, 900030, N'Ondřej', N'Chládek', '111111');
 
     SET IDENTITY_INSERT [TabCisZam] OFF;
   `;
-  console.log('  ✓ Created 3 employees in TabCisZam');
+  console.log('  ✓ Created 4 employees in TabCisZam');
   console.log('    - ID 1: Admin (999999)');
   console.log('    - ID 2: Školitel (888888)');
   console.log('    - ID 3: Pracovník (123456)');
+  console.log('    - ID 801: Ondřej Chládek (900030)');
   console.log('');
 
   // ============================================================================
@@ -83,16 +89,14 @@ async function main() {
   // ============================================================================
   console.log('📚 Creating training columns data (TabCisZam_EXT)...');
 
-  // Insert training data for all 3 employees
+  // Insert basic records into TabCisZam_EXT (just ID column in dev, training columns in production)
+  // Note: In development, training columns don't exist (defined dynamically in production by DB admin)
   await prisma.$executeRaw`
-    INSERT INTO [TabCisZam_EXT] (ID, _CMMDatumPosl, _CMMDatumPristi, _CMMPozadovano, _EDMDatumPosl, _EDMDatumPristi, _EDMPozadovano)
-    VALUES
-      (1, NULL, NULL, 0, NULL, NULL, 0),
-      (2, NULL, NULL, 0, NULL, NULL, 0),
-      (3, NULL, NULL, 1, NULL, NULL, 1);
+    INSERT INTO [TabCisZam_EXT] (ID)
+    VALUES (1), (2), (3), (801);
   `;
-  console.log('  ✓ Created training columns for 3 employees');
-  console.log('    - Worker (ID 3) requires CMM and EDM trainings');
+  console.log('  ✓ Created TabCisZam_EXT records for 4 employees');
+  console.log('    - Note: Training columns (_CMMDatumPosl, etc.) only exist in production');
   console.log('');
 
   // ============================================================================
@@ -102,24 +106,31 @@ async function main() {
 
   // Admin user
   const admin = await prisma.$executeRaw`
-    INSERT INTO [User] (UserID, Cislo, role, email, Alias, Jmeno, Prijmeni)
-    VALUES (1, 999999, 'ADMIN', 'admin@admin.cz', ${plainPassword}, N'Admin', N'Testovací')
+    INSERT INTO [User] (ID, Cislo, role, email, Alias, Jmeno, Prijmeni, createdAt, updatedAt)
+    VALUES (1, 999999, 'ADMIN', 'admin@admin.cz', ${plainPassword}, N'Admin', N'Testovací', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `;
   console.log('  ✓ Admin: admin@admin.cz / heslo (cislo: 999999)');
 
   // Trainer user
   const trainer = await prisma.$executeRaw`
-    INSERT INTO [User] (UserID, Cislo, role, email, Alias, Jmeno, Prijmeni)
-    VALUES (2, 888888, 'TRAINER', 'trainer@trainer.cz', ${plainPassword}, N'Školitel', N'Testovací')
+    INSERT INTO [User] (ID, Cislo, role, email, Alias, Jmeno, Prijmeni, createdAt, updatedAt)
+    VALUES (2, 888888, 'TRAINER', 'trainer@trainer.cz', ${plainPassword}, N'Školitel', N'Testovací', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `;
   console.log('  ✓ Trainer: trainer@trainer.cz / heslo (cislo: 888888)');
 
   // Worker user
   const worker = await prisma.$executeRaw`
-    INSERT INTO [User] (UserID, Cislo, role, email, Alias, Jmeno, Prijmeni)
-    VALUES (3, 123456, 'WORKER', NULL, ${plainPassword}, N'Pracovník', N'Testovací')
+    INSERT INTO [User] (ID, Cislo, role, email, Alias, Jmeno, Prijmeni, createdAt, updatedAt)
+    VALUES (3, 123456, 'WORKER', 'worker@dev.local', ${plainPassword}, N'Pracovník', N'Testovací', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `;
-  console.log('  ✓ Worker: cislo 123456 / heslo (no email)');
+  console.log('  ✓ Worker: cislo 123456 / heslo (dev email: worker@dev.local)');
+
+  // Ondřej Chládek user (production data)
+  const ondrej = await prisma.$executeRaw`
+    INSERT INTO [User] (ID, Cislo, role, email, Alias, Jmeno, Prijmeni, createdAt, updatedAt)
+    VALUES (801, 900030, 'WORKER', 'ondrej@dev.local', '111111', N'Ondřej', N'Chládek', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+  `;
+  console.log('  ✓ Ondřej Chládek: cislo 900030 / 111111 (dev email: ondrej@dev.local)');
   console.log('');
 
   // ============================================================================
@@ -127,7 +138,7 @@ async function main() {
   // ============================================================================
   console.log('📖 Creating training modules...');
 
-  const cmmTraining = await prisma.training.create({
+  const cmmTraining = await prisma.inspiritTraining.create({
     data: {
       code: 'CMM',
       name: 'CMM - Koordinátové měřící stroje',
@@ -154,7 +165,7 @@ async function main() {
   });
   console.log('  ✓ Created: CMM - Koordinátové měřící stroje');
 
-  const edmTraining = await prisma.training.create({
+  const edmTraining = await prisma.inspiritTraining.create({
     data: {
       code: 'EDM',
       name: 'EDM - Elektro-erozivní obrábění',
@@ -177,7 +188,7 @@ async function main() {
   });
   console.log('  ✓ Created: EDM - Elektro-erozivní obrábění');
 
-  const itTraining = await prisma.training.create({
+  const itTraining = await prisma.inspiritTraining.create({
     data: {
       code: 'ITBezpecnost',
       name: 'IT Bezpečnost',
@@ -206,7 +217,7 @@ async function main() {
   // ============================================================================
   console.log('📝 Creating tests...');
 
-  const cmmTest = await prisma.test.create({
+  const cmmTest = await prisma.inspiritTest.create({
     data: {
       trainingId: cmmTraining.id,
       title: 'CMM - Závěrečný test',
@@ -218,7 +229,7 @@ async function main() {
   });
   console.log('  ✓ Created test for CMM training');
 
-  const edmTest = await prisma.test.create({
+  const edmTest = await prisma.inspiritTest.create({
     data: {
       trainingId: edmTraining.id,
       title: 'EDM - Závěrečný test',
@@ -230,7 +241,7 @@ async function main() {
   });
   console.log('  ✓ Created test for EDM training');
 
-  const itTest = await prisma.test.create({
+  const itTest = await prisma.inspiritTest.create({
     data: {
       trainingId: itTraining.id,
       title: 'IT Bezpečnost - Závěrečný test',
@@ -249,7 +260,7 @@ async function main() {
   console.log('❓ Creating questions...');
 
   // CMM Test Questions
-  await prisma.question.createMany({
+  await prisma.inspiritQuestion.createMany({
     data: [
       {
         testId: cmmTest.id,
@@ -296,7 +307,7 @@ async function main() {
   console.log('  ✓ Created 3 questions for CMM test');
 
   // EDM Test Questions
-  await prisma.question.createMany({
+  await prisma.inspiritQuestion.createMany({
     data: [
       {
         testId: edmTest.id,
@@ -334,7 +345,7 @@ async function main() {
   console.log('  ✓ Created 2 questions for EDM test');
 
   // IT Security Test Questions
-  await prisma.question.createMany({
+  await prisma.inspiritQuestion.createMany({
     data: [
       {
         testId: itTest.id,
@@ -386,7 +397,7 @@ async function main() {
   // ============================================================================
   console.log('👨‍🏫 Creating training assignments...');
 
-  await prisma.trainingAssignment.createMany({
+  await prisma.inspiritTrainingAssignment.createMany({
     data: [
       {
         trainerId: 2, // Trainer user ID
@@ -410,7 +421,7 @@ async function main() {
   // ============================================================================
   console.log('📊 Creating sample test attempt...');
 
-  const testAttempt = await prisma.testAttempt.create({
+  const testAttempt = await prisma.inspiritTestAttempt.create({
     data: {
       testId: itTest.id,
       userId: 3, // Worker user
@@ -429,20 +440,21 @@ async function main() {
   console.log('');
 
   // ============================================================================
-  // STEP 9: Update Training Dates in TabCisZam_EXT (Optional)
+  // STEP 9: Update Training Dates in TabCisZam_EXT (Optional - Production Only)
   // ============================================================================
-  console.log('📅 Updating training completion dates...');
-
-  // Mark IT Bezpečnost as completed for worker
-  await prisma.$executeRaw`
-    UPDATE [TabCisZam_EXT]
-    SET
-      _ITBezpecnostDatumPosl = GETDATE(),
-      _ITBezpecnostDatumPristi = DATEADD(YEAR, 1, GETDATE())
-    WHERE ID = 3
-  `;
-  console.log('  ✓ Updated IT Bezpečnost completion for worker (valid for 1 year)');
-  console.log('');
+  // console.log('📅 Updating training completion dates...');
+  //
+  // // Mark IT Bezpečnost as completed for worker
+  // // NOTE: Disabled in development - training columns only exist in production
+  // await prisma.$executeRaw`
+  //   UPDATE [TabCisZam_EXT]
+  //   SET
+  //     _ITBezpecnostDatumPosl = GETDATE(),
+  //     _ITBezpecnostDatumPristi = DATEADD(YEAR, 1, GETDATE())
+  //   WHERE ID = 3
+  // `;
+  // console.log('  ✓ Updated IT Bezpečnost completion for worker (valid for 1 year)');
+  // console.log('');
 
   // ============================================================================
   // Summary
@@ -452,16 +464,17 @@ async function main() {
   console.log('========================================');
   console.log('');
   console.log('📊 Summary:');
-  console.log('  - 3 users (1 admin, 1 trainer, 1 worker)');
+  console.log('  - 4 users (1 admin, 1 trainer, 2 workers)');
   console.log('  - 3 trainings (CMM, EDM, IT Bezpečnost)');
   console.log('  - 3 tests with 8 questions total');
   console.log('  - 3 training assignments');
   console.log('  - 1 sample test attempt');
   console.log('');
   console.log('🔐 Login credentials:');
-  console.log('  Admin:   admin@admin.cz / heslo');
-  console.log('  Trainer: trainer@trainer.cz / heslo');
-  console.log('  Worker:  123456 / heslo');
+  console.log('  Admin:          admin@admin.cz / heslo');
+  console.log('  Trainer:        trainer@trainer.cz / heslo');
+  console.log('  Worker:         123456 / heslo');
+  console.log('  Ondřej Chládek: 900030 / 111111 (production user)');
   console.log('');
 }
 
