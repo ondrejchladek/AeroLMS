@@ -13,9 +13,10 @@ datasource db {
 
 // TabCisZam - Helios ERP Employee Master Table
 //
-// PURPOSE:
-//   - Development: Simulated Helios table for Prisma Studio visualization
+// ARCHITECTURE (IDENTICAL in DEV and PROD):
+//   - Development: Simulated Helios table created by dev-db-full-setup.sql
 //   - Production: Physical Helios ERP table (READ-ONLY for AeroLMS)
+//   - Both environments use exact same structure
 //
 // USAGE IN APPLICATION:
 //   - ❌ NOT used directly by application code
@@ -48,9 +49,10 @@ model TabCisZam {
 
 // TabCisZam_EXT - Helios ERP Extended Table with Training Columns
 //
-// PURPOSE:
-//   - Development: Simulated Helios extended table for Prisma Studio visualization
+// ARCHITECTURE (IDENTICAL in DEV and PROD):
+//   - Development: Simulated Helios extended table created by dev-db-full-setup.sql
 //   - Production: Physical Helios ERP table with training completion tracking
+//   - Both environments use exact same structure
 //
 // USAGE IN APPLICATION:
 //   - ✅ DIRECTLY WRITTEN by updateUserTrainingData() in training-sync.ts
@@ -59,7 +61,7 @@ model TabCisZam {
 //
 // CRITICAL SECURITY:
 //   - NEVER update directly with raw SQL without validateTrainingCode()
-//   - Training codes are whitelisted to prevent SQL injection
+//   - Training codes are validated to prevent SQL injection
 //   - All column names have underscore prefix: _CMMDatumPosl (not CMMDatumPosl)
 //
 // COLUMN PATTERN (dynamic - added by DB admin):
@@ -67,13 +69,12 @@ model TabCisZam {
 //   - _{code}DatumPristi: Next due date (DATE, auto-calculated +1 year)
 //   - _{code}Pozadovano: Required flag (BOOLEAN, default false)
 //
-// WRITE STRATEGY:
-//   - Production: Direct UPDATE to TabCisZam_EXT (more efficient than VIEW triggers)
-//   - Development: UPDATE to User table (simpler structure)
+// WRITE STRATEGY (IDENTICAL in DEV and PROD):
+//   - Direct UPDATE to TabCisZam_EXT (more efficient than VIEW triggers)
 //
 // IMPORTANT - DYNAMIC COLUMNS:
 //   Training columns (_{code}DatumPosl, _{code}DatumPristi, _{code}Pozadovano) are:
-//   - Added dynamically by database administrator in production
+//   - Added dynamically by database administrator
 //   - Detected at runtime via training-sync.ts (detectTrainingColumns function)
 //   - NOT defined in this Prisma model to allow flexibility
 //   - Accessed via raw SQL queries with validated training codes
@@ -93,9 +94,9 @@ model TabCisZam_EXT {
 
 // InspiritUserAuth - AeroLMS Authentication Table
 //
-// PURPOSE:
-//   - Development: Physical table for Prisma Studio visualization
-//   - Production: Physical table storing AeroLMS-specific authentication data
+// ARCHITECTURE (IDENTICAL in DEV and PROD):
+//   - Physical table storing AeroLMS-specific authentication data
+//   - Same structure in both environments
 //
 // USAGE IN APPLICATION:
 //   - ✅ WRITTEN via User SYNONYM → InspiritCisZam VIEW → INSTEAD OF triggers
@@ -108,12 +109,12 @@ model TabCisZam_EXT {
 //   - email: Email address for admin/trainer login (optional, unique)
 //   - createdAt, updatedAt: Audit timestamps
 //
-// WRITE FLOW (Production):
+// WRITE FLOW (IDENTICAL in DEV and PROD):
 //   Application: prisma.user.update({ email: "new@email.com" })
 //        ↓
 //   User SYNONYM → InspiritCisZam VIEW
 //        ↓
-//   INSTEAD OF UPDATE trigger (deployment/sql/03_create_inspirit_view.sql)
+//   INSTEAD OF UPDATE trigger (dev-db-full-setup.sql or deployment/sql/03_create_inspirit_view.sql)
 //        ↓
 //   UPDATE InspiritUserAuth SET email = ..., updatedAt = CURRENT_TIMESTAMP
 //
@@ -136,42 +137,43 @@ model InspiritUserAuth {
 // AEROLMS APPLICATION TABLES
 // ============================================================================
 
-// User - Primary Application Model (Maps to SYNONYM → VIEW)
+// User - Primary Application Model (Maps directly to VIEW)
 //
 // PURPOSE:
 //   This is the MAIN model that application code uses for all user operations.
 //
-// ARCHITECTURE:
-//   Development:
-//     - User table is a physical table containing all user data
-//     - Simple structure for local development
+// ARCHITECTURE (IDENTICAL in DEV and PROD):
+//   Prisma Model: User (@@map("InspiritCisZam"))
+//        ↓
+//   VIEW: InspiritCisZam combines 3 tables via LEFT JOIN:
+//       1. TabCisZam (Helios ERP - ID, Cislo, Alias, Jmeno, Prijmeni) - READ ONLY
+//       2. TabCisZam_EXT (Helios ERP - training columns with _ prefix) - WRITTEN via updateUserTrainingData()
+//       3. InspiritUserAuth (AeroLMS - role, email, timestamps) - WRITTEN via INSTEAD OF triggers
 //
-//   Production (Helios003 database):
-//     - User is a SYNONYM pointing to InspiritCisZam VIEW
-//     - VIEW combines 3 tables via LEFT JOIN:
-//         1. TabCisZam (Helios ERP - ID, Cislo, Alias, Jmeno, Prijmeni) - READ ONLY
-//         2. TabCisZam_EXT (Helios ERP - training columns with _ prefix) - WRITTEN via updateUserTrainingData()
-//         3. InspiritUserAuth (AeroLMS - role, email, timestamps) - WRITTEN via INSTEAD OF triggers
+//   - Development: Simulated Helios tables (dev-db-full-setup.sql)
+//   - Production: Real Helios ERP tables
+//   - Database structure is IDENTICAL in both environments
+//   - NO SYNONYM in database - Prisma model maps directly to VIEW
 //
-// DATA FLOW - READ:
+// DATA FLOW - READ (IDENTICAL in DEV and PROD):
 //   prisma.user.findMany()
 //     ↓
-//   User SYNONYM → InspiritCisZam VIEW
+//   InspiritCisZam VIEW
 //     ↓
 //   LEFT JOIN (TabCisZam + TabCisZam_EXT + InspiritUserAuth)
 //     ↓
 //   Returns combined data (Cislo, Alias, Jmeno, Prijmeni, role, email, timestamps)
 //
-// DATA FLOW - WRITE (Auth data):
+// DATA FLOW - WRITE Auth data (IDENTICAL in DEV and PROD):
 //   prisma.user.update({ email: "new@email.com" })
 //     ↓
-//   User SYNONYM → InspiritCisZam VIEW
+//   InspiritCisZam VIEW
 //     ↓
-//   INSTEAD OF UPDATE trigger (deployment/sql/03_create_inspirit_view.sql)
+//   INSTEAD OF UPDATE trigger (dev-db-full-setup.sql or deployment/sql/03_create_inspirit_view.sql)
 //     ↓
 //   UPDATE InspiritUserAuth SET email = ..., updatedAt = CURRENT_TIMESTAMP
 //
-// DATA FLOW - WRITE (Training data):
+// DATA FLOW - WRITE Training data (IDENTICAL in DEV and PROD):
 //   updateUserTrainingData(userId, trainingCode, datumPosl)
 //     ↓
 //   Direct UPDATE to TabCisZam_EXT (bypasses VIEW for efficiency)
@@ -185,10 +187,10 @@ model InspiritUserAuth {
 //
 // CRITICAL:
 //   - NEVER run `prisma migrate` on production!
-//   - Always use manual SQL scripts from deployment/sql/
+//   - Always use manual SQL scripts from deployment/sql/ (production) or dev-db-full-setup.sql (development)
 //   - Training columns are dynamic and detected at runtime via training-sync.ts
-model User {
-  id        Int      @id @map("ID") // Employee ID - from TabCisZam.ID (production) or User.ID (dev)
+model InspiritCisZam {
+  id        Int      @id @map("ID") // Employee ID - from TabCisZam.ID
   cislo     Int?     @unique @map("Cislo") // Personal code (employee number, for login) - from TabCisZam
   firstName String   @map("Jmeno") // First name - from TabCisZam
   lastName  String   @map("Prijmeni") // Last name - from TabCisZam
@@ -201,8 +203,6 @@ model User {
   testAttempts        InspiritTestAttempt[]
   trainingAssignments InspiritTrainingAssignment[]
   certificates        InspiritCertificate[]
-
-  @@map("User")
 }
 
 // Training modules - auto-synchronized from TabCisZam_EXT columns via training-sync.ts
@@ -284,7 +284,7 @@ model InspiritTestAttempt {
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
   test          InspiritTest          @relation(fields: [testId], references: [id])
-  user          User                  @relation(fields: [userId], references: [id])
+  user          InspiritCisZam        @relation(fields: [userId], references: [id])
   certificates  InspiritCertificate[]
 
   @@index([userId])
@@ -310,7 +310,7 @@ model InspiritCertificate {
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
 
-  user              User                  @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user              InspiritCisZam        @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   training          InspiritTraining      @relation(fields: [trainingId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   testAttempt       InspiritTestAttempt   @relation(fields: [testAttemptId], references: [id], onDelete: Cascade)
 
@@ -328,7 +328,7 @@ model InspiritTrainingAssignment {
   assignedAt DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
 
-  trainer    User             @relation(fields: [trainerId], references: [id])
+  trainer    InspiritCisZam   @relation(fields: [trainerId], references: [id])
   training   InspiritTraining @relation(fields: [trainingId], references: [id])
 
   @@unique([trainerId, trainingId])

@@ -9,7 +9,6 @@
  *   2. TabCisZam_EXT (Helios ERP, training columns): ID + _{code}DatumPosl/DatumPristi/Pozadovano
  *   3. InspiritCisZam VIEW (EXISTING): Combines TabCisZam + TabCisZam_EXT
  *   4. InspiritUserAuth TABLE (TO BE CREATED): ID, role, email, timestamps
- *   5. User SYNONYM (TO BE CREATED): Points to InspiritCisZam VIEW
  *
  * Run this script FIRST to understand what already exists in production DB
  ******************************************************************************/
@@ -211,36 +210,9 @@ END
 PRINT '';
 
 -- ==============================================================================
--- SECTION 4: Check User SYNONYM (Should NOT Exist Yet)
+-- SECTION 4: Check AeroLMS Application Tables (Should NOT Exist Yet)
 -- ==============================================================================
-PRINT '4. Checking User SYNONYM...';
-PRINT '----------------------------------------';
-
-IF EXISTS (SELECT * FROM sys.synonyms WHERE name = 'User' AND schema_id = SCHEMA_ID('dbo'))
-BEGIN
-    PRINT '⚠ User SYNONYM ALREADY EXISTS';
-    PRINT '  → Script 03 will skip creation';
-
-    -- Check what it points to
-    DECLARE @SynonymTarget NVARCHAR(500);
-    SELECT @SynonymTarget = base_object_name
-    FROM sys.synonyms
-    WHERE name = 'User' AND schema_id = SCHEMA_ID('dbo');
-
-    PRINT '  Points to: ' + @SynonymTarget;
-END
-ELSE
-BEGIN
-    PRINT '✓ User SYNONYM DOES NOT EXIST (expected)';
-    PRINT '  → Script 03 will create SYNONYM pointing to InspiritCisZam VIEW';
-END
-
-PRINT '';
-
--- ==============================================================================
--- SECTION 5: Check AeroLMS Application Tables (Should NOT Exist Yet)
--- ==============================================================================
-PRINT '5. Checking AeroLMS application tables...';
+PRINT '4. Checking AeroLMS application tables...';
 PRINT '----------------------------------------';
 
 DECLARE @AppTables TABLE (
@@ -285,7 +257,6 @@ DECLARE @TabCisZamExists BIT = CASE WHEN OBJECT_ID('[dbo].[TabCisZam]', 'U') IS 
 DECLARE @TabCisZamEXTExists BIT = CASE WHEN OBJECT_ID('[dbo].[TabCisZam_EXT]', 'U') IS NOT NULL THEN 1 ELSE 0 END;
 DECLARE @InspiritViewExists BIT = CASE WHEN OBJECT_ID('[dbo].[InspiritCisZam]', 'V') IS NOT NULL THEN 1 ELSE 0 END;
 DECLARE @InspiritAuthExists BIT = CASE WHEN OBJECT_ID('[dbo].[InspiritUserAuth]', 'U') IS NOT NULL THEN 1 ELSE 0 END;
-DECLARE @UserSynonymExists BIT = CASE WHEN EXISTS (SELECT * FROM sys.synonyms WHERE name = 'User') THEN 1 ELSE 0 END;
 
 IF @TabCisZamExists = 1 AND @TabCisZamEXTExists = 1
 BEGIN
@@ -305,11 +276,6 @@ BEGIN
     ELSE
         PRINT '  ⚠ InspiritUserAuth TABLE - Already exists';
 
-    IF @UserSynonymExists = 0
-        PRINT '  ✓ User SYNONYM - Does not exist (will be created)';
-    ELSE
-        PRINT '  ⚠ User SYNONYM - Already exists';
-
     PRINT '';
     PRINT '⚠ CRITICAL: Helios tables are READ-ONLY for AeroLMS!';
     PRINT '  → TabCisZam: NO modifications allowed';
@@ -318,7 +284,7 @@ BEGIN
     PRINT 'Next steps:';
     PRINT '  1. CREATE FULL DATABASE BACKUP!';
     PRINT '  2. Run 02_create_inspirit_tables.sql (creates InspiritUserAuth)';
-    PRINT '  3. Run 03_create_inspirit_view.sql (creates/alters VIEW and SYNONYM)';
+    PRINT '  3. Run 03_create_inspirit_view.sql (creates/alters VIEW and triggers)';
     PRINT '  4. Run 04_create_aerolms_tables.sql (creates app tables)';
     PRINT '  5. Run 05_create_indexes.sql (performance indexes)';
     PRINT '  6. Run 06_set_permissions.sql (database security)';

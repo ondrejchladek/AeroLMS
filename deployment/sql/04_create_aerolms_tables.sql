@@ -14,7 +14,7 @@
  *
  * Foreign Keys:
  *   - User FK references point to TabCisZam.ID (physical table)
- *   - Application uses [User] SYNONYM → InspiritCisZam VIEW for queries
+ *   - Application uses InspiritCisZam Prisma model for queries
  *
  * Run AFTER: 03_create_inspirit_view.sql
  * Run BEFORE: 05_create_indexes.sql
@@ -187,38 +187,18 @@ BEGIN TRY
             ON UPDATE NO ACTION;
         END
 
-        -- Foreign key to User (via SYNONYM → InspiritCisZam VIEW → TabCisZam)
-        -- Note: FK references physical table TabCisZam.ID, not VIEW
-        IF EXISTS (SELECT * FROM sys.synonyms WHERE name = 'User')
-           OR EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
-                      WHERE TABLE_NAME = 'User' AND TABLE_SCHEMA = 'dbo')
+        -- Foreign key to TabCisZam
+        -- Note: FK must reference the actual base table, not VIEW
+        IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
+                   WHERE TABLE_NAME = 'TabCisZam' AND TABLE_SCHEMA = 'dbo')
         BEGIN
-            -- In production: User SYNONYM → InspiritCisZam VIEW → TabCisZam.ID
-            -- In dev: User table directly
-            -- FK must reference the actual base table, not VIEW
-            IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
-                       WHERE TABLE_NAME = 'TabCisZam' AND TABLE_SCHEMA = 'dbo')
-            BEGIN
-                -- Production: FK to TabCisZam (base table under the VIEW)
-                ALTER TABLE [dbo].[InspiritTestAttempt]
-                ADD CONSTRAINT [InspiritTestAttempt_userId_fkey]
-                FOREIGN KEY ([userId])
-                REFERENCES [dbo].[TabCisZam]([ID])
-                ON DELETE NO ACTION
-                ON UPDATE NO ACTION;
-                PRINT '  → FK to TabCisZam.ID (production mode)';
-            END
-            ELSE
-            BEGIN
-                -- Development: FK to User table directly
-                ALTER TABLE [dbo].[InspiritTestAttempt]
-                ADD CONSTRAINT [InspiritTestAttempt_userId_fkey]
-                FOREIGN KEY ([userId])
-                REFERENCES [dbo].[User]([UserID])
-                ON DELETE NO ACTION
-                ON UPDATE NO ACTION;
-                PRINT '  → FK to User.UserID (development mode)';
-            END
+            ALTER TABLE [dbo].[InspiritTestAttempt]
+            ADD CONSTRAINT [InspiritTestAttempt_userId_fkey]
+            FOREIGN KEY ([userId])
+            REFERENCES [dbo].[TabCisZam]([ID])
+            ON DELETE NO ACTION
+            ON UPDATE NO ACTION;
+            PRINT '  → FK to TabCisZam.ID';
         END
 
         PRINT '✓ InspiritTestAttempt table created';
@@ -254,26 +234,14 @@ BEGIN TRY
             CONSTRAINT [InspiritCertificate_certificateNumber_key] UNIQUE NONCLUSTERED ([certificateNumber])
         );
 
-        -- Foreign key to User
+        -- Foreign key to TabCisZam
         IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
                    WHERE TABLE_NAME = 'TabCisZam' AND TABLE_SCHEMA = 'dbo')
         BEGIN
-            -- Production: FK to TabCisZam
             ALTER TABLE [dbo].[InspiritCertificate]
             ADD CONSTRAINT [InspiritCertificate_userId_fkey]
             FOREIGN KEY ([userId])
             REFERENCES [dbo].[TabCisZam]([ID])
-            ON DELETE NO ACTION
-            ON UPDATE NO ACTION;
-        END
-        ELSE IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
-                        WHERE TABLE_NAME = 'User' AND TABLE_SCHEMA = 'dbo')
-        BEGIN
-            -- Development: FK to User table
-            ALTER TABLE [dbo].[InspiritCertificate]
-            ADD CONSTRAINT [InspiritCertificate_userId_fkey]
-            FOREIGN KEY ([userId])
-            REFERENCES [dbo].[User]([UserID])
             ON DELETE NO ACTION
             ON UPDATE NO ACTION;
         END
@@ -328,26 +296,14 @@ BEGIN TRY
             CONSTRAINT [InspiritTrainingAssignment_trainerId_trainingId_key] UNIQUE NONCLUSTERED ([trainerId], [trainingId])
         );
 
-        -- Foreign key to User (trainer)
+        -- Foreign key to TabCisZam (trainer)
         IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
                    WHERE TABLE_NAME = 'TabCisZam' AND TABLE_SCHEMA = 'dbo')
         BEGIN
-            -- Production: FK to TabCisZam
             ALTER TABLE [dbo].[InspiritTrainingAssignment]
             ADD CONSTRAINT [InspiritTrainingAssignment_trainerId_fkey]
             FOREIGN KEY ([trainerId])
             REFERENCES [dbo].[TabCisZam]([ID])
-            ON DELETE NO ACTION
-            ON UPDATE NO ACTION;
-        END
-        ELSE IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES
-                        WHERE TABLE_NAME = 'User' AND TABLE_SCHEMA = 'dbo')
-        BEGIN
-            -- Development: FK to User table
-            ALTER TABLE [dbo].[InspiritTrainingAssignment]
-            ADD CONSTRAINT [InspiritTrainingAssignment_trainerId_fkey]
-            FOREIGN KEY ([trainerId])
-            REFERENCES [dbo].[User]([UserID])
             ON DELETE NO ACTION
             ON UPDATE NO ACTION;
         END

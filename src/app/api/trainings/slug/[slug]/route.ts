@@ -50,47 +50,7 @@ export async function GET(
       }
     }
 
-    // Also check common mappings (for backward compatibility)
-    const commonMappings: Record<string, string> = {
-      cmm: 'CMM',
-      edm: 'EDM',
-      'vizualni-kontrola': 'VizualniKontrola',
-      znaceni: 'Znaceni',
-      'zlomeni-nastroje': 'ZlomeniNastroje',
-      vzorovani: 'Vzorovani',
-      'udrzba-stroju-pracovniky-dilny': 'UdrzbaStrojuPracovnikyDilny',
-      'system-managementu-kvality': 'SystemmanagemenntuKvalityCilepodniku',
-      'symboly-v-bb': 'SymbolyvBB',
-      'seriova-cisla': 'SeriovaCisla',
-      samokontrola: 'Samokontrola',
-      'regulacni-karty': 'RegulacniKarty',
-      pruvodka: 'Pruvodka',
-      'prace-kon-produkt': 'PraceKonProdukt',
-      'pouziti-nastroju': 'PouzitiNatsroju',
-      'opotrebeni-nastroju-cmt': 'OpotrebeniNastrojuuCMT',
-      'monitor-vyra-cmt-dilu': 'MonitorVyraCMTDilu',
-      meridla: 'Meridla',
-      'kniha-stroje': 'KnihaStroje',
-      'mereni-vyhodnoceni-opotrebeni': 'MerAVyhodOpotrebeni'
-    };
-
-    const mappedCode = commonMappings[slug];
-    if (mappedCode) {
-      const trainingByMappedCode = await prisma.inspiritTraining.findUnique({
-        where: { code: mappedCode },
-        select: {
-          id: true,
-          name: true,
-          code: true,
-          description: true
-        }
-      });
-
-      if (trainingByMappedCode) {
-        return NextResponse.json(trainingByMappedCode);
-      }
-    }
-
+    // Training not found - all trainings are dynamic, no hardcoded mappings
     return NextResponse.json({ error: 'Training not found' }, { status: 404 });
   } catch (error) {
     return NextResponse.json(

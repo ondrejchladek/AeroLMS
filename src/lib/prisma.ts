@@ -18,6 +18,11 @@ const createPrismaClient = (): PrismaClient => {
   });
 };
 
-export const prisma = global.prisma ?? createPrismaClient();
+const prismaClient = global.prisma ?? createPrismaClient();
 
-if (process.env.NODE_ENV !== 'production') global.prisma = prisma;
+// Alias pro zpětnou kompatibilitu - kód může používat prisma.user místo prisma.inspiritCisZam
+export const prisma = Object.assign(prismaClient, {
+  user: prismaClient.inspiritCisZam
+});
+
+if (process.env.NODE_ENV !== 'production') global.prisma = prismaClient;

@@ -9,33 +9,32 @@ interface TrainingColumn {
 }
 
 /**
- * Get all column names from the User table/view
+ * Get all column names from TabCisZam_EXT table containing training data
  * Uses raw SQL query to access database metadata
  *
- * Environment-aware:
- * - Development: Queries User table
- * - Production: Queries InspiritCisZam VIEW (User SYNONYM points to it)
+ * IDENTICAL in DEV and PROD:
+ * - Both environments query TabCisZam_EXT (where training columns are stored)
  */
 async function getUserTableColumns(): Promise<string[]> {
-  // Detect environment
-  const isProd = process.env.DB_ENVIRONMENT === 'production';
+  try {
+    // Note: Table name cannot be parameterized in INFORMATION_SCHEMA query
+    // Using direct string since 'TabCisZam_EXT' is a constant, not user input
+    const result = await prisma.$queryRawUnsafe<Array<{ COLUMN_NAME: string }>>(
+      `
+      SELECT COLUMN_NAME
+      FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_NAME = 'TabCisZam_EXT'
+        AND TABLE_SCHEMA = 'dbo'
+      ORDER BY ORDINAL_POSITION
+      `
+    );
 
-  // In production, query the VIEW directly (User is a SYNONYM which INFORMATION_SCHEMA can't see)
-  // In development, query the User table
-  const tableName = isProd ? 'InspiritCisZam' : 'User';
-
-  const result = await prisma.$queryRawUnsafe<Array<{ COLUMN_NAME: string }>>(
-    `
-    SELECT COLUMN_NAME
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_NAME = @P1
-      AND TABLE_SCHEMA = 'dbo'
-    ORDER BY ORDINAL_POSITION
-    `,
-    tableName
-  );
-
-  return result.map((row) => row.COLUMN_NAME);
+    console.log('[getUserTableColumns] Found columns:', result.length);
+    return result.map((row) => row.COLUMN_NAME);
+  } catch (error) {
+    console.error('[getUserTableColumns] Error:', error);
+    return [];
+  }
 }
 
 /**
@@ -178,21 +177,11 @@ export async function syncTrainingsWithDatabase(): Promise<{
 }
 
 /**
- * Detect if running in production environment
- * Production: Corporate SQL Server with Helios003 database
- * Development: Local SQL Server Express with User table
- */
-function isProductionEnvironment(): boolean {
-  return process.env.DB_ENVIRONMENT === 'production';
-}
-
-/**
  * Get user training data for specific training code
  * Returns the dates and required status for a user's training
  *
- * Environment-aware:
- * - Dev: Queries User table directly
- * - Prod: Queries User SYNONYM → InspiritUser VIEW → TabCisZam_EXT
+ * IDENTICAL in DEV and PROD:
+ * - Queries InspiritCisZam VIEW → TabCisZam + TabCisZam_EXT + InspiritUserAuth
  */
 export async function getUserTrainingData(
   userId: number,
@@ -215,26 +204,18 @@ export async function getUserTrainingData(
     const columnDatumPristi = `_${trainingCode}DatumPristi`;
     const columnPozadovano = `_${trainingCode}Pozadovano`;
 
-    // Determine ID column based on environment
-    // Production: ID (from TabCisZam/InspiritCisZam VIEW)
-    // Development: UserID (from User table)
-    const isProd = isProductionEnvironment();
-    const idColumn = isProd ? 'ID' : 'UserID';
-
     // Use raw query to dynamically access columns
     // SAFE: trainingCode is validated against whitelist above
     //
-    // Note: [User] works in both dev and prod:
-    // - Dev: Physical User table
-    // - Prod: User SYNONYM → InspiritCisZam VIEW → TabCisZam_EXT
+    // InspiritCisZam VIEW → TabCisZam + TabCisZam_EXT + InspiritUserAuth (identical in dev and prod)
     const result = await prisma.$queryRawUnsafe<any[]>(
       `
       SELECT
         [${columnDatumPosl}] as datumPosl,
         [${columnDatumPristi}] as datumPristi,
         [${columnPozadovano}] as pozadovano
-      FROM [User]
-      WHERE [${idColumn}] = @P1
+      FROM [InspiritCisZam]
+      WHERE [ID] = @P1
     `,
       userId
     );
@@ -256,9 +237,8 @@ export async function getUserTrainingData(
 /**
  * Update user training data after test completion
  *
- * Environment-aware:
- * - Dev: Updates User table directly
- * - Prod: Updates TabCisZam_EXT directly (more efficient than via VIEW trigger)
+ * IDENTICAL in DEV and PROD:
+ * - Updates TabCisZam_EXT directly (more efficient than via VIEW trigger)
  */
 export async function updateUserTrainingData(
   userId: number,
@@ -275,27 +255,20 @@ export async function updateUserTrainingData(
       return false;
     }
 
-    const isProd = isProductionEnvironment();
-
     // Column names (with _ prefix in database)
     const columnDatumPosl = `_${trainingCode}DatumPosl`;
     const columnDatumPristi = `_${trainingCode}DatumPristi`;
 
-    // Determine target table and ID column based on environment
-    // Production: Update TabCisZam_EXT directly (more efficient than VIEW)
-    // Development: Update User table
-    const targetTable = isProd ? 'TabCisZam_EXT' : 'User';
-    const idColumn = isProd ? 'ID' : 'UserID';
-
+    // Update TabCisZam_EXT directly (more efficient than VIEW)
     // SAFE: trainingCode is validated against whitelist above
     if (datumPristi) {
       await prisma.$executeRawUnsafe(
         `
-        UPDATE [${targetTable}]
+        UPDATE [TabCisZam_EXT]
         SET
           [${columnDatumPosl}] = @P1,
           [${columnDatumPristi}] = @P2
-        WHERE [${idColumn}] = @P3
+        WHERE [ID] = @P3
       `,
         datumPosl,
         datumPristi,
@@ -304,9 +277,9 @@ export async function updateUserTrainingData(
     } else {
       await prisma.$executeRawUnsafe(
         `
-        UPDATE [${targetTable}]
+        UPDATE [TabCisZam_EXT]
         SET [${columnDatumPosl}] = @P1
-        WHERE [${idColumn}] = @P2
+        WHERE [ID] = @P2
       `,
         datumPosl,
         userId

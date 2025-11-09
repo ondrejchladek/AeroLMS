@@ -96,10 +96,6 @@ BEGIN
     PRINT '  ✓ InspiritCisZam VIEW: SELECT + INSERT + UPDATE granted';
 END
 
--- User SYNONYM: SELECT (resolves to InspiritCisZam VIEW)
--- Note: Permissions are inherited from underlying object (InspiritCisZam VIEW)
-PRINT '  ✓ User SYNONYM: Permissions inherited from InspiritCisZam VIEW';
-
 PRINT '';
 
 -- ==============================================================================

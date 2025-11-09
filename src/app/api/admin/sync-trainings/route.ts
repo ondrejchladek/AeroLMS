@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { syncTrainingsWithDatabase } from '@/lib/training-sync';
+import {
+  syncTrainingsWithDatabase,
+  detectTrainingColumns
+} from '@/lib/training-sync';
 import { isAdmin } from '@/types/roles';
 
 export async function POST() {
@@ -20,13 +23,21 @@ export async function POST() {
       );
     }
 
+    // Detect all trainings from database columns
+    const detectedTrainings = await detectTrainingColumns();
+
     // Run training synchronization
-    const result = await syncTrainingsWithDatabase();
+    const syncResult = await syncTrainingsWithDatabase();
 
     return NextResponse.json({
       success: true,
       message: 'Training synchronization completed',
-      ...result
+      result: {
+        detected: detectedTrainings.length,
+        created: syncResult.created.length,
+        existing: syncResult.existing.length,
+        errors: syncResult.errors.length
+      }
     });
   } catch (error) {
     return NextResponse.json(

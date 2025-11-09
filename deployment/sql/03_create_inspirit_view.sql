@@ -12,8 +12,7 @@
  *
  * Components created:
  *   1. InspiritCisZam VIEW - Existing structure + InspiritUserAuth columns
- *   2. User SYNONYM - Maps "User" → "InspiritCisZam" for Prisma compatibility
- *   3. INSTEAD OF triggers - Handle INSERT/UPDATE on VIEW
+ *   2. INSTEAD OF triggers - Handle INSERT/UPDATE on VIEW
  *
  * Run AFTER: 02_create_inspirit_tables.sql
  * Run BEFORE: 04_create_aerolms_tables.sql
@@ -292,23 +291,6 @@ GO
 PRINT '✓ INSTEAD OF UPDATE trigger created';
 PRINT '';
 
--- ============================================================================
--- COMPONENT 4: User SYNONYM (Critical for Prisma compatibility!)
--- ============================================================================
-PRINT 'Creating/updating User SYNONYM → InspiritCisZam...';
-
-IF EXISTS (SELECT * FROM sys.synonyms WHERE name = 'User' AND schema_id = SCHEMA_ID('dbo'))
-    DROP SYNONYM [dbo].[User];
-GO
-
-CREATE SYNONYM [dbo].[User] FOR [dbo].[InspiritCisZam];
-GO
-
-PRINT '✓ User SYNONYM created';
-PRINT '  - Prisma queries for [User] will resolve to InspiritCisZam VIEW';
-PRINT '  - Zero application code changes needed!';
-PRINT '';
-
 PRINT '========================================';
 PRINT '✓ InspiritCisZam VIEW augmented successfully!';
 PRINT '========================================';
@@ -317,7 +299,6 @@ PRINT 'Components created:';
 PRINT '  1. InspiritCisZam VIEW (complete existing structure + auth columns)';
 PRINT '  2. INSTEAD OF INSERT trigger';
 PRINT '  3. INSTEAD OF UPDATE trigger';
-PRINT '  4. User SYNONYM → InspiritCisZam';
 PRINT '';
 PRINT 'Next step: Run 04_create_aerolms_tables.sql';
 PRINT '';

@@ -470,8 +470,8 @@ export default function AdminPrehledClient() {
               <AlertTitle>Informace</AlertTitle>
               <AlertDescription>
                 Synchronizace probíhá automaticky při každém startu aplikace.
-                Systém detekuje všechny sloupce ve formátu {'{code}'}DatumPosl,{' '}
-                {'{code}'}DatumPristi a {'{code}'}Pozadovano v tabulce User a
+                Systém detekuje všechny sloupce ve formátu _{'{code}'}DatumPosl,{' '}
+                _{'{code}'}DatumPristi a _{'{code}'}Pozadovano v tabulce TabCisZam_EXT a
                 vytvoří odpovídající záznamy v tabulce Training.
               </AlertDescription>
             </Alert>
@@ -604,19 +604,19 @@ export default function AdminPrehledClient() {
           <CardContent>
             <ol className='text-muted-foreground list-inside list-decimal space-y-2 text-sm'>
               <li>
-                Systém prohledá tabulku User a najde všechny sloupce
+                Systém prohledá tabulku TabCisZam_EXT a najde všechny sloupce
                 odpovídající vzoru školení
               </li>
               <li>
-                Pro každé školení hledá trojici sloupců: {'{code}'}DatumPosl,{' '}
-                {'{code}'}DatumPristi, {'{code}'}Pozadovano
+                Pro každé školení hledá trojici sloupců: _{'{code}'}DatumPosl,{' '}
+                _{'{code}'}DatumPristi, _{'{code}'}Pozadovano
               </li>
               <li>
                 Školení s kompletní trojicí sloupců se porovnají s existujícími
                 záznamy v tabulce Training
               </li>
               <li>
-                Chybějící školení se automaticky přenesou z tabulky User do
+                Chybějící školení se automaticky přenesou z tabulky TabCisZam_EXT do
                 tabulky Training a přidají do UI tabulky Školení v databázi s
                 kódem jako názvem
               </li>

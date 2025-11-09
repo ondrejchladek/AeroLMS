@@ -49,7 +49,7 @@ The system dynamically generates training content based on database columns:
 ### How It Works
 1. **On Application Start** (`src/instrumentation.ts`):
    - Calls `initializeTrainings()` from `lib/init-trainings.ts`
-   - Scans User table for training columns pattern: `{code}DatumPosl`, `{code}DatumPristi`, `{code}Pozadovano`
+   - Scans TabCisZam_EXT table for training columns pattern: `_{code}DatumPosl`, `_{code}DatumPristi`, `_{code}Pozadovano`
    - Creates missing Training records automatically via `lib/training-sync.ts`
    - Preserves existing training data
 
@@ -63,7 +63,7 @@ The system dynamically generates training content based on database columns:
    - Run with: `node prisma/check-columns.js`
 
 ### Training Detection Pattern
-For each training, the system looks for three columns in User table (production: TabCisZam_EXT):
+For each training, the system looks for three columns in TabCisZam_EXT table:
 - `_{code}DatumPosl` - Last completion date
 - `_{code}DatumPristi` - Next due date
 - `_{code}Pozadovano` - Required flag (boolean)
@@ -274,20 +274,22 @@ The system uses a **hybrid database pattern** combining existing Helios ERP tabl
    - Code (Cislo) and password (Alias) are in TabCisZam - plain text password (Helios constraint)
    - 1:1 relationship with TabCisZam via ID field
 
-4. **InspiritCisZam VIEW** (Production - ALREADY EXISTS, augmented by AeroLMS)
+4. **InspiritCisZam VIEW** (IDENTICAL in dev and production)
    - ✅ **Already exists in production** containing TabCisZam + TabCisZam_EXT
    - 🔧 **Deployment script 03 augments** with LEFT JOIN to InspiritUserAuth
    - Uses `CREATE OR ALTER VIEW` (preserves existing view, no data loss)
    - INSTEAD OF triggers handle INSERT/UPDATE operations
    - Routes auth data to InspiritUserAuth, preserves Helios data
 
-5. **User SYNONYM** (AeroLMS - Prisma compatibility layer)
-   - Maps Prisma User model → InspiritCisZam VIEW
-   - Allows Prisma to work with VIEW as if it were a table
+5. **Prisma User Model** (JavaScript alias, not database SYNONYM)
+   - Prisma model `User` maps to `InspiritCisZam` VIEW in schema
+   - JavaScript alias: `Object.assign(prismaClient, { user: prismaClient.inspiritCisZam })`
+   - Allows code to use `prisma.user` while querying InspiritCisZam VIEW
+   - No database SYNONYM object created
 
 **Data Flow - Read Operations:**
 ```
-Prisma Query → User SYNONYM → InspiritCisZam VIEW →
+Prisma Query (prisma.user) → InspiritCisZam VIEW →
   LEFT JOIN (TabCisZam + TabCisZam_EXT + InspiritUserAuth)
 ```
 
@@ -297,10 +299,10 @@ Prisma Query → User SYNONYM → InspiritCisZam VIEW →
 - **Training fields**: Direct to TabCisZam_EXT via `updateUserTrainingData()`
 - **Helios fields** (Jmeno, Prijmeni, Cislo): ❌ NEVER UPDATE (managed by Helios)
 
-**Environment Differences:**
-- **Development**: Simpler structure, User table contains all data
-- **Production**: Complex VIEW + SYNONYM + Triggers architecture
-- Code detects environment via `DB_ENVIRONMENT` variable
+**Environment Identity:**
+- **Development and Production**: IDENTICAL database structure
+- Both environments use TabCisZam, TabCisZam_EXT, InspiritUserAuth, and InspiritCisZam VIEW
+- No environmental differences or conditional logic
 
 ### Database Models
 - **User**: Employee records with:
@@ -322,7 +324,7 @@ Prisma Query → User SYNONYM → InspiritCisZam VIEW →
 - **TestAttempt**: User test attempts with scores and completion status
   - Indexes: `userId`, `testId`, `completedAt`, `createdAt` (DESC), composite `userId+testId`
   - Optimized for user history queries and filtering by completion status
-  - Employee data accessed via `userId` foreign key to User table (normalized)
+  - Employee data accessed via `userId` foreign key to TabCisZam table
 - **Certificate**: PDF certificates for completed trainings
   - Indexes: `userId`, `trainingId`, `certificateNumber`, `validUntil`
   - Optimized for certificate lookups and expiration queries
@@ -613,7 +615,7 @@ await prisma.$queryRawUnsafe(
 ```
 Directive: Use approved helper functions, not direct Prisma queries
 Pattern: getUserTrainingData(userId, trainingCode) → returns training status
-Why: Handles environment differences, validates training code, uses correct table
+Why: Validates training code, queries InspiritCisZam VIEW for training column data
 ```
 
 **Workflow 2: Updating Training After Test Completion**
@@ -622,9 +624,9 @@ Directive: ONLY use updateUserTrainingData() function
 Steps:
 1. User completes test successfully
 2. Call updateUserTrainingData(userId, trainingCode, new Date())
-3. Function handles: validation, environment detection, correct table selection
+3. Function handles: validation, correct table selection
 4. Database auto-calculates DatumPristi (+1 year)
-Never: Direct UPDATE on TabCisZam_EXT or User table
+Never: Direct UPDATE on TabCisZam_EXT
 ```
 
 **Workflow 3: Training Synchronization**
@@ -632,7 +634,7 @@ Never: Direct UPDATE on TabCisZam_EXT or User table
 Directive: Use syncTrainingsWithDatabase() for automatic detection
 When: Application startup, manual admin trigger
 Process:
-1. detectTrainingColumns() scans User table for *DatumPosl/*DatumPristi/*Pozadovano
+1. detectTrainingColumns() scans TabCisZam_EXT for _*DatumPosl/_*DatumPristi/_*Pozadovano columns
 2. Creates missing Training records in Training table
 3. Preserves existing training data (names, descriptions, content)
 Never: Delete or recreate existing Training records
@@ -1005,7 +1007,7 @@ npm install --save-dev @playwright/test
 - Created TrainingAssignment model for trainer assignments
 - Automatic training synchronization from database columns
 - Multiple tests per training support
-- Dynamic content generation based on User table columns
+- Dynamic content generation based on TabCisZam_EXT columns
 
 ## Common Pitfalls to Avoid
 

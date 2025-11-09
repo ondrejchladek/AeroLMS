@@ -2,12 +2,11 @@
  * Prisma seed file
  * Seeds the database with initial development data
  *
- * Architecture:
+ * Architecture (IDENTICAL to production):
  * 1. Insert into TabCisZam (Helios employee master - direct SQL)
- * 2. Add training columns to TabCisZam_EXT (simulates production columns)
- * 3. Insert training data into TabCisZam_EXT
- * 4. Upsert User via Prisma (INSTEAD OF trigger routes to InspiritUserAuth)
- * 5. Training sync auto-creates InspiritTraining records on app startup
+ * 2. Insert training data into TabCisZam_EXT (training columns already exist from dev-db-full-setup.sql)
+ * 3. Insert via InspiritCisZam VIEW (INSTEAD OF trigger routes to TabCisZam + InspiritUserAuth)
+ * 4. Training sync auto-creates InspiritTraining records on app startup
  */
 
 const { PrismaClient } = require('@prisma/client');
@@ -41,15 +40,11 @@ async function main() {
   await prisma.inspiritTraining.deleteMany({});
   console.log('  ✓ Deleted Training records');
 
-  // Delete User data first (has FK to TabCisZam)
-  await prisma.$executeRaw`DELETE FROM [User]`;
-  console.log('  ✓ Deleted User records');
-
-  // Delete auth data via raw SQL (InspiritUserAuth)
+  // Delete in dependency order (children first, then parents)
+  // Cannot DELETE from User VIEW (affects multiple base tables)
   await prisma.$executeRaw`DELETE FROM [InspiritUserAuth]`;
   console.log('  ✓ Deleted InspiritUserAuth records');
 
-  // Delete Helios data via raw SQL
   await prisma.$executeRaw`DELETE FROM [TabCisZam_EXT]`;
   console.log('  ✓ Deleted TabCisZam_EXT records');
 
@@ -86,36 +81,10 @@ async function main() {
   console.log('');
 
   // ============================================================================
-  // STEP 2: Add Training Columns to TabCisZam_EXT (Simulate Production)
+  // STEP 2: Insert Training Data to TabCisZam_EXT
   // ============================================================================
-  console.log('📚 Adding training columns to TabCisZam_EXT (simulating production)...');
-
-  // Add CMM training columns
-  await prisma.$executeRaw`
-    ALTER TABLE [TabCisZam_EXT]
-    ADD _CMMDatumPosl DATE NULL,
-        _CMMDatumPristi DATE NULL,
-        _CMMPozadovano BIT NULL;
-  `;
-  console.log('  ✓ Added CMM training columns');
-
-  // Add EDM training columns
-  await prisma.$executeRaw`
-    ALTER TABLE [TabCisZam_EXT]
-    ADD _EDMDatumPosl DATE NULL,
-        _EDMDatumPristi DATE NULL,
-        _EDMPozadovano BIT NULL;
-  `;
-  console.log('  ✓ Added EDM training columns');
-
-  // Add ITBezpecnost training columns
-  await prisma.$executeRaw`
-    ALTER TABLE [TabCisZam_EXT]
-    ADD _ITBezpecnostDatumPosl DATE NULL,
-        _ITBezpecnostDatumPristi DATE NULL,
-        _ITBezpecnostPozadovano BIT NULL;
-  `;
-  console.log('  ✓ Added ITBezpecnost training columns');
+  console.log('📚 Inserting training data into TabCisZam_EXT...');
+  console.log('  (Training columns already exist from dev-db-full-setup.sql)');
 
   // Insert training data for all 4 employees
   await prisma.$executeRaw`
@@ -137,34 +106,34 @@ async function main() {
   console.log('');
 
   // ============================================================================
-  // STEP 3: Create Auth Data via Prisma (Routes to InspiritUserAuth via trigger)
+  // STEP 3: Create Auth Data via VIEW (Routes to InspiritUserAuth via trigger)
   // ============================================================================
-  console.log('🔐 Creating authentication data (via User SYNONYM → InspiritUserAuth)...');
+  console.log('🔐 Creating authentication data (via InspiritCisZam VIEW → InspiritUserAuth)...');
 
   // Admin user
   await prisma.$executeRaw`
-    INSERT INTO [User] (ID, Cislo, role, email, Alias, Jmeno, Prijmeni, createdAt, updatedAt)
+    INSERT INTO [InspiritCisZam] (ID, Cislo, role, email, Alias, Jmeno, Prijmeni, createdAt, updatedAt)
     VALUES (1, 999999, 'ADMIN', 'admin@admin.cz', ${plainPassword}, N'Admin', N'Testovací', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `;
   console.log('  ✓ Admin: admin@admin.cz / heslo (cislo: 999999)');
 
   // Trainer user
   await prisma.$executeRaw`
-    INSERT INTO [User] (ID, Cislo, role, email, Alias, Jmeno, Prijmeni, createdAt, updatedAt)
+    INSERT INTO [InspiritCisZam] (ID, Cislo, role, email, Alias, Jmeno, Prijmeni, createdAt, updatedAt)
     VALUES (2, 888888, 'TRAINER', 'trainer@trainer.cz', ${plainPassword}, N'Školitel', N'Testovací', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `;
   console.log('  ✓ Trainer: trainer@trainer.cz / heslo (cislo: 888888)');
 
   // Worker user
   await prisma.$executeRaw`
-    INSERT INTO [User] (ID, Cislo, role, email, Alias, Jmeno, Prijmeni, createdAt, updatedAt)
+    INSERT INTO [InspiritCisZam] (ID, Cislo, role, email, Alias, Jmeno, Prijmeni, createdAt, updatedAt)
     VALUES (3, 123456, 'WORKER', 'worker@dev.local', ${plainPassword}, N'Pracovník', N'Testovací', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `;
   console.log('  ✓ Worker: cislo 123456 / heslo (dev email: worker@dev.local)');
 
   // Ondřej Chládek user (production data)
   await prisma.$executeRaw`
-    INSERT INTO [User] (ID, Cislo, role, email, Alias, Jmeno, Prijmeni, createdAt, updatedAt)
+    INSERT INTO [InspiritCisZam] (ID, Cislo, role, email, Alias, Jmeno, Prijmeni, createdAt, updatedAt)
     VALUES (801, 900030, 'WORKER', 'ondrej@dev.local', '111111', N'Ondřej', N'Chládek', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
   `;
   console.log('  ✓ Ondřej Chládek: cislo 900030 / 111111 (dev email: ondrej@dev.local)');

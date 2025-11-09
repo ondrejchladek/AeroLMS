@@ -83,28 +83,9 @@ BEGIN TRY
     PRINT '';
 
     -- ============================================================================
-    -- STEP 1: Drop User SYNONYM
+    -- STEP 1: Drop INSTEAD OF Triggers
     -- ============================================================================
-    PRINT '1. Removing User SYNONYM...';
-    PRINT '----------------------------------------';
-
-    IF EXISTS (SELECT * FROM sys.synonyms WHERE name = 'User')
-    BEGIN
-        DROP SYNONYM [dbo].[User];
-        PRINT '  ✓ User SYNONYM dropped';
-        SET @DropCount = @DropCount + 1;
-    END
-    ELSE
-    BEGIN
-        PRINT '  ℹ User SYNONYM does not exist (skipped)';
-    END
-
-    PRINT '';
-
-    -- ============================================================================
-    -- STEP 2: Drop INSTEAD OF Triggers
-    -- ============================================================================
-    PRINT '2. Removing INSTEAD OF triggers...';
+    PRINT '1. Removing INSTEAD OF triggers...';
     PRINT '----------------------------------------';
 
     IF EXISTS (SELECT * FROM sys.triggers WHERE name = 'trg_InspiritCisZam_Update')
@@ -124,9 +105,9 @@ BEGIN TRY
     PRINT '';
 
     -- ============================================================================
-    -- STEP 3: Drop InspiritCisZam VIEW
+    -- STEP 2: Drop InspiritCisZam VIEW
     -- ============================================================================
-    PRINT '3. Removing InspiritCisZam VIEW...';
+    PRINT '2. Removing InspiritCisZam VIEW...';
     PRINT '----------------------------------------';
 
     IF EXISTS (SELECT * FROM sys.views WHERE name = 'InspiritCisZam')
@@ -143,9 +124,9 @@ BEGIN TRY
     PRINT '';
 
     -- ============================================================================
-    -- STEP 4: Drop AeroLMS Application Tables (with FK dependencies)
+    -- STEP 3: Drop AeroLMS Application Tables (with FK dependencies)
     -- ============================================================================
-    PRINT '4. Removing AeroLMS application tables...';
+    PRINT '3. Removing AeroLMS application tables...';
     PRINT '----------------------------------------';
 
     -- Drop in correct order to respect FK constraints
@@ -168,8 +149,8 @@ BEGIN TRY
 
     IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'InspiritTestAttempt')
     BEGIN
-        DROP TABLE [dbo].[TestAttempt];
-        PRINT '  ✓ TestAttempt table dropped';
+        DROP TABLE [dbo].[InspiritTestAttempt];
+        PRINT '  ✓ InspiritTestAttempt table dropped';
         SET @DropCount = @DropCount + 1;
     END
 
@@ -197,9 +178,9 @@ BEGIN TRY
     PRINT '';
 
     -- ============================================================================
-    -- STEP 5: Drop InspiritUserAuth Table
+    -- STEP 4: Drop InspiritUserAuth Table
     -- ============================================================================
-    PRINT '5. Removing InspiritUserAuth table...';
+    PRINT '4. Removing InspiritUserAuth table...';
     PRINT '----------------------------------------';
 
     IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'InspiritUserAuth')
@@ -216,9 +197,9 @@ BEGIN TRY
     PRINT '';
 
     -- ============================================================================
-    -- STEP 6: Revoke Permissions (if AeroLMS user exists)
+    -- STEP 5: Revoke Permissions (if AeroLMS user exists)
     -- ============================================================================
-    PRINT '6. Revoking permissions from AeroLMS user...';
+    PRINT '5. Revoking permissions from AeroLMS user...';
     PRINT '----------------------------------------';
 
     IF EXISTS (SELECT * FROM sys.database_principals WHERE name = 'AeroLMS')
@@ -257,9 +238,9 @@ BEGIN TRY
     PRINT '';
 
     -- ============================================================================
-    -- STEP 7: Verify Helios Tables Are Intact
+    -- STEP 6: Verify Helios Tables Are Intact
     -- ============================================================================
-    PRINT '7. Verifying Helios tables integrity...';
+    PRINT '6. Verifying Helios tables integrity...';
     PRINT '----------------------------------------';
 
     IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'TabCisZam')
