@@ -78,8 +78,10 @@ const TestSchemaBase = z.object({
   isActive: z.boolean().optional().default(true),
   questions: z
     .array(QuestionSchema)
-    .min(1, 'Test musí obsahovat alespoň 1 otázku')
+    .min(0, 'Minimální počet otázek je 0')
     .max(100, 'Maximum 100 otázek na test')
+    .optional()
+    .default([])
 });
 
 export const CreateTestSchema = TestSchemaBase.refine(
