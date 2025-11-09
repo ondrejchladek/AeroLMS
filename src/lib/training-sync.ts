@@ -4,8 +4,10 @@ import { validateTrainingCode } from '@/lib/validation-schemas';
 interface TrainingColumn {
   code: string;
   hasDatumPosl: boolean;
-  hasDatumPristi: boolean;
   hasPozadovano: boolean;
+  // Note: DatumPristi is a COMPUTED COLUMN in InspiritCisZam VIEW, not a physical column in TabCisZam_EXT
+  // It's calculated as: DATEADD(month, X, _*DatumPosl) where X varies per training (12, 24, or 36 months)
+  // Therefore, we only detect DatumPosl + Pozadovano columns for training detection
 }
 
 /**
@@ -38,8 +40,13 @@ async function getUserTableColumns(): Promise<string[]> {
 }
 
 /**
- * Extract training codes from User table columns
- * Looks for patterns: {code}DatumPosl, {code}DatumPristi, {code}Pozadovano
+ * Extract training codes from TabCisZam_EXT table columns
+ * Looks for patterns: _{code}DatumPosl, _{code}Pozadovano
+ *
+ * Note: DatumPristi columns do NOT exist in TabCisZam_EXT - they are COMPUTED COLUMNS
+ * in the InspiritCisZam VIEW, calculated as DATEADD(month, X, _{code}DatumPosl)
+ *
+ * A training is valid when it has both DatumPosl and Pozadovano columns.
  */
 export async function detectTrainingColumns(): Promise<TrainingColumn[]> {
   try {
@@ -58,30 +65,10 @@ export async function detectTrainingColumns(): Promise<TrainingColumn[]> {
           trainings.set(code, {
             code,
             hasDatumPosl: true,
-            hasDatumPristi: false,
             hasPozadovano: false
           });
         } else {
           trainings.get(code)!.hasDatumPosl = true;
-        }
-      }
-
-      // Check for DatumPristi pattern
-      else if (column.endsWith('DatumPristi')) {
-        let code = column.substring(0, column.length - 11); // Remove 'DatumPristi'
-        // Remove underscore prefix if present (production: _CMMDatumPristi -> CMM)
-        if (code.startsWith('_')) {
-          code = code.substring(1);
-        }
-        if (!trainings.has(code)) {
-          trainings.set(code, {
-            code,
-            hasDatumPosl: false,
-            hasDatumPristi: true,
-            hasPozadovano: false
-          });
-        } else {
-          trainings.get(code)!.hasDatumPristi = true;
         }
       }
 
@@ -96,7 +83,6 @@ export async function detectTrainingColumns(): Promise<TrainingColumn[]> {
           trainings.set(code, {
             code,
             hasDatumPosl: false,
-            hasDatumPristi: false,
             hasPozadovano: true
           });
         } else {
@@ -105,13 +91,18 @@ export async function detectTrainingColumns(): Promise<TrainingColumn[]> {
       }
     }
 
-    // Filter out incomplete trainings (must have all 3 columns)
+    // Filter to only complete trainings (must have both DatumPosl AND Pozadovano)
+    // DatumPristi is computed in VIEW, so we don't require it for detection
     const completeTrainings = Array.from(trainings.values()).filter(
-      (t) => t.hasDatumPosl && t.hasDatumPristi && t.hasPozadovano
+      (t) => t.hasDatumPosl && t.hasPozadovano
     );
 
+    console.log(`[detectTrainingColumns] Found ${completeTrainings.length} complete trainings:`,
+      completeTrainings.map(t => t.code).join(', '));
+
     return completeTrainings;
-  } catch {
+  } catch (error) {
+    console.error('[detectTrainingColumns] Error:', error);
     return [];
   }
 }
