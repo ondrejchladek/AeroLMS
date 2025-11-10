@@ -8,6 +8,10 @@ import {
   validateRequestBody,
   safeJsonParse
 } from '@/lib/validation-schemas';
+import {
+  validateTrainingAccess,
+  isTrainerAssignedToTraining
+} from '@/lib/authorization';
 
 interface RouteParams {
   params: Promise<{
@@ -31,6 +35,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         { error: 'Invalid training ID' },
         { status: 400 }
       );
+    }
+
+    // SECURITY: Validate trainer has access to this training
+    const userRole = session.user.role;
+    if (isTrainer(userRole)) {
+      const hasAccess = await isTrainerAssignedToTraining(
+        parseInt(session.user.id),
+        trainingId
+      );
+      if (!hasAccess) {
+        return NextResponse.json(
+          { error: 'Nemáte oprávnění k tomuto školení' },
+          { status: 403 }
+        );
+      }
     }
 
     // Get user to check role
@@ -124,25 +143,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Ověř oprávnění
-    let canCreate = false;
-
-    if (isAdmin(session.user.role)) {
-      canCreate = true;
-    } else if (isTrainer(session.user.role)) {
-      // Trainer může vytvářet testy pouze pro svá školení
-      const assignment = await prisma.inspiritTrainingAssignment.findFirst({
-        where: {
-          trainerId: parseInt(session.user.id),
-          trainingId: trainingId
-        }
-      });
-      canCreate = !!assignment;
-    }
-
-    if (!canCreate) {
+    // SECURITY: Validate trainer has access to this training using centralized helper
+    try {
+      await validateTrainingAccess(session, trainingId);
+    } catch (error: any) {
       return NextResponse.json(
-        { error: 'Nedostatečná oprávnění pro vytvoření testu' },
+        { error: error.message || 'Nedostatečná oprávnění' },
         { status: 403 }
       );
     }

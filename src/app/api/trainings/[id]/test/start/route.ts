@@ -59,10 +59,10 @@ export async function POST(
     if (user.role === 'WORKER') {
       const trainingCode = test.training.code;
 
-      // Build dynamic field names based on training code
-      const datumPoslField = `${trainingCode}DatumPosl`;
-      const datumPristiField = `${trainingCode}DatumPristi`;
-      const pozadovanoField = `${trainingCode}Pozadovano`;
+      // Build dynamic field names based on training code (with underscore prefix)
+      const datumPoslField = `_${trainingCode}DatumPosl`;
+      const datumPristiField = `_${trainingCode}DatumPristi`;
+      const pozadovanoField = `_${trainingCode}Pozadovano`;
 
       // Check if training is required
       const isRequired = (user as any)[pozadovanoField] === true;

@@ -122,6 +122,13 @@ export default function AppSidebar() {
                 icon: 'user',
                 isActive: false,
                 items: []
+              },
+              {
+                title: 'Smazaná data',
+                url: '/admin/smazana-data',
+                icon: 'trash',
+                isActive: false,
+                items: []
               }
             ];
             setAdminNavItems(adminItems);

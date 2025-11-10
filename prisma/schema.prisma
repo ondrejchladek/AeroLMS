@@ -56,7 +56,7 @@ model TabCisZam {
 //
 // USAGE IN APPLICATION:
 //   - ✅ DIRECTLY WRITTEN by updateUserTrainingData() in training-sync.ts
-//   - ✅ READ via User SYNONYM → InspiritCisZam VIEW
+//   - ✅ READ via InspiritCisZam VIEW (not direct table access)
 //   - 🔧 Updates training dates after successful test completion
 //
 // CRITICAL SECURITY:
@@ -65,15 +65,21 @@ model TabCisZam {
 //   - All column names have underscore prefix: _CMMDatumPosl (not CMMDatumPosl)
 //
 // COLUMN PATTERN (dynamic - added by DB admin):
-//   - _{code}DatumPosl: Last completion date (DATE)
-//   - _{code}DatumPristi: Next due date (DATE, auto-calculated +1 year)
-//   - _{code}Pozadovano: Required flag (BOOLEAN, default false)
+//   ✅ PHYSICAL COLUMNS in TabCisZam_EXT:
+//     - _{code}DatumPosl: Last completion date (DATE)
+//     - _{code}Pozadovano: Required flag (BOOLEAN, default false)
+//
+//   ✅ COMPUTED COLUMNS in InspiritCisZam VIEW:
+//     - _{code}DatumPristi: Next due date (COMPUTED via DATEADD in VIEW)
+//     - Example: DATEADD(month, 24, _CMMDatumPosl) AS _CMMDatumPristi
+//     - Validity period (months) set by superadmin in VIEW definition
 //
 // WRITE STRATEGY (IDENTICAL in DEV and PROD):
-//   - Direct UPDATE to TabCisZam_EXT (more efficient than VIEW triggers)
+//   - Direct UPDATE to TabCisZam_EXT for DatumPosl and Pozadovano
+//   - DatumPristi is READ-ONLY (auto-calculated in VIEW)
 //
 // IMPORTANT - DYNAMIC COLUMNS:
-//   Training columns (_{code}DatumPosl, _{code}DatumPristi, _{code}Pozadovano) are:
+//   Training columns (_{code}DatumPosl, _{code}Pozadovano) are:
 //   - Added dynamically by database administrator
 //   - Detected at runtime via training-sync.ts (detectTrainingColumns function)
 //   - NOT defined in this Prisma model to allow flexibility
@@ -216,10 +222,12 @@ model InspiritTraining {
   content             String?                      @db.NVarChar(Max)
   createdAt           DateTime                     @default(now())
   updatedAt           DateTime                     @updatedAt
+  deletedAt           DateTime?                    // Soft delete timestamp (NULL = active, DATE = deleted)
   tests               InspiritTest[]
   trainingAssignments InspiritTrainingAssignment[]
   certificates        InspiritCertificate[]
 
+  @@index([deletedAt])
   @@map("InspiritTraining")
 }
 
@@ -238,6 +246,7 @@ model InspiritTest {
   timeLimit    Int?                   @default(15)
   createdAt    DateTime               @default(now())
   updatedAt    DateTime               @updatedAt
+  deletedAt    DateTime?              // Soft delete timestamp (NULL = active, DATE = deleted)
   questions    InspiritQuestion[]
   training     InspiritTraining       @relation(fields: [trainingId], references: [id])
   testAttempts InspiritTestAttempt[]
@@ -245,6 +254,7 @@ model InspiritTest {
   @@index([trainingId])
   @@index([isActive])
   @@index([trainingId, isActive])
+  @@index([deletedAt])
   @@map("InspiritTest")
 }
 
@@ -262,10 +272,12 @@ model InspiritQuestion {
   required      Boolean        @default(true)
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?      // Soft delete timestamp (NULL = active, DATE = deleted)
   test          InspiritTest   @relation(fields: [testId], references: [id])
 
   @@index([testId])
   @@index([testId, order])
+  @@index([deletedAt])
   @@map("InspiritQuestion")
 }
 
@@ -283,6 +295,7 @@ model InspiritTestAttempt {
   answers       String?               @db.NVarChar(Max)
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
+  deletedAt     DateTime?             // Soft delete timestamp (NULL = active, DATE = deleted)
   test          InspiritTest          @relation(fields: [testId], references: [id])
   user          InspiritCisZam        @relation(fields: [userId], references: [id])
   certificates  InspiritCertificate[]
@@ -292,6 +305,7 @@ model InspiritTestAttempt {
   @@index([userId, testId])
   @@index([createdAt(sort: Desc)])
   @@index([completedAt])
+  @@index([deletedAt])
   @@map("InspiritTestAttempt")
 }
 
@@ -309,6 +323,7 @@ model InspiritCertificate {
   pdfData           String?               @db.NVarChar(Max)
   createdAt         DateTime              @default(now())
   updatedAt         DateTime              @updatedAt
+  deletedAt         DateTime?             // Soft delete timestamp (NULL = active, DATE = deleted) - preserves legal documents
 
   user              InspiritCisZam        @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
   training          InspiritTraining      @relation(fields: [trainingId], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -318,6 +333,7 @@ model InspiritCertificate {
   @@index([trainingId])
   @@index([certificateNumber])
   @@index([validUntil])
+  @@index([deletedAt])
   @@map("InspiritCertificate")
 }
 
@@ -327,6 +343,7 @@ model InspiritTrainingAssignment {
   trainingId Int
   assignedAt DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
+  deletedAt  DateTime?        // Soft delete timestamp (NULL = active, DATE = deleted)
 
   trainer    InspiritCisZam   @relation(fields: [trainerId], references: [id])
   training   InspiritTraining @relation(fields: [trainingId], references: [id])
@@ -334,5 +351,6 @@ model InspiritTrainingAssignment {
   @@unique([trainerId, trainingId])
   @@index([trainerId])
   @@index([trainingId])
+  @@index([deletedAt])
   @@map("InspiritTrainingAssignment")
 }

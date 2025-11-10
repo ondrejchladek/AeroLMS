@@ -42,6 +42,146 @@ The system implements three user roles with distinct permissions:
   - First test must be taken in person with trainer
   - Login: personal code + password (example: code `123456` + password)
 
+### RBAC Implementation - Enterprise-Grade Authorization
+
+**Status**: ✅ Fully Implemented (2025-01-10)
+
+The application implements centralized, enterprise-grade authorization system with audit logging capabilities.
+
+#### Centralized Authorization Module (`src/lib/authorization.ts`)
+
+All authorization logic is centralized in `src/lib/authorization.ts` to ensure consistency, maintainability, and auditability:
+
+```typescript
+// Core authorization helpers
+getTrainerAssignedTrainingIds(trainerId: number): Promise<number[]>
+isTrainerAssignedToTraining(trainerId: number, trainingId: number): Promise<boolean>
+authorizeTrainingAccess(userId: number, userRole: string, trainingId?: number)
+getTrainingsForUser(userId: number, userRole: string, options?)
+validateTrainingAccess(session: any, trainingId?: number)  // Middleware-style
+validateTestAccess(session: any, testId: number)
+logAuthorizationCheck(log: AuthAuditLog): Promise<void>
+```
+
+**Key Features**:
+- Single source of truth for all permission checks
+- Middleware-style validators for API routes
+- Built-in audit logging framework
+- Type-safe with comprehensive TypeScript definitions
+- Performance optimized (uses database indexes)
+
+#### Role-Based Filtering Logic
+
+**ADMIN** - Full Access:
+- Views ALL trainings without restrictions
+- No filtering applied on any endpoint
+- Complete system access
+
+**TRAINER** - Training Assignment Based:
+- Views ONLY trainings assigned via `InspiritTrainingAssignment` table
+- Assignment checked on every API call using `isTrainerAssignedToTraining()`
+- Endpoints return 403 Forbidden for non-assigned trainings
+- Dashboard `/trainer` shows only assigned trainings
+- Dropdown in `/trainer/prvni-testy` filtered by assignments
+
+**WORKER** - Required Training Based:
+- Views ONLY trainings where `_{code}Pozadovano = TRUE` in their user record
+- Filtering applied on:
+  - Main dashboard `/` (page and statistics)
+  - Sidebar navigation links
+  - API endpoint `/api/trainings` (default, without `?admin=true`)
+- Independent of `InspiritTrainingAssignment` (trainings can be unassigned to trainers)
+
+#### Protected API Endpoints
+
+All API endpoints have been secured with proper authorization checks:
+
+**Fully Protected Trainer Endpoints** (check `InspiritTrainingAssignment`):
+- `GET/PUT /api/trainings/[id]` - Training detail and updates
+- `GET/POST /api/trainings/[id]/tests` - Test management
+- `GET /api/trainings/[id]/content` - Training content access
+- `GET /api/trainings/[id]/pdf` - PDF export
+- `GET /api/trainings/by-code/[code]` - Training by code lookup
+- `GET/PUT/DELETE /api/tests/[id]` - Test operations
+- `POST/GET /api/test-attempts/manual` - Manual test entry
+
+**Role-Filtered Endpoints**:
+- `GET /api/trainings` - Returns trainings based on role:
+  - WORKER: Only `Pozadovano = TRUE` trainings
+  - TRAINER: Only assigned trainings (with `?admin=true` param)
+  - ADMIN: All trainings (with `?admin=true` param)
+
+#### Security Implementation Pattern
+
+**Recommended pattern for new API endpoints**:
+
+```typescript
+import { validateTrainingAccess } from '@/lib/authorization';
+
+export async function PUT(request: NextRequest, { params }: RouteParams) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { id } = await params;
+  const trainingId = parseInt(id);
+
+  // SECURITY: Validate authorization using centralized helper
+  try {
+    await validateTrainingAccess(session, trainingId);
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error.message || 'Nedostatečná oprávnění' },
+      { status: 403 }
+    );
+  }
+
+  // ... proceed with authorized operation
+}
+```
+
+#### Testing RBAC
+
+Comprehensive testing guide: `RBAC-TESTING-GUIDE.md` in project root
+
+**Quick Verification**:
+1. TRAINER role: Should see only assigned trainings in `/trainer` and `/trainer/prvni-testy`
+2. WORKER role: Should see only required trainings (Pozadovano=TRUE) on dashboard and sidebar
+3. Security: Direct URL access to non-authorized trainings should return 403
+
+**Database Queries for Testing**:
+```sql
+-- Check trainer assignments
+SELECT t.code, t.name, ta.assignedAt
+FROM InspiritTrainingAssignment ta
+JOIN InspiritTraining t ON ta.trainingId = t.id
+WHERE ta.trainerId = <TRAINER_ID>;
+
+-- Check worker required trainings
+SELECT _CMMPozadovano, _EDMPozadovano, _ITBezpecnostPozadovano
+FROM InspiritCisZam
+WHERE ID = <WORKER_ID>;
+```
+
+#### Audit Logging
+
+All authorization checks can be logged for compliance and security auditing:
+
+```typescript
+await logAuthorizationCheck({
+  userId: session.user.id,
+  userRole: session.user.role,
+  action: 'training.edit',
+  resourceType: 'training',
+  resourceId: trainingId.toString(),
+  allowed: hasAccess,
+  reason: hasAccess ? 'Authorized' : 'Not assigned to training'
+});
+```
+
+Currently logs to console (development), ready for database storage (production).
+
 ## 🔄 Automatic Training Synchronization
 
 The system dynamically generates training content based on database columns:
@@ -63,14 +203,20 @@ The system dynamically generates training content based on database columns:
    - Run with: `node prisma/check-columns.js`
 
 ### Training Detection Pattern
-For each training, the system looks for three columns in TabCisZam_EXT table:
-- `_{code}DatumPosl` - Last completion date
-- `_{code}DatumPristi` - Next due date
-- `_{code}Pozadovano` - Required flag (boolean)
+For each training, the system looks for TWO physical columns in TabCisZam_EXT table:
+- `_{code}DatumPosl` - Last completion date (PHYSICAL column)
+- `_{code}Pozadovano` - Required flag (boolean, PHYSICAL column)
+
+The third column is COMPUTED in the VIEW:
+- `_{code}DatumPristi` - Next due date (COMPUTED via DATEADD in InspiritCisZam VIEW)
+  - Example: `DATEADD(month, 24, _CMMDatumPosl) AS _CMMDatumPristi`
+  - Validity period (months) is set by superadmin in VIEW definition
 
 **CRITICAL:** All training columns have `_` (underscore) prefix!
 
-Example: `_CMMDatumPosl`, `_CMMDatumPristi`, `_CMMPozadovano` → Creates training with code "CMM"
+Example physical columns in TabCisZam_EXT: `_CMMDatumPosl`, `_CMMPozadovano`
+Example computed column in VIEW: `_CMMDatumPristi = DATEADD(month, 24, _CMMDatumPosl)`
+→ Creates training with code "CMM"
 
 ## 📚 Advanced Testing System
 

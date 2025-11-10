@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { TrainingPDFDocument } from '@/components/training/training-pdf-document';
 import { getFullNameSafe } from '@/lib/user-helpers';
+import { isTrainer } from '@/types/roles';
+import { isTrainerAssignedToTraining } from '@/lib/authorization';
 
 export async function GET(
   request: NextRequest,
@@ -18,6 +20,19 @@ export async function GET(
 
     const { id } = await params;
     const trainingId = parseInt(id);
+
+    // SECURITY: Validate trainer has access to this training
+    if (isTrainer(session.user.role)) {
+      const hasAccess = await isTrainerAssignedToTraining(
+        parseInt(session.user.id),
+        trainingId
+      );
+      if (!hasAccess) {
+        return new NextResponse('Nemáte oprávnění k tomuto školení', {
+          status: 403
+        });
+      }
+    }
 
     // Načti data školení z databáze
     const training = await prisma.inspiritTraining.findUnique({

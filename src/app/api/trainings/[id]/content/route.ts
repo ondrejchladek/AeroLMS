@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isTrainer } from '@/types/roles';
+import { isTrainerAssignedToTraining } from '@/lib/authorization';
 
 export async function GET(
   request: NextRequest,
@@ -14,8 +16,24 @@ export async function GET(
     }
 
     const { id } = await params;
+    const trainingId = parseInt(id);
+
+    // SECURITY: Validate trainer has access to this training
+    if (isTrainer(session.user.role)) {
+      const hasAccess = await isTrainerAssignedToTraining(
+        parseInt(session.user.id),
+        trainingId
+      );
+      if (!hasAccess) {
+        return NextResponse.json(
+          { error: 'Nemáte oprávnění k tomuto školení' },
+          { status: 403 }
+        );
+      }
+    }
+
     const training = await prisma.inspiritTraining.findUnique({
-      where: { id: parseInt(id) }
+      where: { id: trainingId }
     });
 
     if (!training) {

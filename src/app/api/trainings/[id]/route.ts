@@ -7,6 +7,10 @@ import {
   UpdateTrainingSchema,
   validateRequestBody
 } from '@/lib/validation-schemas';
+import {
+  isTrainerAssignedToTraining,
+  validateTrainingAccess
+} from '@/lib/authorization';
 
 interface RouteParams {
   params: Promise<{
@@ -17,6 +21,16 @@ interface RouteParams {
 // GET - Získat detail školení
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const session = await getServerSession(authOptions);
+
+    // SECURITY: Require authentication
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { error: 'Neautorizovaný přístup' },
+        { status: 401 }
+      );
+    }
+
     const { id } = await params;
     const trainingId = parseInt(id);
 
@@ -25,6 +39,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         { error: 'Invalid training ID' },
         { status: 400 }
       );
+    }
+
+    // SECURITY: Validate trainer has access to this training
+    if (isTrainer(session.user.role)) {
+      const hasAccess = await isTrainerAssignedToTraining(
+        parseInt(session.user.id),
+        trainingId
+      );
+      if (!hasAccess) {
+        return NextResponse.json(
+          { error: 'Nemáte oprávnění k tomuto školení' },
+          { status: 403 }
+        );
+      }
     }
 
     const training = await prisma.inspiritTraining.findUnique({
@@ -99,26 +127,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Ověř oprávnění
-    let canEdit = false;
-
-    if (isAdmin(session.user.role)) {
-      // Admin může editovat všechna školení
-      canEdit = true;
-    } else if (isTrainer(session.user.role)) {
-      // Trainer může editovat pouze přiřazená školení
-      const assignment = await prisma.inspiritTrainingAssignment.findFirst({
-        where: {
-          trainerId: parseInt(session.user.id),
-          trainingId: trainingId
-        }
-      });
-      canEdit = !!assignment;
-    }
-
-    if (!canEdit) {
+    // SECURITY: Validate trainer has access using centralized helper
+    try {
+      await validateTrainingAccess(session, trainingId);
+    } catch (error: any) {
       return NextResponse.json(
-        { error: 'Nedostatečná oprávnění pro editaci tohoto školení' },
+        { error: error.message || 'Nedostatečná oprávnění' },
         { status: 403 }
       );
     }

@@ -43,8 +43,6 @@ import {
   Plus,
   Edit,
   Trash2,
-  Save,
-  Loader2,
   MoveUp,
   MoveDown
 } from 'lucide-react';
@@ -81,7 +79,42 @@ export default function QuestionsManagementClient({
   );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+
+  // Helper function to save questions to API
+  const saveQuestionsToApi = async (questionsToSave: Question[]) => {
+    try {
+      const response = await fetch(`/api/tests/${test.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          questions: questionsToSave.map((q) => ({
+            ...q,
+            options: q.options ? JSON.stringify(q.options) : null,
+            correctAnswer: q.correctAnswer
+              ? typeof q.correctAnswer === 'object'
+                ? JSON.stringify(q.correctAnswer)
+                : q.correctAnswer
+              : ''
+          }))
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Chyba při ukládání');
+      }
+
+      toast.success('Změny byly automaticky uloženy');
+      router.refresh();
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Chyba při ukládání změn'
+      );
+      throw error;
+    }
+  };
 
   // Form state for new/edit question
   const [currentQuestion, setCurrentQuestion] = useState<Question>({
@@ -118,7 +151,7 @@ export default function QuestionsManagementClient({
     setIsDialogOpen(true);
   };
 
-  const handleSaveQuestion = () => {
+  const handleSaveQuestion = async () => {
     if (!currentQuestion.question.trim()) {
       toast.error('Otázka musí být vyplněna');
       return;
@@ -136,17 +169,26 @@ export default function QuestionsManagementClient({
 
     setQuestions(newQuestions);
     setIsDialogOpen(false);
+
+    // Auto-save changes
+    await saveQuestionsToApi(newQuestions);
   };
 
-  const handleDeleteQuestion = (index: number) => {
+  const handleDeleteQuestion = async (index: number) => {
     if (confirm('Opravdu chcete smazat tuto otázku?')) {
       const newQuestions = questions.filter((_, i) => i !== index);
       newQuestions.forEach((q, i) => (q.order = i));
       setQuestions(newQuestions);
+
+      // Auto-save changes
+      await saveQuestionsToApi(newQuestions);
     }
   };
 
-  const handleMoveQuestion = (index: number, direction: 'up' | 'down') => {
+  const handleMoveQuestion = async (
+    index: number,
+    direction: 'up' | 'down'
+  ) => {
     const newQuestions = [...questions];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
 
@@ -157,44 +199,9 @@ export default function QuestionsManagementClient({
       ];
       newQuestions.forEach((q, i) => (q.order = i));
       setQuestions(newQuestions);
-    }
-  };
 
-  const handleSaveAllQuestions = async () => {
-    setIsSaving(true);
-
-    try {
-      const response = await fetch(`/api/tests/${test.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          questions: questions.map((q) => ({
-            ...q,
-            options: q.options ? JSON.stringify(q.options) : null,
-            correctAnswer: q.correctAnswer
-              ? typeof q.correctAnswer === 'object'
-                ? JSON.stringify(q.correctAnswer)
-                : q.correctAnswer
-              : ''
-          }))
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Chyba při ukládání');
-      }
-
-      toast.success('Otázky byly úspěšně uloženy');
-      router.refresh();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'Chyba při ukládání otázek'
-      );
-    } finally {
-      setIsSaving(false);
+      // Auto-save changes
+      await saveQuestionsToApi(newQuestions);
     }
   };
 
@@ -227,22 +234,6 @@ export default function QuestionsManagementClient({
             <Button onClick={handleAddQuestion}>
               <Plus className='mr-2 h-4 w-4' />
               Nová otázka
-            </Button>
-            <Button
-              onClick={handleSaveAllQuestions}
-              disabled={isSaving || questions.length === 0}
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className='mr-2 h-4 w-4 animate-spin' />
-                  Ukládám...
-                </>
-              ) : (
-                <>
-                  <Save className='mr-2 h-4 w-4' />
-                  Uložit vše
-                </>
-              )}
             </Button>
           </div>
         </div>

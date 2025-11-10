@@ -39,6 +39,8 @@ interface TestAttempt {
   id: number;
   testTitle: string;
   trainingName: string;
+  userName: string;
+  userCislo: number | null;
   score: number;
   passed: boolean;
   createdAt: string;
@@ -57,45 +59,103 @@ interface User {
   cislo: number | null;
 }
 
+interface Training {
+  id: number;
+  name: string;
+  code: string;
+}
+
+interface Test {
+  id: number;
+  title: string;
+  trainingId: number;
+}
+
 export function ResultsClient() {
   const [attempts, setAttempts] = useState<TestAttempt[]>([]);
   const [filteredAttempts, setFilteredAttempts] = useState<TestAttempt[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [trainings, setTrainings] = useState<Training[]>([]);
+  const [tests, setTests] = useState<Test[]>([]);
 
   const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [selectedTrainingId, setSelectedTrainingId] = useState<string>('');
+  const [selectedTestId, setSelectedTestId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch users
+  // Fetch initial data (users, trainings, tests)
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchInitialData = async () => {
       try {
-        const response = await fetch('/api/users');
-        if (response.ok) {
-          const data = await response.json();
+        // Fetch users, trainings in parallel
+        const [usersRes, trainingsRes] = await Promise.all([
+          fetch('/api/users'),
+          fetch('/api/trainings?admin=true')
+        ]);
+
+        if (usersRes.ok) {
+          const data = await usersRes.json();
           setUsers(data.users || []);
+        }
+
+        if (trainingsRes.ok) {
+          const data = await trainingsRes.json();
+          setTrainings(data.trainings || []);
         }
       } catch {
         // Error silently handled via UI state
       }
     };
-    fetchUsers();
+    fetchInitialData();
   }, []);
 
-  // Fetch attempts when user is selected
+  // Fetch tests when training is selected
   useEffect(() => {
-    if (!selectedUserId) {
-      setAttempts([]);
-      setFilteredAttempts([]);
+    if (!selectedTrainingId) {
       return;
     }
 
+    const fetchTests = async () => {
+      try {
+        const training = trainings.find(
+          (t) => t.id === parseInt(selectedTrainingId)
+        );
+        if (!training) return;
+
+        const response = await fetch(`/api/trainings/${training.id}/tests`);
+        if (response.ok) {
+          const data = await response.json();
+          setTests(data.tests || []);
+        }
+      } catch {
+        // Error silently handled via UI state
+      }
+    };
+
+    fetchTests();
+  }, [selectedTrainingId, trainings]);
+
+  // Fetch attempts with filters
+  useEffect(() => {
     const fetchAttempts = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(
-          `/api/test-attempts/manual?userId=${selectedUserId}`
-        );
+        // Build query params (skip "_all" values)
+        const params = new URLSearchParams();
+        if (selectedUserId && selectedUserId !== '_all')
+          params.append('userId', selectedUserId);
+        if (selectedTrainingId && selectedTrainingId !== '_all')
+          params.append('trainingId', selectedTrainingId);
+        if (selectedTestId && selectedTestId !== '_all')
+          params.append('testId', selectedTestId);
+
+        const queryString = params.toString();
+        const url = queryString
+          ? `/api/test-attempts/manual?${queryString}`
+          : '/api/test-attempts/manual';
+
+        const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
           setAttempts(data.attempts || []);
@@ -109,7 +169,7 @@ export function ResultsClient() {
     };
 
     fetchAttempts();
-  }, [selectedUserId]);
+  }, [selectedUserId, selectedTrainingId, selectedTestId]);
 
   // Filter attempts based on search
   useEffect(() => {
@@ -138,14 +198,12 @@ export function ResultsClient() {
     });
   };
 
-  const selectedUser = users.find((u) => u.id === parseInt(selectedUserId));
-
   return (
     <div className='container mx-auto max-w-7xl p-6'>
       <div className='mb-6'>
         <h1 className='mb-2 text-3xl font-bold'>Výsledky testů</h1>
         <p className='text-muted-foreground'>
-          Přehled všech výsledků testů absolvovaných osobně
+          Přehled všech výsledků testů ze všech přidělených školení
         </p>
       </div>
 
@@ -157,18 +215,65 @@ export function ResultsClient() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className='grid gap-4 md:grid-cols-2'>
+          <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
             {/* User Selection */}
             <div className='space-y-2'>
               <Label htmlFor='user'>Zaměstnanec</Label>
               <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                 <SelectTrigger id='user'>
-                  <SelectValue placeholder='Vyberte zaměstnance' />
+                  <SelectValue placeholder='Všichni' />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value='_all'>Všichni</SelectItem>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id.toString()}>
                       {`${user.firstName} ${user.lastName}`} ({user.cislo})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Training Selection */}
+            <div className='space-y-2'>
+              <Label htmlFor='training'>Školení</Label>
+              <Select
+                value={selectedTrainingId}
+                onValueChange={(value) => {
+                  setSelectedTrainingId(value);
+                  setSelectedTestId(''); // Reset test selection
+                }}
+              >
+                <SelectTrigger id='training'>
+                  <SelectValue placeholder='Všechna školení' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='_all'>Všechna školení</SelectItem>
+                  {trainings.map((training) => (
+                    <SelectItem key={training.id} value={training.id.toString()}>
+                      {training.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Test Selection */}
+            <div className='space-y-2'>
+              <Label htmlFor='test'>Test</Label>
+              <Select
+                value={selectedTestId}
+                onValueChange={setSelectedTestId}
+                disabled={!selectedTrainingId || selectedTrainingId === '_all'}
+              >
+                <SelectTrigger id='test'>
+                  <SelectValue placeholder='Všechny testy' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='_all'>Všechny testy</SelectItem>
+                  {tests.map((test) => (
+                    <SelectItem key={test.id} value={test.id.toString()}>
+                      {test.title}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -182,11 +287,10 @@ export function ResultsClient() {
                 <Search className='text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2' />
                 <Input
                   id='search'
-                  placeholder='Hledat podle školení, testu, hodnotitele...'
+                  placeholder='Hledat...'
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className='pl-10'
-                  disabled={!selectedUserId}
                 />
               </div>
             </div>
@@ -194,109 +298,103 @@ export function ResultsClient() {
         </CardContent>
       </Card>
 
-      {selectedUser && (
-        <Card>
-          <CardHeader>
-            <CardTitle className='flex items-center justify-between'>
-              <div className='flex items-center gap-2'>
-                <FileText className='h-5 w-5' />
-                Výsledky - {selectedUser.firstName} {selectedUser.lastName}
-              </div>
-              <Badge variant='outline'>
-                {filteredAttempts.length}{' '}
-                {filteredAttempts.length === 1 ? 'výsledek' : 'výsledků'}
-              </Badge>
-            </CardTitle>
-            <CardDescription>
-              Seznam všech absolvovaných testů zaměstnance
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className='text-muted-foreground py-8 text-center'>
-                Načítání...
-              </div>
-            ) : filteredAttempts.length === 0 ? (
-              <div className='text-muted-foreground py-8 text-center'>
-                {searchQuery
-                  ? 'Nebyly nalezeny žádné výsledky'
-                  : 'Žádné výsledky k zobrazení'}
-              </div>
-            ) : (
-              <div className='rounded-lg border'>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Školení</TableHead>
-                      <TableHead>Test</TableHead>
-                      <TableHead>Skóre</TableHead>
-                      <TableHead>Výsledek</TableHead>
-                      <TableHead>Datum</TableHead>
-                      <TableHead>Certifikát</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAttempts.map((attempt) => (
-                      <TableRow key={attempt.id}>
-                        <TableCell className='font-medium'>
-                          {attempt.trainingName}
-                        </TableCell>
-                        <TableCell>{attempt.testTitle}</TableCell>
-                        <TableCell>
-                          <Badge variant='outline'>
-                            {attempt.score.toFixed(1)}%
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {attempt.passed ? (
-                            <Badge variant='default' className='gap-1'>
-                              <CheckCircle className='h-3 w-3' />
-                              Uspěl
-                            </Badge>
-                          ) : (
-                            <Badge variant='destructive' className='gap-1'>
-                              <XCircle className='h-3 w-3' />
-                              Neuspěl
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className='text-muted-foreground text-sm'>
-                          {formatDate(attempt.createdAt)}
-                        </TableCell>
-                        <TableCell>
-                          {attempt.certificate ? (
-                            <div className='flex items-center gap-2'>
-                              <Award className='h-4 w-4 text-yellow-600' />
-                              <span className='font-mono text-sm'>
-                                {attempt.certificate.certificateNumber}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className='text-muted-foreground text-sm'>
-                              -
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {!selectedUserId && (
-        <Card>
-          <CardContent className='pt-6'>
-            <div className='text-muted-foreground py-12 text-center'>
-              <FileText className='mx-auto mb-4 h-12 w-12 opacity-50' />
-              <p>Vyberte zaměstnance pro zobrazení výsledků</p>
+      <Card>
+        <CardHeader>
+          <CardTitle className='flex items-center justify-between'>
+            <div className='flex items-center gap-2'>
+              <FileText className='h-5 w-5' />
+              Výsledky testů
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <Badge variant='outline'>
+              {filteredAttempts.length}{' '}
+              {filteredAttempts.length === 1 ? 'výsledek' : 'výsledků'}
+            </Badge>
+          </CardTitle>
+          <CardDescription>
+            Seznam všech absolvovaných testů ze všech přidělených školení
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className='text-muted-foreground py-8 text-center'>
+              Načítání...
+            </div>
+          ) : filteredAttempts.length === 0 ? (
+            <div className='text-muted-foreground py-8 text-center'>
+              {searchQuery
+                ? 'Nebyly nalezeny žádné výsledky'
+                : 'Žádné výsledky k zobrazení'}
+            </div>
+          ) : (
+            <div className='rounded-lg border'>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Zaměstnanec</TableHead>
+                    <TableHead>Školení</TableHead>
+                    <TableHead>Test</TableHead>
+                    <TableHead>Skóre</TableHead>
+                    <TableHead>Výsledek</TableHead>
+                    <TableHead>Datum</TableHead>
+                    <TableHead>Certifikát</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAttempts.map((attempt) => (
+                    <TableRow key={attempt.id}>
+                      <TableCell className='font-medium'>
+                        {attempt.userName}
+                        {attempt.userCislo && (
+                          <span className='text-muted-foreground ml-2 text-sm'>
+                            ({attempt.userCislo})
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>{attempt.trainingName}</TableCell>
+                      <TableCell>{attempt.testTitle}</TableCell>
+                      <TableCell>
+                        <Badge variant='outline'>
+                          {attempt.score.toFixed(1)}%
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {attempt.passed ? (
+                          <Badge variant='default' className='gap-1'>
+                            <CheckCircle className='h-3 w-3' />
+                            Uspěl
+                          </Badge>
+                        ) : (
+                          <Badge variant='destructive' className='gap-1'>
+                            <XCircle className='h-3 w-3' />
+                            Neuspěl
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className='text-muted-foreground text-sm'>
+                        {formatDate(attempt.createdAt)}
+                      </TableCell>
+                      <TableCell>
+                        {attempt.certificate ? (
+                          <div className='flex items-center gap-2'>
+                            <Award className='h-4 w-4 text-yellow-600' />
+                            <span className='font-mono text-sm'>
+                              {attempt.certificate.certificateNumber}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className='text-muted-foreground text-sm'>
+                            -
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

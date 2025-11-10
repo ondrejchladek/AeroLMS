@@ -54,7 +54,6 @@ export default function TestsManagementClient({
   training
 }: TestsManagementClientProps) {
   const router = useRouter();
-  const [tests] = useState(training.tests);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const [isCreating, setIsCreating] = useState(false);
@@ -302,7 +301,7 @@ export default function TestsManagementClient({
             <CardDescription>Všechny testy pro toto školení</CardDescription>
           </CardHeader>
           <CardContent>
-            {tests.length === 0 ? (
+            {training.tests.length === 0 ? (
               <div className='text-muted-foreground py-8 text-center'>
                 Zatím nejsou vytvořeny žádné testy
               </div>
@@ -322,7 +321,7 @@ export default function TestsManagementClient({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tests.map((test: any) => (
+                  {training.tests.map((test: any) => (
                     <TableRow key={test.id}>
                       <TableCell className='font-medium'>
                         {test.title}

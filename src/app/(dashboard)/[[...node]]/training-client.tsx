@@ -390,7 +390,7 @@ export function TrainingClient({
       {/* Warnings */}
       {isExpired && (
         <Card className='border-red-200 bg-red-50 dark:bg-red-950/20'>
-          <CardContent className='pt-6'>
+          <CardContent className=''>
             <div className='flex items-start gap-3'>
               <AlertCircle className='mt-0.5 h-5 w-5 text-red-600' />
               <div>
@@ -411,7 +411,7 @@ export function TrainingClient({
         <div>
           {!isCompleted && (
             <Card className='mb-4 border-blue-200 bg-blue-50 dark:bg-blue-950/20'>
-              <CardContent className='pt-6'>
+              <CardContent className=''>
                 <div className='flex items-start gap-3'>
                   <Info className='mt-0.5 h-5 w-5 text-blue-600' />
                   <div>
@@ -429,7 +429,7 @@ export function TrainingClient({
 
           {isCompleted && trainingData.datumPristi && !canStartTest() && (
             <Card className='mb-4 border-amber-200 bg-amber-50 dark:bg-amber-950/20'>
-              <CardContent className='pt-6'>
+              <CardContent className=''>
                 <div className='flex items-start gap-3'>
                   <Clock className='mt-0.5 h-5 w-5 text-amber-600' />
                   <div>

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isAdmin, isTrainer } from '@/types/roles';
+import { getTrainingsForUser } from '@/lib/authorization';
 
 // POST method removed - trainings are created only through automatic synchronization
 // New trainings are added by adding three columns to User table:
@@ -23,40 +24,38 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const isAdminOrTrainer =
       isAdmin(session.user.role) || isTrainer(session.user.role);
+
+    // FIXED: Use authorization helper that respects training assignments
     if (url.searchParams.get('admin') === 'true' && isAdminOrTrainer) {
-      const trainings = await prisma.inspiritTraining.findMany({
-        include: {
-          tests: true
-        },
-        orderBy: {
-          createdAt: 'desc'
-        }
+      const userId = parseInt(session.user.id);
+      const trainings = await getTrainingsForUser(userId, session.user.role, {
+        includeTests: true,
+        orderBy: 'createdAt'
       });
 
       return NextResponse.json({
         trainings: trainings.map((t: any) => ({
           ...t,
-          testsCount: t.tests.length
+          testsCount: t.tests?.length || 0
         }))
       });
     }
     // Získej data uživatele podle kódu nebo emailu
-    let user;
+    // IMPORTANT: Použij raw SQL aby se načetly i dynamické sloupce školení (_*Pozadovano)
+    let user: any;
 
     if (session.user.cislo) {
       // Uživatel přihlášen kódem
-      user = await prisma.user.findUnique({
-        where: {
-          cislo: session.user.cislo
-        }
-      });
+      const result = await prisma.$queryRaw<any[]>`
+        SELECT * FROM InspiritCisZam WHERE Cislo = ${session.user.cislo}
+      `;
+      user = result[0];
     } else if (session.user.email) {
       // Uživatel přihlášen emailem
-      user = await prisma.user.findUnique({
-        where: {
-          email: session.user.email
-        }
-      });
+      const result = await prisma.$queryRaw<any[]>`
+        SELECT * FROM InspiritCisZam WHERE email = ${session.user.email}
+      `;
+      user = result[0];
     } else {
       return NextResponse.json(
         { error: 'User identifier not found' },
@@ -68,8 +67,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Načti všechna školení z databáze
+    // Načti všechna školení z databáze (pouze aktivní - ne soft-deleted)
     const dbTrainings = await prisma.inspiritTraining.findMany({
+      where: {
+        deletedAt: null
+      },
       orderBy: {
         name: 'asc'
       }
@@ -95,11 +97,17 @@ export async function GET(request: Request) {
       };
     });
 
-    // Filtruj pouze požadovaná školení pro zobrazení v sidebaru
-    const requiredTrainings = trainings.filter((t: any) => t.required);
+    // RBAC: Filtruj školení podle role uživatele
+    // WORKER: Vidí pouze požadovaná školení (Pozadovano = TRUE)
+    // ADMIN/TRAINER: Vidí všechna školení
+    const userRole = user.role || 'WORKER';
+    const filteredTrainings =
+      userRole === 'WORKER'
+        ? trainings.filter((t: any) => t.required)
+        : trainings;
 
     return NextResponse.json({
-      trainings: requiredTrainings,
+      trainings: filteredTrainings,
       allTrainings: trainings
     });
   } catch (error) {

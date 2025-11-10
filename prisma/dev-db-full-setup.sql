@@ -51,25 +51,24 @@ BEGIN TRY
     PRINT '';
 
     -- TabCisZam_EXT (Helios ERP extension with training columns)
+    -- IMPORTANT: Only DatumPosl and Pozadovano columns (DatumPristi is COMPUTED in VIEW)
     PRINT 'Creating TabCisZam_EXT...';
     CREATE TABLE [dbo].[TabCisZam_EXT] (
         [ID] INT PRIMARY KEY,
-        -- CMM Training (24 month validity)
+        -- CMM Training (validity period: 24 months - set in VIEW)
         [_CMMDatumPosl] DATETIME2 NULL,
-        [_CMMDatumPristi] DATETIME2 NULL,
         [_CMMPozadovano] BIT NOT NULL DEFAULT 0,
-        -- EDM Training (12 month validity)
+        -- EDM Training (validity period: 12 months - set in VIEW)
         [_EDMDatumPosl] DATETIME2 NULL,
-        [_EDMDatumPristi] DATETIME2 NULL,
         [_EDMPozadovano] BIT NOT NULL DEFAULT 0,
-        -- IT Security Training (12 month validity)
+        -- IT Security Training (validity period: 12 months - set in VIEW)
         [_ITBezpecnostDatumPosl] DATETIME2 NULL,
-        [_ITBezpecnostDatumPristi] DATETIME2 NULL,
         [_ITBezpecnostPozadovano] BIT NOT NULL DEFAULT 0,
         CONSTRAINT [FK_TabCisZam_EXT_TabCisZam] FOREIGN KEY ([ID])
             REFERENCES [dbo].[TabCisZam]([ID]) ON DELETE CASCADE
     );
     PRINT '✓ TabCisZam_EXT created (trainings: CMM, EDM, ITBezpecnost)';
+    PRINT '  Note: DatumPristi columns are COMPUTED in VIEW (not physical columns)';
     PRINT '';
 
     -- InspiritUserAuth (AeroLMS authentication)
@@ -108,23 +107,24 @@ BEGIN TRY
             tc.Jmeno,
             tc.Prijmeni,
             tc.Alias,
-            -- Training data - CMM
+            -- Training data - CMM (validity: 24 months)
             ISNULL(ext._CMMPozadovano, 0) AS _CMMPozadovano,
             ext._CMMDatumPosl,
-            ext._CMMDatumPristi,
-            -- Training data - EDM
+            DATEADD(month, 24, ext._CMMDatumPosl) AS _CMMDatumPristi,
+            -- Training data - EDM (validity: 12 months)
             ISNULL(ext._EDMPozadovano, 0) AS _EDMPozadovano,
             ext._EDMDatumPosl,
-            ext._EDMDatumPristi,
-            -- Training data - IT Security
+            DATEADD(month, 12, ext._EDMDatumPosl) AS _EDMDatumPristi,
+            -- Training data - IT Security (validity: 12 months)
             ISNULL(ext._ITBezpecnostPozadovano, 0) AS _ITBezpecnostPozadovano,
             ext._ITBezpecnostDatumPosl,
-            ext._ITBezpecnostDatumPristi
+            DATEADD(month, 12, ext._ITBezpecnostDatumPosl) AS _ITBezpecnostDatumPristi
         FROM [dbo].[TabCisZam] tc
         LEFT OUTER JOIN [dbo].[TabCisZam_EXT] ext ON ext.ID = tc.ID
         LEFT JOIN [dbo].[InspiritUserAuth] auth ON auth.ID = tc.ID
     ');
     PRINT '✓ InspiritCisZam VIEW created';
+    PRINT '  Note: DatumPristi columns computed via DATEADD (CMM=24mo, EDM=12mo, ITBezpecnost=12mo)';
     PRINT '';
 
     -- INSTEAD OF INSERT Trigger

@@ -337,6 +337,7 @@ export function TiptapEditor({
   className
 }: TiptapEditorProps) {
   const editor = useEditor({
+    immediatelyRender: false, // Fix SSR hydration mismatch in Next.js 15
     extensions: [
       StarterKit.configure({
         heading: {

@@ -33,15 +33,18 @@ export default async function DynamicPage({ params }: PageProps) {
   // Pokud není žádná cesta, zobraz přehled
   if (node.length === 0) {
     // Načti data přihlášeného uživatele
-    let user;
+    // IMPORTANT: Použij raw SQL aby se načetly i dynamické sloupce školení (_*Pozadovano, _*DatumPosl, _*DatumPristi)
+    let user: any;
     if (session!.user?.cislo) {
-      user = await prisma.user.findUnique({
-        where: { cislo: session!.user.cislo }
-      });
+      const result = await prisma.$queryRaw<any[]>`
+        SELECT * FROM InspiritCisZam WHERE Cislo = ${session!.user.cislo}
+      `;
+      user = result[0];
     } else if (session!.user?.email) {
-      user = await prisma.user.findUnique({
-        where: { email: session!.user.email }
-      });
+      const result = await prisma.$queryRaw<any[]>`
+        SELECT * FROM InspiritCisZam WHERE email = ${session!.user.email}
+      `;
+      user = result[0];
     }
 
     if (!user) {
@@ -72,18 +75,26 @@ export default async function DynamicPage({ params }: PageProps) {
       };
     });
 
-    // Spočítej statistiky ze skutečných dat
+    // RBAC: Filter trainings based on user role
+    // WORKER: Vidí pouze požadovaná školení (Pozadovano = TRUE)
+    // ADMIN/TRAINER: Vidí všechna školení na přehledu
+    const filteredTrainings =
+      user.role === 'WORKER'
+        ? allTrainings.filter((t: any) => t.required)
+        : allTrainings;
+
+    // Spočítej statistiky ze skutečných dat (podle role - WORKER vidí jen požadovaná)
     const now = new Date();
-    const requiredTrainings = allTrainings.filter(
+    const requiredTrainings = filteredTrainings.filter(
       (t: any) => t.required
     ).length;
-    const completedTrainings = allTrainings.filter(
+    const completedTrainings = filteredTrainings.filter(
       (t: any) => t.lastDate !== null
     ).length;
-    const expiredTrainings = allTrainings.filter(
+    const expiredTrainings = filteredTrainings.filter(
       (t: any) => t.nextDate && new Date(t.nextDate) < now
     ).length;
-    const upcomingTrainings = allTrainings.filter((t: any) => {
+    const upcomingTrainings = filteredTrainings.filter((t: any) => {
       if (!t.nextDate) return false;
       const nextDate = new Date(t.nextDate);
       const diffTime = nextDate.getTime() - now.getTime();
@@ -163,7 +174,7 @@ export default async function DynamicPage({ params }: PageProps) {
           <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-7'>
             <div className='col-span-4'>
               <BarGraph
-                trainings={allTrainings.map((t: any) => ({
+                trainings={filteredTrainings.map((t: any) => ({
                   name: t.name,
                   date: t.nextDate
                 }))}
@@ -171,7 +182,7 @@ export default async function DynamicPage({ params }: PageProps) {
             </div>
             <div className='col-span-4 md:col-span-3'>
               <RecentSales
-                trainings={allTrainings.map((t: any) => ({
+                trainings={filteredTrainings.map((t: any) => ({
                   name: t.name,
                   lastDate: t.lastDate,
                   required: t.required
@@ -180,8 +191,8 @@ export default async function DynamicPage({ params }: PageProps) {
             </div>
           </div>
 
-          {/* Tabulka školení */}
-          <TrainingsTable trainings={allTrainings} />
+          {/* Tabulka školení - WORKER vidí pouze požadovaná (Pozadovano=TRUE) */}
+          <TrainingsTable trainings={filteredTrainings} />
         </div>
       </PageContainer>
     );
@@ -207,22 +218,21 @@ export default async function DynamicPage({ params }: PageProps) {
 
   // Získej data uživatele včetně informací o školení
   // Middleware garantuje, že session existuje a obsahuje buď code nebo email
-  let user;
+  // IMPORTANT: Použij raw SQL aby se načetly i dynamické sloupce školení (_*Pozadovano, _*DatumPosl, _*DatumPristi)
+  let user: any;
 
   if (session!.user?.cislo) {
     // Uživatel přihlášen kódem
-    user = await prisma.user.findUnique({
-      where: {
-        cislo: session!.user.cislo
-      }
-    });
+    const result = await prisma.$queryRaw<any[]>`
+      SELECT * FROM InspiritCisZam WHERE Cislo = ${session!.user.cislo}
+    `;
+    user = result[0];
   } else if (session!.user?.email) {
     // Uživatel přihlášen emailem
-    user = await prisma.user.findUnique({
-      where: {
-        email: session!.user.email
-      }
-    });
+    const result = await prisma.$queryRaw<any[]>`
+      SELECT * FROM InspiritCisZam WHERE email = ${session!.user.email}
+    `;
+    user = result[0];
   }
 
   if (!user) {

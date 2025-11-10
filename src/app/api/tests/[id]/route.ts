@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { isAdmin, isTrainer } from '@/types/roles';
+import { validateTestAccess } from '@/lib/authorization';
 
 interface RouteParams {
   params: Promise<{
@@ -27,6 +28,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (isNaN(testId)) {
       return NextResponse.json({ error: 'Invalid test ID' }, { status: 400 });
+    }
+
+    // SECURITY: Validate trainer has access to this test
+    try {
+      await validateTestAccess(session, testId);
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: error.message || 'Nedostatečná oprávnění' },
+        { status: 403 }
+      );
     }
 
     const test = await prisma.inspiritTest.findUnique({
@@ -86,40 +97,23 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid test ID' }, { status: 400 });
     }
 
-    // Získej test s informací o školení
+    // SECURITY: Validate trainer has access using centralized helper
+    try {
+      await validateTestAccess(session, testId);
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: error.message || 'Nedostatečná oprávnění' },
+        { status: 403 }
+      );
+    }
+
+    // Získej test pro validaci existence
     const test = await prisma.inspiritTest.findUnique({
-      where: { id: testId },
-      include: {
-        training: true
-      }
+      where: { id: testId }
     });
 
     if (!test) {
       return NextResponse.json({ error: 'Test nenalezen' }, { status: 404 });
-    }
-
-    // Ověř oprávnění
-    let canEdit = false;
-
-    if (isAdmin(session.user.role)) {
-      // Admin může editovat všechny testy
-      canEdit = true;
-    } else if (isTrainer(session.user.role)) {
-      // Trainer může editovat testy svých školení
-      const assignment = await prisma.inspiritTrainingAssignment.findFirst({
-        where: {
-          trainerId: parseInt(session.user.id),
-          trainingId: test.trainingId
-        }
-      });
-      canEdit = !!assignment;
-    }
-
-    if (!canEdit) {
-      return NextResponse.json(
-        { error: 'Nedostatečná oprávnění pro editaci tohoto testu' },
-        { status: 403 }
-      );
     }
 
     const body = await request.json();
@@ -209,40 +203,23 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid test ID' }, { status: 400 });
     }
 
-    // Získej test s informací o školení
+    // SECURITY: Validate trainer has access using centralized helper
+    try {
+      await validateTestAccess(session, testId);
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: error.message || 'Nedostatečná oprávnění' },
+        { status: 403 }
+      );
+    }
+
+    // Validuj existenci testu
     const test = await prisma.inspiritTest.findUnique({
-      where: { id: testId },
-      include: {
-        training: true
-      }
+      where: { id: testId }
     });
 
     if (!test) {
       return NextResponse.json({ error: 'Test nenalezen' }, { status: 404 });
-    }
-
-    // Ověř oprávnění
-    let canDelete = false;
-
-    if (isAdmin(session.user.role)) {
-      // Admin může mazat všechny testy
-      canDelete = true;
-    } else if (isTrainer(session.user.role)) {
-      // Trainer může mazat testy svých školení
-      const assignment = await prisma.inspiritTrainingAssignment.findFirst({
-        where: {
-          trainerId: parseInt(session.user.id),
-          trainingId: test.trainingId
-        }
-      });
-      canDelete = !!assignment;
-    }
-
-    if (!canDelete) {
-      return NextResponse.json(
-        { error: 'Nedostatečná oprávnění pro smazání tohoto testu' },
-        { status: 403 }
-      );
     }
 
     // Smaž test (cascade delete smaže i otázky a pokusy)

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { isTrainer } from '@/types/roles';
+import { isTrainerAssignedToTraining } from '@/lib/authorization';
 
 export async function GET(
   request: NextRequest,
@@ -26,6 +28,20 @@ export async function GET(
         { error: 'Training not found' },
         { status: 404 }
       );
+    }
+
+    // SECURITY: Validate trainer has access to this training
+    if (isTrainer(session.user.role)) {
+      const hasAccess = await isTrainerAssignedToTraining(
+        parseInt(session.user.id),
+        training.id
+      );
+      if (!hasAccess) {
+        return NextResponse.json(
+          { error: 'Nemáte oprávnění k tomuto školení' },
+          { status: 403 }
+        );
+      }
     }
 
     // Check if user has completed this training
