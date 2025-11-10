@@ -8,6 +8,10 @@ import {
   ManualTestAttemptSchema,
   validateRequestBody
 } from '@/lib/validation-schemas';
+import {
+  validateTestAccess,
+  getTrainerAssignedTrainingIds
+} from '@/lib/authorization';
 
 // Function to generate unique certificate number
 function generateCertificateNumber(): string {
@@ -45,6 +49,16 @@ export async function POST(request: NextRequest) {
 
     const { userId, testId, score, passed, notes } = validation.data;
 
+    // SECURITY: Validate trainer has access to this test using centralized helper
+    try {
+      await validateTestAccess(session, testId);
+    } catch (error: any) {
+      return NextResponse.json(
+        { error: error.message || 'Nedostatečná oprávnění' },
+        { status: 403 }
+      );
+    }
+
     // Verify test exists and get training info
     const test = await prisma.inspiritTest.findUnique({
       where: { id: testId },
@@ -66,79 +80,81 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // If trainer, check if they're assigned to this training
-    if (isTrainer(session.user.role)) {
-      const assignment = await prisma.inspiritTrainingAssignment.findFirst({
-        where: {
-          trainerId: parseInt(session.user.id),
-          trainingId: test.trainingId
+    // SECURITY & DATA INTEGRITY: Use transaction to ensure atomic operations
+    // Prevents partial updates if any operation fails (test attempt created but certificate/training dates not updated)
+    const result = await prisma.$transaction(async (tx) => {
+      // Create manual test attempt
+      const testAttempt = await tx.inspiritTestAttempt.create({
+        data: {
+          testId,
+          userId,
+          score,
+          passed,
+          startedAt: new Date(),
+          completedAt: new Date(),
+          answers: JSON.stringify({ manual: true, notes })
         }
       });
 
-      if (!assignment) {
-        return NextResponse.json(
-          {
-            error: 'You are not assigned to this training'
-          },
-          { status: 403 }
-        );
-      }
-    }
+      let certificate = null;
+      let trainingDatesUpdated = false;
 
-    // Create manual test attempt
-    const testAttempt = await prisma.inspiritTestAttempt.create({
-      data: {
-        testId,
-        userId,
-        score,
-        passed,
-        startedAt: new Date(),
-        completedAt: new Date(),
-        answers: JSON.stringify({ manual: true, notes })
+      // If passed, update user's training dates and create certificate
+      if (passed) {
+        const trainingCode = test.training.code;
+
+        // Update user's training completion date
+        // Uses validated function with environment detection and SQL injection protection
+        // DatumPristi is automatically calculated by the database from DatumPosl
+        // TRANSACTION: Pass tx context to ensure atomic operations
+        const updateSuccess = await updateUserTrainingData(
+          userId,
+          trainingCode,
+          new Date(), // DatumPosl - DatumPristi auto-calculated by database
+          undefined, // datumPristi - auto-calculated
+          tx // CRITICAL: Transaction context for atomicity
+        );
+
+        if (!updateSuccess) {
+          throw new Error('Failed to update training dates');
+        }
+
+        trainingDatesUpdated = true;
+
+        // Create certificate
+        certificate = await tx.inspiritCertificate.create({
+          data: {
+            userId,
+            trainingId: test.trainingId,
+            testAttemptId: testAttempt.id,
+            certificateNumber: generateCertificateNumber(),
+            issuedAt: new Date(),
+            validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // +1 year
+            pdfData: null // PDF will be generated separately
+          }
+        });
       }
+
+      return { testAttempt, certificate, trainingDatesUpdated };
     });
 
-    // If passed, update user's training dates and create certificate
-    if (passed) {
-      const trainingCode = test.training.code;
-
-      // Update user's training completion date
-      // Uses validated function with environment detection and SQL injection protection
-      // DatumPristi is automatically calculated by the database from DatumPosl
-      await updateUserTrainingData(
-        userId,
-        trainingCode,
-        new Date() // DatumPosl - DatumPristi auto-calculated by database
-      );
-
-      // Create certificate
-      const certificate = await prisma.inspiritCertificate.create({
-        data: {
-          userId,
-          trainingId: test.trainingId,
-          testAttemptId: testAttempt.id,
-          certificateNumber: generateCertificateNumber(),
-          issuedAt: new Date(),
-          validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // +1 year
-          pdfData: null // PDF will be generated separately
-        }
-      });
-
+    // Return success response based on transaction result
+    if (result.certificate) {
       return NextResponse.json({
         success: true,
         message: 'Manual test result recorded successfully',
         testAttempt: {
-          id: testAttempt.id,
+          id: result.testAttempt.id,
           score,
           passed
         },
         certificate: {
-          id: certificate.id,
-          certificateNumber: certificate.certificateNumber,
-          issuedAt: certificate.issuedAt,
-          validUntil: certificate.validUntil
+          id: result.certificate.id,
+          certificateNumber: result.certificate.certificateNumber,
+          issuedAt: result.certificate.issuedAt,
+          validUntil: result.certificate.validUntil
         },
-        trainingDatesUpdated: true
+        trainingDatesUpdated: result.trainingDatesUpdated
       });
     }
 
@@ -146,11 +162,11 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Manual test result recorded successfully',
       testAttempt: {
-        id: testAttempt.id,
+        id: result.testAttempt.id,
         score,
         passed
       },
-      trainingDatesUpdated: false
+      trainingDatesUpdated: result.trainingDatesUpdated
     });
   } catch (error) {
     return NextResponse.json(
@@ -179,47 +195,49 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
     const trainingId = searchParams.get('trainingId');
+    const testId = searchParams.get('testId');
 
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'userId is required' },
-        { status: 400 }
-      );
-    }
-
-    // Build where clause
+    // Build where clause - userId is now optional
     let whereClause: any = {
-      userId: parseInt(userId),
       answers: {
         contains: '"manual":true'
       }
     };
 
+    // Filter by userId if provided
+    if (userId) {
+      whereClause.userId = parseInt(userId);
+    }
+
+    // Filter by testId if provided
+    if (testId) {
+      whereClause.testId = parseInt(testId);
+    }
+
+    // Filter by trainingId if provided
     if (trainingId) {
-      whereClause = {
-        ...whereClause,
-        test: {
-          trainingId: parseInt(trainingId)
-        }
+      whereClause.test = {
+        trainingId: parseInt(trainingId)
       };
     }
 
-    // If trainer, filter to their assigned trainings
+    // SECURITY: If trainer, filter to their assigned trainings only
     if (isTrainer(session.user.role)) {
-      const assignments = await prisma.inspiritTrainingAssignment.findMany({
-        where: { trainerId: parseInt(session.user.id) },
-        select: { trainingId: true }
-      });
+      const assignedTrainingIds = await getTrainerAssignedTrainingIds(
+        parseInt(session.user.id)
+      );
 
-      const assignedTrainingIds = assignments.map((a) => a.trainingId);
-
-      whereClause = {
-        ...whereClause,
-        test: {
+      // Merge with existing test filter if present
+      if (whereClause.test) {
+        whereClause.test = {
           ...whereClause.test,
           trainingId: { in: assignedTrainingIds }
-        }
-      };
+        };
+      } else {
+        whereClause.test = {
+          trainingId: { in: assignedTrainingIds }
+        };
+      }
     }
 
     const manualAttempts = await prisma.inspiritTestAttempt.findMany({
@@ -228,6 +246,14 @@ export async function GET(request: NextRequest) {
         test: {
           include: {
             training: true
+          }
+        },
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            cislo: true
           }
         },
         certificates: true
@@ -243,6 +269,8 @@ export async function GET(request: NextRequest) {
         testId: attempt.testId,
         testTitle: attempt.test.title,
         trainingName: attempt.test.training.name,
+        userName: `${attempt.user.firstName} ${attempt.user.lastName}`,
+        userCislo: attempt.user.cislo,
         score: attempt.score,
         passed: attempt.passed,
         createdAt: attempt.createdAt,

@@ -109,36 +109,81 @@ export async function detectTrainingColumns(): Promise<TrainingColumn[]> {
 
 /**
  * Synchronize detected trainings with Training table
- * Creates missing Training records with detected codes
+ * - Creates missing Training records with detected codes
+ * - Soft-deletes trainings that no longer have corresponding columns in TabCisZam_EXT
+ * - Restores previously soft-deleted trainings if columns reappear
+ * - Cascades soft-delete to all related entities (tests, questions, attempts, certificates, assignments)
  */
 export async function syncTrainingsWithDatabase(): Promise<{
   created: string[];
   existing: string[];
+  softDeleted: string[];
+  restored: string[];
   errors: string[];
 }> {
   const result = {
     created: [] as string[],
     existing: [] as string[],
+    softDeleted: [] as string[],
+    restored: [] as string[],
     errors: [] as string[]
   };
 
   try {
-    // Get detected training codes from User columns
+    // Get detected training codes from TabCisZam_EXT columns
     const detectedTrainings = await detectTrainingColumns();
-    const detectedCodes = detectedTrainings.map((t) => t.code);
+    const detectedCodes = new Set(detectedTrainings.map((t) => t.code));
 
-    if (detectedCodes.length === 0) {
-      return result;
+    // Get ALL trainings from database (including soft-deleted)
+    const allTrainings = await prisma.inspiritTraining.findMany({
+      select: { code: true, deletedAt: true, id: true }
+    });
+
+    // Process each training in database
+    for (const training of allTrainings) {
+      const hasColumns = detectedCodes.has(training.code);
+      const isDeleted = training.deletedAt !== null;
+
+      if (hasColumns && isDeleted) {
+        // RESTORE: Training was soft-deleted but columns reappeared
+        try {
+          await prisma.inspiritTraining.update({
+            where: { code: training.code },
+            data: { deletedAt: null }
+          });
+          // Also restore all related entities
+          await restoreTrainingCascade(training.id);
+          result.restored.push(training.code);
+          console.log(`[syncTrainings] Restored training: ${training.code}`);
+        } catch (error) {
+          console.error(`[syncTrainings] Error restoring ${training.code}:`, error);
+          result.errors.push(training.code);
+        }
+      } else if (!hasColumns && !isDeleted) {
+        // SOFT DELETE: Training exists in DB but columns are missing
+        try {
+          await prisma.inspiritTraining.update({
+            where: { code: training.code },
+            data: { deletedAt: new Date() }
+          });
+          // Cascade soft-delete to all related entities
+          await softDeleteTrainingCascade(training.id);
+          result.softDeleted.push(training.code);
+          console.log(`[syncTrainings] Soft-deleted orphaned training: ${training.code}`);
+        } catch (error) {
+          console.error(`[syncTrainings] Error soft-deleting ${training.code}:`, error);
+          result.errors.push(training.code);
+        }
+      } else if (hasColumns && !isDeleted) {
+        // EXISTING: Training is active and has columns
+        result.existing.push(training.code);
+      }
+      // Note: If !hasColumns && isDeleted, training is already soft-deleted - no action needed
     }
 
-    // Get existing training codes from database
-    const existingTrainings = await prisma.inspiritTraining.findMany({
-      select: { code: true }
-    });
-    const existingCodes = new Set(existingTrainings.map((t) => t.code));
-
-    // Find missing trainings
-    const missingCodes = detectedCodes.filter(
+    // Find NEW trainings (detected in columns but not in database)
+    const existingCodes = new Set(allTrainings.map((t) => t.code));
+    const missingCodes = Array.from(detectedCodes).filter(
       (code) => !existingCodes.has(code)
     );
 
@@ -153,16 +198,16 @@ export async function syncTrainingsWithDatabase(): Promise<{
           }
         });
         result.created.push(code);
-      } catch {
+        console.log(`[syncTrainings] Created new training: ${code}`);
+      } catch (error) {
+        console.error(`[syncTrainings] Error creating ${code}:`, error);
         result.errors.push(code);
       }
     }
 
-    // Track existing trainings
-    result.existing = detectedCodes.filter((code) => existingCodes.has(code));
-
     return result;
-  } catch {
+  } catch (error) {
+    console.error('[syncTrainings] Fatal error:', error);
     return result;
   }
 }
@@ -235,7 +280,8 @@ export async function updateUserTrainingData(
   userId: number,
   trainingCode: string,
   datumPosl: Date,
-  datumPristi?: Date
+  datumPristi?: Date,
+  prismaClient?: any // Optional: Prisma client or transaction context
 ): Promise<boolean> {
   try {
     // SECURITY: Validate training code against whitelist to prevent SQL injection
@@ -246,14 +292,19 @@ export async function updateUserTrainingData(
       return false;
     }
 
+    // Use provided client (transaction context) or default to global prisma
+    // This allows function to participate in Prisma transactions
+    const client = prismaClient || prisma;
+
     // Column names (with _ prefix in database)
     const columnDatumPosl = `_${trainingCode}DatumPosl`;
     const columnDatumPristi = `_${trainingCode}DatumPristi`;
 
     // Update TabCisZam_EXT directly (more efficient than VIEW)
     // SAFE: trainingCode is validated against whitelist above
+    // TRANSACTION-SAFE: Uses provided client which can be transaction context
     if (datumPristi) {
-      await prisma.$executeRawUnsafe(
+      await client.$executeRawUnsafe(
         `
         UPDATE [TabCisZam_EXT]
         SET
@@ -266,7 +317,7 @@ export async function updateUserTrainingData(
         userId
       );
     } else {
-      await prisma.$executeRawUnsafe(
+      await client.$executeRawUnsafe(
         `
         UPDATE [TabCisZam_EXT]
         SET [${columnDatumPosl}] = @P1
@@ -341,5 +392,111 @@ export async function getAllUserTrainings(userId: number): Promise<
     return userTrainings;
   } catch {
     return [];
+  }
+}
+
+/**
+ * Cascade soft-delete all related entities when a training is soft-deleted
+ * Sets deletedAt timestamp on: tests, questions, test attempts, certificates, assignments
+ */
+async function softDeleteTrainingCascade(trainingId: number): Promise<void> {
+  try {
+    const now = new Date();
+
+    // Get all tests for this training
+    const tests = await prisma.inspiritTest.findMany({
+      where: { trainingId, deletedAt: null },
+      select: { id: true }
+    });
+    const testIds = tests.map((t) => t.id);
+
+    if (testIds.length > 0) {
+      // Soft-delete questions
+      await prisma.inspiritQuestion.updateMany({
+        where: { testId: { in: testIds }, deletedAt: null },
+        data: { deletedAt: now }
+      });
+
+      // Soft-delete test attempts
+      await prisma.inspiritTestAttempt.updateMany({
+        where: { testId: { in: testIds }, deletedAt: null },
+        data: { deletedAt: now }
+      });
+
+      // Soft-delete tests
+      await prisma.inspiritTest.updateMany({
+        where: { id: { in: testIds } },
+        data: { deletedAt: now }
+      });
+    }
+
+    // Soft-delete certificates (legal documents - preserved)
+    await prisma.inspiritCertificate.updateMany({
+      where: { trainingId, deletedAt: null },
+      data: { deletedAt: now }
+    });
+
+    // Soft-delete training assignments
+    await prisma.inspiritTrainingAssignment.updateMany({
+      where: { trainingId, deletedAt: null },
+      data: { deletedAt: now }
+    });
+
+    console.log(`[softDeleteCascade] Soft-deleted all entities for training ${trainingId}`);
+  } catch (error) {
+    console.error(`[softDeleteCascade] Error for training ${trainingId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Cascade restore all related entities when a training is restored
+ * Sets deletedAt = NULL on: tests, questions, test attempts, certificates, assignments
+ */
+async function restoreTrainingCascade(trainingId: number): Promise<void> {
+  try {
+    // Get all tests for this training (including soft-deleted)
+    const tests = await prisma.inspiritTest.findMany({
+      where: { trainingId },
+      select: { id: true }
+    });
+    const testIds = tests.map((t) => t.id);
+
+    if (testIds.length > 0) {
+      // Restore tests
+      await prisma.inspiritTest.updateMany({
+        where: { id: { in: testIds } },
+        data: { deletedAt: null }
+      });
+
+      // Restore questions
+      await prisma.inspiritQuestion.updateMany({
+        where: { testId: { in: testIds } },
+        data: { deletedAt: null }
+      });
+
+      // Restore test attempts
+      await prisma.inspiritTestAttempt.updateMany({
+        where: { testId: { in: testIds } },
+        data: { deletedAt: null }
+      });
+    }
+
+    // Restore certificates
+    await prisma.inspiritCertificate.updateMany({
+      where: { trainingId },
+      data: { deletedAt: null }
+    });
+
+    // Restore training assignments
+    await prisma.inspiritTrainingAssignment.updateMany({
+      where: { trainingId },
+      data: { deletedAt: null }
+    });
+
+    console.log(`[restoreCascade] Restored all entities for training ${trainingId}`);
+  } catch (error) {
+    console.error(`[restoreCascade] Error for training ${trainingId}:`, error);
+    throw error;
   }
 }

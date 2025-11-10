@@ -30,30 +30,47 @@ export function DynamicBreadcrumbs() {
       // Parse the pathname
       const segments = pathname.split('/').filter(Boolean);
 
+      // Special routes that are not trainings
+      const specialRoutes: Record<string, string> = {
+        'trainer': 'Školitel',
+        'admin': 'Administrace',
+        'profil': 'Profil',
+        'login': 'Přihlášení'
+      };
+
       // If we're on a training page
       if (segments.length > 0) {
         const slug = segments[0];
 
-        try {
-          // Fetch training name from API
-          const response = await fetch(`/api/trainings/slug/${slug}`);
-          if (response.ok) {
-            const training = await response.json();
+        // Check if it's a special route first
+        if (specialRoutes[slug]) {
+          breadcrumbs.push({
+            title: specialRoutes[slug],
+            link: `/${slug}`
+          });
+        } else {
+          // It's a training page - fetch from API
+          try {
+            // Fetch training name from API
+            const response = await fetch(`/api/trainings/slug/${slug}`);
+            if (response.ok) {
+              const training = await response.json();
+              breadcrumbs.push({
+                title: training.name,
+                link: `/${slug}`
+              });
+            }
+          } catch (error) {
+            // Fallback to formatted slug if API fails
+            const title = slug
+              .split('-')
+              .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ');
             breadcrumbs.push({
-              title: training.name,
+              title,
               link: `/${slug}`
             });
           }
-        } catch (error) {
-          // Fallback to formatted slug if API fails
-          const title = slug
-            .split('-')
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(' ');
-          breadcrumbs.push({
-            title,
-            link: `/${slug}`
-          });
         }
       }
 

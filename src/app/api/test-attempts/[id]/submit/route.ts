@@ -128,43 +128,61 @@ export async function POST(
     const score = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
     const passed = score >= attempt.test.passingScore;
 
-    // Update test attempt
-    await prisma.inspiritTestAttempt.update({
-      where: { id: attemptId },
-      data: {
-        completedAt: new Date(),
-        score: score,
-        passed: passed,
-        answers: JSON.stringify(answers)
-      }
-    });
-
-    // If passed, generate certificate and update training completion
-    if (passed) {
-      const trainingCode = attempt.test.training.code;
-
-      // Update user's training completion date
-      // Uses validated function with environment detection and SQL injection protection
-      // DatumPristi is automatically calculated by the database from DatumPosl
-      await updateUserTrainingData(
-        parseInt(session.user.id),
-        trainingCode,
-        new Date() // DatumPosl - DatumPristi auto-calculated by database
-      );
-
-      // Create certificate record
-      const certificate = await prisma.inspiritCertificate.create({
+    // SECURITY & DATA INTEGRITY: Use transaction to ensure atomic operations
+    // Prevents partial updates if any operation fails (test updated but training dates/certificate not updated)
+    // PRODUCTION-SAFE: Transactions work with raw SQL ($executeRawUnsafe) for dynamic columns
+    const result = await prisma.$transaction(async (tx) => {
+      // Update test attempt
+      await tx.inspiritTestAttempt.update({
+        where: { id: attemptId },
         data: {
-          userId: parseInt(session.user.id),
-          trainingId: attempt.test.trainingId,
-          testAttemptId: attemptId,
-          certificateNumber: generateCertificateNumber(),
-          issuedAt: new Date(),
-          validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // +1 year
-          pdfData: null // PDF will be generated separately
+          completedAt: new Date(),
+          score: score,
+          passed: passed,
+          answers: JSON.stringify(answers)
         }
       });
 
+      let certificate = null;
+
+      // If passed, generate certificate and update training completion
+      if (passed) {
+        const trainingCode = attempt.test.training.code;
+
+        // Update user's training completion date
+        // Uses validated function with environment detection and SQL injection protection
+        // DatumPristi is automatically calculated by the database from DatumPosl
+        // TRANSACTION: Pass tx context to ensure atomic operations with raw SQL
+        const updateSuccess = await updateUserTrainingData(
+          parseInt(session.user.id),
+          trainingCode,
+          new Date(), // DatumPosl - DatumPristi auto-calculated by database
+          undefined, // datumPristi - auto-calculated
+          tx // CRITICAL: Transaction context for atomicity (works with raw SQL!)
+        );
+
+        if (!updateSuccess) {
+          throw new Error('Failed to update training dates');
+        }
+
+        // Create certificate record
+        certificate = await tx.inspiritCertificate.create({
+          data: {
+            userId: parseInt(session.user.id),
+            trainingId: attempt.test.trainingId,
+            testAttemptId: attemptId,
+            certificateNumber: generateCertificateNumber(),
+            issuedAt: new Date(),
+            validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // +1 year
+            pdfData: null // PDF will be generated separately
+          }
+        });
+      }
+
+      return { certificate };
+    });
+
+    if (result.certificate) {
       return NextResponse.json({
         score: score.toFixed(1),
         passed,
@@ -173,10 +191,10 @@ export async function POST(
         passingScore: attempt.test.passingScore,
         message: 'Gratulujeme! Test jste úspěšně složili.',
         certificate: {
-          id: certificate.id,
-          certificateNumber: certificate.certificateNumber,
-          issuedAt: certificate.issuedAt,
-          validUntil: certificate.validUntil
+          id: result.certificate.id,
+          certificateNumber: result.certificate.certificateNumber,
+          issuedAt: result.certificate.issuedAt,
+          validUntil: result.certificate.validUntil
         }
       });
     }

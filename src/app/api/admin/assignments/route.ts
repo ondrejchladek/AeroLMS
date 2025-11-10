@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isAdmin } from '@/types/roles';
@@ -116,6 +117,11 @@ export async function POST(request: Request) {
       }
     });
 
+    // REAL-TIME UPDATE: Revalidate trainer pages to show new assignment immediately
+    // This ensures trainers see newly assigned trainings without manual refresh
+    revalidatePath('/trainer', 'layout'); // Revalidates all /trainer/* pages including dashboard, prvni-testy, vysledky
+    revalidatePath('/admin/assignments'); // Revalidate admin assignments page
+
     return NextResponse.json({ assignment });
   } catch (error) {
     return NextResponse.json(
@@ -155,6 +161,11 @@ export async function DELETE(request: Request) {
         id: parseInt(assignmentId)
       }
     });
+
+    // REAL-TIME UPDATE: Revalidate trainer pages to remove deleted assignment immediately
+    // This ensures trainers no longer see unassigned trainings without manual refresh
+    revalidatePath('/trainer', 'layout'); // Revalidates all /trainer/* pages including dashboard, prvni-testy, vysledky
+    revalidatePath('/admin/assignments'); // Revalidate admin assignments page
 
     return NextResponse.json({ success: true });
   } catch (error) {
