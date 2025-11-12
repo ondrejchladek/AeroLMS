@@ -311,7 +311,7 @@ export default function DeletedDataClient() {
 
   return (
     <PageContainer scrollable>
-      <div className="space-y-6">
+      <div className="w-full max-w-full min-w-0 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight">
@@ -363,7 +363,7 @@ export default function DeletedDataClient() {
           </Alert>
         )}
 
-        <Card>
+        <Card className="min-w-0 max-w-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Archive className="h-5 w-5" />
@@ -392,20 +392,20 @@ export default function DeletedDataClient() {
               </div>
             ) : (
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Kód</TableHead>
-                    <TableHead>Název</TableHead>
-                    <TableHead>Smazáno</TableHead>
-                    <TableHead className="text-center">Testy</TableHead>
-                    <TableHead className="text-center">Otázky</TableHead>
-                    <TableHead className="text-center">Pokusy</TableHead>
-                    <TableHead className="text-center">Certifikáty</TableHead>
-                    <TableHead className="text-center">Přiřazení</TableHead>
-                    <TableHead className="text-center">Celkem</TableHead>
-                    <TableHead className="text-right">Akce</TableHead>
-                  </TableRow>
-                </TableHeader>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Kód</TableHead>
+                      <TableHead>Název</TableHead>
+                      <TableHead>Smazáno</TableHead>
+                      <TableHead className="text-center">Testy</TableHead>
+                      <TableHead className="text-center">Otázky</TableHead>
+                      <TableHead className="text-center">Pokusy</TableHead>
+                      <TableHead className="text-center">Certifikáty</TableHead>
+                      <TableHead className="text-center">Přiřazení</TableHead>
+                      <TableHead className="text-center">Celkem</TableHead>
+                      <TableHead className="text-right">Akce</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {data.deletedTrainings.map((training) => (
                     <TableRow key={training.id}>
@@ -492,7 +492,7 @@ export default function DeletedDataClient() {
         </Card>
 
         {/* Deleted Tests Section */}
-        <Card>
+        <Card className="min-w-0 max-w-full">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Archive className="h-5 w-5" />
@@ -520,96 +520,96 @@ export default function DeletedDataClient() {
               </div>
             ) : (
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Název testu</TableHead>
-                    <TableHead>Školení</TableHead>
-                    <TableHead>Smazáno</TableHead>
-                    <TableHead className="text-center">Otázky</TableHead>
-                    <TableHead className="text-center">Pokusy</TableHead>
-                    <TableHead className="text-center">Certifikáty</TableHead>
-                    <TableHead className="text-center">Celkem</TableHead>
-                    <TableHead className="text-right">Akce</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.deletedTests.map((test) => (
-                    <TableRow key={test.id}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{test.title}</div>
-                          {test.description && (
-                            <div className="text-xs text-muted-foreground line-clamp-1">
-                              {test.description}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium text-sm">
-                            {test.training.code}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {test.training.name}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-xs text-muted-foreground">
-                          {format(
-                            new Date(test.deletedAt),
-                            'dd. MM. yyyy HH:mm',
-                            { locale: cs }
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline">{test.counts.questions}</Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline">
-                          {test.counts.testAttempts}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline">
-                          {test.counts.certificates}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge>{test.counts.total}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="cursor-pointer"
-                            onClick={() =>
-                              setTestRestoreDialog({ open: true, test })
-                            }
-                          >
-                            <RefreshCcw className="mr-1 h-3 w-3" />
-                            Obnovit
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="cursor-pointer"
-                            onClick={() =>
-                              setTestDeleteDialog({ open: true, test })
-                            }
-                          >
-                            <Trash2 className="mr-1 h-3 w-3" />
-                            Smazat
-                          </Button>
-                        </div>
-                      </TableCell>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Název testu</TableHead>
+                      <TableHead>Školení</TableHead>
+                      <TableHead>Smazáno</TableHead>
+                      <TableHead className="text-center">Otázky</TableHead>
+                      <TableHead className="text-center">Pokusy</TableHead>
+                      <TableHead className="text-center">Certifikáty</TableHead>
+                      <TableHead className="text-center">Celkem</TableHead>
+                      <TableHead className="text-right">Akce</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {data.deletedTests.map((test) => (
+                      <TableRow key={test.id}>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{test.title}</div>
+                            {test.description && (
+                              <div className="text-xs text-muted-foreground line-clamp-1">
+                                {test.description}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium text-sm">
+                              {test.training.code}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {test.training.name}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-xs text-muted-foreground">
+                            {format(
+                              new Date(test.deletedAt),
+                              'dd. MM. yyyy HH:mm',
+                              { locale: cs }
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline">{test.counts.questions}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline">
+                            {test.counts.testAttempts}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline">
+                            {test.counts.certificates}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge>{test.counts.total}</Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="cursor-pointer"
+                              onClick={() =>
+                                setTestRestoreDialog({ open: true, test })
+                              }
+                            >
+                              <RefreshCcw className="mr-1 h-3 w-3" />
+                              Obnovit
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="cursor-pointer"
+                              onClick={() =>
+                                setTestDeleteDialog({ open: true, test })
+                              }
+                            >
+                              <Trash2 className="mr-1 h-3 w-3" />
+                              Smazat
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
             )}
           </CardContent>
         </Card>

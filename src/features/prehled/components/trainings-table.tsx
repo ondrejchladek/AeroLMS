@@ -105,7 +105,7 @@ export function TrainingsTable({ trainings }: TrainingsTableProps) {
   };
 
   return (
-    <div className='bg-card rounded-lg border'>
+    <div className='bg-card rounded-lg border min-w-0 max-w-full'>
       <div className='p-6'>
         <h2 className='mb-4 text-xl font-semibold'>Přehled školení</h2>
         <Table>

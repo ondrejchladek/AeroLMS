@@ -398,7 +398,7 @@ export default function AdminPrehledClient() {
 
   return (
     <PageContainer>
-      <div className='w-full space-y-6'>
+      <div className='w-full max-w-full min-w-0 space-y-6'>
         <div>
           <h1 className='text-3xl font-bold tracking-tight'>Admin přehled</h1>
           <p className='text-muted-foreground'>Správa školení a uživatelů</p>
@@ -575,7 +575,7 @@ export default function AdminPrehledClient() {
         </Card>
 
         {/* Tabulka školení */}
-        <Card>
+        <Card className="min-w-0 max-w-full">
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <BookOpen className='h-5 w-5' />
@@ -659,7 +659,7 @@ export default function AdminPrehledClient() {
         </Card>
 
         {/* Nová obecná tabulka správy uživatelů */}
-        <Card>
+        <Card className="min-w-0 max-w-full">
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <UserCog className='h-5 w-5' />
@@ -738,7 +738,7 @@ export default function AdminPrehledClient() {
         </Card>
 
         {/* Tabulka přiřazení školení pracovníkům */}
-        <Card>
+        <Card className="min-w-0 max-w-full">
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <Users className='h-5 w-5' />
@@ -800,19 +800,18 @@ export default function AdminPrehledClient() {
             </div>
 
             {/* Tabulka uživatelů pro vybrané školení */}
-            <div className='overflow-x-auto'>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Kód</TableHead>
-                    <TableHead>Jméno</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Požadováno</TableHead>
-                    <TableHead>Datum poslední</TableHead>
-                    <TableHead>Datum příští</TableHead>
-                  </TableRow>
-                </TableHeader>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Kód</TableHead>
+                  <TableHead>Jméno</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Požadováno</TableHead>
+                  <TableHead>Datum poslední</TableHead>
+                  <TableHead>Datum příští</TableHead>
+                </TableRow>
+              </TableHeader>
                 <TableBody>
                   {users.filter((u) => u.role === 'WORKER').length === 0 ? (
                     <TableRow>
@@ -901,7 +900,6 @@ export default function AdminPrehledClient() {
                   )}
                 </TableBody>
               </Table>
-            </div>
           </CardContent>
         </Card>
 

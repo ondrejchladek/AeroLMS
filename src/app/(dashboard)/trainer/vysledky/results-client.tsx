@@ -289,7 +289,7 @@ export function ResultsClient() {
 
   return (
     <PageContainer>
-      <div className='space-y-6'>
+      <div className='w-full max-w-full min-w-0 space-y-6'>
         <div>
           <h1 className='text-3xl font-bold tracking-tight'>Výsledky testů</h1>
           <p className='text-muted-foreground'>
@@ -373,7 +373,7 @@ export function ResultsClient() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="min-w-0 max-w-full">
         <CardHeader>
           <CardTitle className='flex items-center justify-between'>
             <div className='flex items-center gap-2'>
@@ -399,8 +399,7 @@ export function ResultsClient() {
               Žádné výsledky k zobrazení
             </div>
           ) : (
-            <div className='rounded-lg border'>
-              <Table>
+            <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Zaměstnanec</TableHead>
@@ -468,7 +467,6 @@ export function ResultsClient() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
           )}
         </CardContent>
       </Card>

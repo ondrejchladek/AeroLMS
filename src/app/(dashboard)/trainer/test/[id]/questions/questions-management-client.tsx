@@ -316,7 +316,7 @@ export default function QuestionsManagementClient({
 
   return (
     <PageContainer>
-      <div className='space-y-6'>
+      <div className='w-full max-w-full min-w-0 space-y-6'>
         {/* Header */}
         <div className='flex items-center justify-between'>
           <div>
@@ -340,7 +340,7 @@ export default function QuestionsManagementClient({
         </div>
 
         {/* Questions table */}
-        <Card>
+        <Card className="min-w-0 max-w-full">
           <CardHeader>
             <CardTitle>Seznam otázek</CardTitle>
             <CardDescription>
@@ -355,104 +355,104 @@ export default function QuestionsManagementClient({
               </div>
             ) : (
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className='w-12'>#</TableHead>
-                    <TableHead>Otázka</TableHead>
-                    <TableHead>Typ</TableHead>
-                    <TableHead>Body</TableHead>
-                    <TableHead>Povinná</TableHead>
-                    <TableHead>Akce</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {questions.map((question, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{index + 1}</TableCell>
-                      <TableCell className='max-w-md truncate'>
-                        {question.question}
-                      </TableCell>
-                      <TableCell>
-                        {getQuestionTypeLabel(question.type)}
-                      </TableCell>
-                      <TableCell>{question.points}</TableCell>
-                      <TableCell>{question.required ? 'Ano' : 'Ne'}</TableCell>
-                      <TableCell>
-                        <TooltipProvider>
-                          <div className='flex gap-1'>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size='sm'
-                                  variant='ghost'
-                                  className='cursor-pointer'
-                                  onClick={() => handleMoveQuestion(index, 'up')}
-                                  disabled={index === 0}
-                                >
-                                  <MoveUp className='h-4 w-4 mr-1' />
-                                  <span>Nahoru</span>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Posunout otázku nahoru</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size='sm'
-                                  variant='ghost'
-                                  className='cursor-pointer'
-                                  onClick={() => handleMoveQuestion(index, 'down')}
-                                  disabled={index === questions.length - 1}
-                                >
-                                  <MoveDown className='h-4 w-4 mr-1' />
-                                  <span>Dolů</span>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Posunout otázku dolů</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size='sm'
-                                  variant='ghost'
-                                  className='cursor-pointer'
-                                  onClick={() => handleEditQuestion(index)}
-                                >
-                                  <Edit className='h-4 w-4 mr-1' />
-                                  <span>Editovat</span>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Upravit otázku</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size='sm'
-                                  variant='ghost'
-                                  className='cursor-pointer'
-                                  onClick={() => handleDeleteQuestion(index)}
-                                >
-                                  <Trash2 className='h-4 w-4 text-red-500 mr-1' />
-                                  <span>Smazat</span>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Smazat otázku</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TooltipProvider>
-                      </TableCell>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className='w-12'>#</TableHead>
+                      <TableHead>Otázka</TableHead>
+                      <TableHead>Typ</TableHead>
+                      <TableHead>Body</TableHead>
+                      <TableHead>Povinná</TableHead>
+                      <TableHead>Akce</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {questions.map((question, index) => (
+                      <TableRow key={index}>
+                        <TableCell>{index + 1}</TableCell>
+                        <TableCell className='max-w-md truncate'>
+                          {question.question}
+                        </TableCell>
+                        <TableCell>
+                          {getQuestionTypeLabel(question.type)}
+                        </TableCell>
+                        <TableCell>{question.points}</TableCell>
+                        <TableCell>{question.required ? 'Ano' : 'Ne'}</TableCell>
+                        <TableCell>
+                          <TooltipProvider>
+                            <div className='flex gap-1'>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size='sm'
+                                    variant='ghost'
+                                    className='cursor-pointer'
+                                    onClick={() => handleMoveQuestion(index, 'up')}
+                                    disabled={index === 0}
+                                  >
+                                    <MoveUp className='h-4 w-4 mr-1' />
+                                    <span>Nahoru</span>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Posunout otázku nahoru</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size='sm'
+                                    variant='ghost'
+                                    className='cursor-pointer'
+                                    onClick={() => handleMoveQuestion(index, 'down')}
+                                    disabled={index === questions.length - 1}
+                                  >
+                                    <MoveDown className='h-4 w-4 mr-1' />
+                                    <span>Dolů</span>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Posunout otázku dolů</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size='sm'
+                                    variant='ghost'
+                                    className='cursor-pointer'
+                                    onClick={() => handleEditQuestion(index)}
+                                  >
+                                    <Edit className='h-4 w-4 mr-1' />
+                                    <span>Editovat</span>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Upravit otázku</p>
+                                </TooltipContent>
+                              </Tooltip>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size='sm'
+                                    variant='ghost'
+                                    className='cursor-pointer'
+                                    onClick={() => handleDeleteQuestion(index)}
+                                  >
+                                    <Trash2 className='h-4 w-4 text-red-500 mr-1' />
+                                    <span>Smazat</span>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Smazat otázku</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
             )}
           </CardContent>
         </Card>

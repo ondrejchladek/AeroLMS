@@ -193,7 +193,7 @@ export default function AssignmentsClient({
 
   return (
     <PageContainer>
-      <div className='w-full space-y-6'>
+      <div className='w-full max-w-full min-w-0 space-y-6'>
         <div className='flex items-center justify-between'>
           <div>
             <h1 className='text-3xl font-bold tracking-tight'>
@@ -263,7 +263,7 @@ export default function AssignmentsClient({
         </div>
 
         {/* Tabulka přiřazení */}
-        <Card>
+        <Card className="min-w-0 max-w-full">
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <Users className='h-5 w-5' />
@@ -275,15 +275,15 @@ export default function AssignmentsClient({
           </CardHeader>
           <CardContent>
             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Školitel</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Školení</TableHead>
-                  <TableHead>Přiřazeno</TableHead>
-                  <TableHead>Akce</TableHead>
-                </TableRow>
-              </TableHeader>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Školitel</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Školení</TableHead>
+                    <TableHead>Přiřazeno</TableHead>
+                    <TableHead>Akce</TableHead>
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {assignments.length === 0 ? (
                   <TableRow>

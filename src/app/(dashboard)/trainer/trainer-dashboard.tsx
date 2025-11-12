@@ -48,7 +48,7 @@ export default function TrainerDashboard({
 
   return (
     <PageContainer>
-      <div className='w-full space-y-6'>
+      <div className='w-full max-w-full min-w-0 space-y-6'>
         <div>
           <h1 className='text-3xl font-bold tracking-tight'>
             Přehled školitele
@@ -113,7 +113,7 @@ export default function TrainerDashboard({
         </div>
 
         {/* Tabulka přiřazených školení */}
-        <Card>
+        <Card className="min-w-0 max-w-full">
           <CardHeader>
             <CardTitle className='flex items-center gap-2'>
               <BookOpen className='h-5 w-5' />

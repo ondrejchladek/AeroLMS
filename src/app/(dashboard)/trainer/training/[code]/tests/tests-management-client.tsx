@@ -180,7 +180,7 @@ export default function TestsManagementClient({
 
   return (
     <PageContainer>
-      <div className='space-y-6'>
+      <div className='w-full max-w-full min-w-0 space-y-6'>
         {/* Header */}
         <div className='flex items-center justify-between'>
           <div>
@@ -303,7 +303,7 @@ export default function TestsManagementClient({
         </div>
 
         {/* Tests table */}
-        <Card>
+        <Card className="min-w-0 max-w-full">
           <CardHeader>
             <CardTitle>Seznam testů</CardTitle>
             <CardDescription>Všechny testy pro toto školení</CardDescription>
@@ -315,17 +315,17 @@ export default function TestsManagementClient({
               </div>
             ) : (
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Název testu</TableHead>
-                    <TableHead>Úspěšnost</TableHead>
-                    <TableHead>Časový limit</TableHead>
-                    <TableHead>Otázky</TableHead>
-                    <TableHead>Stav</TableHead>
-                    <TableHead>Vytvořeno</TableHead>
-                    <TableHead>Akce</TableHead>
-                  </TableRow>
-                </TableHeader>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Název testu</TableHead>
+                      <TableHead>Úspěšnost</TableHead>
+                      <TableHead>Časový limit</TableHead>
+                      <TableHead>Otázky</TableHead>
+                      <TableHead>Stav</TableHead>
+                      <TableHead>Vytvořeno</TableHead>
+                      <TableHead>Akce</TableHead>
+                    </TableRow>
+                  </TableHeader>
                 <TableBody>
                   {training.tests.map((test: any) => (
                     <TableRow key={test.id}>
