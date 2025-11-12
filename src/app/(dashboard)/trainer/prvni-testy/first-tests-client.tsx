@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import PageContainer from '@/components/layout/page-container';
 import {
   Card,
   CardContent,
@@ -12,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -59,7 +59,6 @@ export function FirstTestsClient() {
   const [selectedTrainingId, setSelectedTrainingId] = useState<string>('');
   const [selectedTestId, setSelectedTestId] = useState<string>('');
   const [score, setScore] = useState<string>('');
-  const [passed, setPassed] = useState(false);
   const [notes, setNotes] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
@@ -116,7 +115,9 @@ export function FirstTestsClient() {
         );
         if (response.ok) {
           const data = await response.json();
-          setTests(data.tests || []);
+          // Filter only active tests for first test entry
+          const activeTests = (data.tests || []).filter((test: any) => test.isActive);
+          setTests(activeTests);
         }
       } catch {
         // Error silently handled via UI state
@@ -140,6 +141,9 @@ export function FirstTestsClient() {
       toast.error('Skóre musí být číslo mezi 0 a 100');
       return;
     }
+
+    // Automatically determine if test was passed based on score
+    const passed = selectedTest ? scoreNum >= selectedTest.passingScore : false;
 
     setIsSubmitting(true);
 
@@ -171,7 +175,6 @@ export function FirstTestsClient() {
       setSelectedTrainingId('');
       setSelectedTestId('');
       setScore('');
-      setPassed(false);
       setNotes('');
     } catch (error: any) {
       toast.error(error.message || 'Nepodařilo se uložit výsledek testu');
@@ -183,13 +186,14 @@ export function FirstTestsClient() {
   const selectedTest = tests.find((t) => t.id === parseInt(selectedTestId));
 
   return (
-    <div className='container mx-auto max-w-4xl p-6'>
-      <div className='mb-6'>
-        <h1 className='mb-2 text-3xl font-bold'>První testy</h1>
-        <p className='text-muted-foreground'>
-          Zadejte výsledky prvních testů absolvovaných osobně se školitelem
-        </p>
-      </div>
+    <PageContainer>
+      <div className='space-y-6'>
+        <div>
+          <h1 className='text-3xl font-bold tracking-tight'>První testy</h1>
+          <p className='text-muted-foreground'>
+            Zadejte výsledky prvních testů absolvovaných osobně se školitelem
+          </p>
+        </div>
 
       <Card>
         <CardHeader>
@@ -304,18 +308,6 @@ export function FirstTestsClient() {
               )}
             </div>
 
-            {/* Passed Checkbox */}
-            <div className='flex items-center space-x-2'>
-              <Checkbox
-                id='passed'
-                checked={passed}
-                onCheckedChange={(checked) => setPassed(checked as boolean)}
-              />
-              <Label htmlFor='passed' className='cursor-pointer font-normal'>
-                Test úspěšně absolvován
-              </Label>
-            </div>
-
             {/* Notes */}
             <div className='space-y-2'>
               <Label htmlFor='notes'>Poznámky (volitelné)</Label>
@@ -329,7 +321,7 @@ export function FirstTestsClient() {
             </div>
 
             {/* Info Alert */}
-            {passed && (
+            {selectedTest && score && parseFloat(score) >= selectedTest.passingScore && (
               <Alert>
                 <CheckCircle className='h-4 w-4' />
                 <AlertDescription>
@@ -349,10 +341,10 @@ export function FirstTestsClient() {
                   setSelectedTrainingId('');
                   setSelectedTestId('');
                   setScore('');
-                  setPassed(false);
                   setNotes('');
                 }}
                 disabled={isSubmitting}
+                className='cursor-pointer'
               >
                 Vymazat formulář
               </Button>
@@ -361,7 +353,7 @@ export function FirstTestsClient() {
                 disabled={
                   isSubmitting || !selectedUserId || !selectedTestId || !score
                 }
-                className='gap-2'
+                className='gap-2 cursor-pointer'
               >
                 <Save className='h-4 w-4' />
                 {isSubmitting ? 'Ukládám...' : 'Uložit výsledek'}
@@ -370,6 +362,7 @@ export function FirstTestsClient() {
           </form>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </PageContainer>
   );
 }

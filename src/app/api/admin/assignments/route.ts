@@ -21,6 +21,9 @@ export async function GET() {
     }
 
     const assignments = await prisma.inspiritTrainingAssignment.findMany({
+      where: {
+        deletedAt: null // Exclude soft-deleted assignments
+      },
       include: {
         trainer: {
           select: {
@@ -76,7 +79,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if assignment already exists
+    // Check if assignment already exists (including soft-deleted)
     const existing = await prisma.inspiritTrainingAssignment.findFirst({
       where: {
         trainerId,
@@ -85,6 +88,39 @@ export async function POST(request: Request) {
     });
 
     if (existing) {
+      // If soft-deleted, restore it instead of creating new
+      if (existing.deletedAt !== null) {
+        const restored = await prisma.inspiritTrainingAssignment.update({
+          where: { id: existing.id },
+          data: { deletedAt: null },
+          include: {
+            trainer: {
+              select: {
+                id: true,
+                cislo: true,
+                firstName: true,
+                lastName: true,
+                email: true
+              }
+            },
+            training: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                description: true
+              }
+            }
+          }
+        });
+
+        // REAL-TIME UPDATE: Revalidate trainer pages
+        revalidatePath('/trainer', 'layout');
+        revalidatePath('/admin/assignments');
+
+        return NextResponse.json({ assignment: restored, restored: true });
+      }
+
       return NextResponse.json(
         { error: 'Assignment already exists' },
         { status: 409 }
@@ -156,9 +192,13 @@ export async function DELETE(request: Request) {
       );
     }
 
-    await prisma.inspiritTrainingAssignment.delete({
+    // Soft delete instead of hard delete
+    await prisma.inspiritTrainingAssignment.update({
       where: {
         id: parseInt(assignmentId)
+      },
+      data: {
+        deletedAt: new Date()
       }
     });
 

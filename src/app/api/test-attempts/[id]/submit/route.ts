@@ -44,14 +44,17 @@ export async function POST(
       include: {
         test: {
           include: {
-            questions: true,
+            questions: {
+              where: { deletedAt: null }, // Only active questions (not soft-deleted)
+              orderBy: { order: 'asc' }
+            },
             training: true
           }
         }
       }
     });
 
-    if (!attempt) {
+    if (!attempt || attempt.deletedAt !== null || attempt.test.deletedAt !== null) {
       return NextResponse.json(
         { error: 'Test attempt not found' },
         { status: 404 }
@@ -79,50 +82,53 @@ export async function POST(
       const userAnswer = answers[question.id];
       if (!userAnswer && question.required) continue;
 
-      const correctAnswer = safeJsonParse(question.correctAnswer);
+      // DEBUG: Log comparison
+      console.log('🔍 DEBUG Question ID:', question.id);
+      console.log('   Question:', question.question.substring(0, 50));
+      console.log('   Type:', question.type);
+      console.log('   Question Points:', question.points);
+      console.log('   User Answer:', userAnswer);
+      console.log('   User Answer Type:', typeof userAnswer);
+      console.log('   Correct Answer (raw):', question.correctAnswer);
 
       if (question.type === 'single') {
-        // Single choice - full points if correct
+        // Single choice - correctAnswer is a plain string, NOT JSON
+        const correctAnswer = question.correctAnswer;
+        console.log('   Correct Answer (string):', correctAnswer);
+        console.log('   Match?:', userAnswer === correctAnswer);
+
         if (userAnswer === correctAnswer) {
           earnedPoints += question.points;
+          console.log(`   ✅ Points awarded: ${question.points}`);
+        } else {
+          console.log(`   ❌ No points awarded`);
         }
       } else if (question.type === 'multiple') {
-        // Multiple choice - partial points for each correct answer
+        // Multiple choice - correctAnswer is JSON array
+        const correctAnswer = safeJsonParse(question.correctAnswer);
+        console.log('   Correct Answer (parsed array):', correctAnswer);
+
+        // DIRECT SCORING: 1 point per correct answer selected
         if (Array.isArray(userAnswer) && Array.isArray(correctAnswer)) {
           const userSet = new Set(userAnswer);
           const correctSet = new Set(correctAnswer);
 
-          // Calculate partial points: each correct selection gets points
-          let correctSelections = 0;
-          let incorrectSelections = 0;
-
-          // Count correct selections
+          // Count how many correct answers the user selected
+          let correctlySelected = 0;
           userSet.forEach((answer) => {
             if (correctSet.has(answer)) {
-              correctSelections++;
-            } else {
-              incorrectSelections++;
+              correctlySelected++;
             }
           });
 
-          // Award partial points based on correct selections
-          // Full points only if all correct and no incorrect selections
-          if (
-            correctSelections === correctAnswer.length &&
-            incorrectSelections === 0
-          ) {
-            earnedPoints += question.points;
-          } else if (correctSelections > 0) {
-            // Partial credit: proportion of correct answers selected
-            const partialScore =
-              (correctSelections / correctAnswer.length) * question.points;
-            // Deduct for wrong selections
-            const penalty = incorrectSelections * 0.25 * question.points;
-            const finalScore = Math.max(0, partialScore - penalty);
-            earnedPoints += Math.round(finalScore * 100) / 100; // Round to 2 decimal places
-          }
+          // Award 1 point for each correctly selected answer
+          earnedPoints += correctlySelected;
+
+          console.log(`   Correctly selected: ${correctlySelected} out of ${correctAnswer.length}`);
+          console.log(`   ✅ Points awarded: ${correctlySelected}`);
         }
       }
+      console.log('---');
     }
 
     const score = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;

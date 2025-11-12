@@ -31,8 +31,11 @@ export default async function TestEditPage({ params }: PageProps) {
   }
 
   // Get test with training info
-  const test = await prisma.inspiritTest.findUnique({
-    where: { id: testId },
+  const test = await prisma.inspiritTest.findFirst({
+    where: {
+      id: testId,
+      deletedAt: null // Exclude soft-deleted tests
+    },
     include: {
       training: {
         select: {
@@ -42,6 +45,7 @@ export default async function TestEditPage({ params }: PageProps) {
         }
       },
       questions: {
+        where: { deletedAt: null }, // Exclude soft-deleted questions
         orderBy: { order: 'asc' }
       }
     }

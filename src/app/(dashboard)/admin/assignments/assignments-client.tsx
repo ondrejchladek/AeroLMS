@@ -37,6 +37,12 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip';
+import {
   Users,
   Plus,
   Trash2,
@@ -197,7 +203,10 @@ export default function AssignmentsClient({
               Přiřazování školení školitelům
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)} className='gap-2'>
+          <Button
+            onClick={() => setDialogOpen(true)}
+            className='gap-2 cursor-pointer'
+          >
             <Plus className='h-4 w-4' />
             Nové přiřazení
           </Button>
@@ -311,14 +320,25 @@ export default function AssignmentsClient({
                       </TableCell>
                       <TableCell>{formatDate(assignment.assignedAt)}</TableCell>
                       <TableCell>
-                        <Button
-                          size='sm'
-                          variant='ghost'
-                          onClick={() => handleDeleteAssignment(assignment.id)}
-                          disabled={loading}
-                        >
-                          <Trash2 className='h-4 w-4' />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size='sm'
+                                variant='ghost'
+                                className='cursor-pointer'
+                                onClick={() => handleDeleteAssignment(assignment.id)}
+                                disabled={loading}
+                              >
+                                <Trash2 className='h-4 w-4 text-red-500 mr-1' />
+                                <span>Smazat</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Smazat přiřazení</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))
@@ -390,10 +410,15 @@ export default function AssignmentsClient({
                   setSelectedTrainer('');
                   setSelectedTraining('');
                 }}
+                className='cursor-pointer'
               >
                 Zrušit
               </Button>
-              <Button onClick={handleCreateAssignment} disabled={loading}>
+              <Button
+                onClick={handleCreateAssignment}
+                disabled={loading}
+                className='cursor-pointer'
+              >
                 {loading ? 'Ukládání...' : 'Přiřadit'}
               </Button>
             </DialogFooter>

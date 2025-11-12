@@ -25,16 +25,17 @@ export default async function TestsManagementPage({ params }: PageProps) {
 
   const { code } = await params;
 
-  // Get training with tests
+  // Get training with tests (only active tests for trainers)
   const training = await prisma.inspiritTraining.findUnique({
     where: { code: code },
     include: {
       tests: {
+        where: { deletedAt: null }, // Only show active tests (not soft-deleted)
         include: {
           _count: {
             select: {
-              questions: true,
-              testAttempts: true
+              questions: { where: { deletedAt: null } },
+              testAttempts: { where: { deletedAt: null } }
             }
           }
         },
@@ -54,7 +55,8 @@ export default async function TestsManagementPage({ params }: PageProps) {
     const assignment = await prisma.inspiritTrainingAssignment.findFirst({
       where: {
         trainerId: parseInt(session.user.id),
-        trainingId: training.id
+        trainingId: training.id,
+        deletedAt: null // Exclude soft-deleted assignments
       }
     });
 

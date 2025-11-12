@@ -40,10 +40,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const test = await prisma.inspiritTest.findUnique({
-      where: { id: testId },
+    const test = await prisma.inspiritTest.findFirst({
+      where: {
+        id: testId,
+        deletedAt: null // Only active tests
+      },
       include: {
         questions: {
+          where: { deletedAt: null }, // Only active questions
           orderBy: { order: 'asc' }
         },
         training: {
@@ -107,13 +111,16 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Získej test pro validaci existence
-    const test = await prisma.inspiritTest.findUnique({
-      where: { id: testId }
+    // Získej test pro validaci existence (pouze aktivní)
+    const test = await prisma.inspiritTest.findFirst({
+      where: {
+        id: testId,
+        deletedAt: null // Only active tests can be edited
+      }
     });
 
     if (!test) {
-      return NextResponse.json({ error: 'Test nenalezen' }, { status: 404 });
+      return NextResponse.json({ error: 'Test nenalezen nebo byl smazán' }, { status: 404 });
     }
 
     const body = await request.json();
@@ -122,6 +129,19 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Aktualizuj test a otázky v transakci
     const updatedTest = await prisma.$transaction(async (tx) => {
+      // BUSINESS RULE: Only one active test per training
+      // When activating a test, deactivate all other tests for the same training
+      if (isActive === true) {
+        await tx.inspiritTest.updateMany({
+          where: {
+            trainingId: test.trainingId,
+            id: { not: testId },
+            deletedAt: null
+          },
+          data: { isActive: false }
+        });
+      }
+
       // Aktualizuj test
       await tx.inspiritTest.update({
         where: { id: testId },
@@ -184,7 +204,51 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * Cascade soft-delete all related entities when a test is soft-deleted
+ * Sets deletedAt timestamp on: questions, test attempts, certificates
+ * @param testId - ID of test to soft-delete
+ */
+async function softDeleteTestCascade(testId: number): Promise<void> {
+  try {
+    const now = new Date();
+
+    // Soft-delete questions
+    await prisma.inspiritQuestion.updateMany({
+      where: { testId, deletedAt: null },
+      data: { deletedAt: now }
+    });
+
+    // Soft-delete test attempts
+    await prisma.inspiritTestAttempt.updateMany({
+      where: { testId, deletedAt: null },
+      data: { deletedAt: now }
+    });
+
+    // Soft-delete certificates related to this test's attempts
+    // Note: Certificates are legal documents, so they're preserved even when soft-deleted
+    const testAttempts = await prisma.inspiritTestAttempt.findMany({
+      where: { testId },
+      select: { id: true }
+    });
+    const attemptIds = testAttempts.map((a) => a.id);
+
+    if (attemptIds.length > 0) {
+      await prisma.inspiritCertificate.updateMany({
+        where: { testAttemptId: { in: attemptIds }, deletedAt: null },
+        data: { deletedAt: now }
+      });
+    }
+
+    console.log(`[softDeleteTestCascade] Soft-deleted all entities for test ${testId}`);
+  } catch (error) {
+    console.error(`[softDeleteTestCascade] Error for test ${testId}:`, error);
+    throw error;
+  }
+}
+
 // DELETE - Smazání testu (pouze admin nebo přiřazený trainer)
+// Uses SOFT DELETE to preserve data integrity and legal documents (certificates)
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
@@ -213,7 +277,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Validuj existenci testu
+    // Validuj existenci testu (včetně již soft-deleted)
     const test = await prisma.inspiritTest.findUnique({
       where: { id: testId }
     });
@@ -222,9 +286,23 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Test nenalezen' }, { status: 404 });
     }
 
-    // Smaž test (cascade delete smaže i otázky a pokusy)
-    await prisma.inspiritTest.delete({
-      where: { id: testId }
+    if (test.deletedAt) {
+      return NextResponse.json(
+        { error: 'Test již byl smazán' },
+        { status: 400 }
+      );
+    }
+
+    // SOFT DELETE: Use transaction to ensure atomicity
+    await prisma.$transaction(async (tx) => {
+      // Soft-delete the test
+      await tx.inspiritTest.update({
+        where: { id: testId },
+        data: { deletedAt: new Date() }
+      });
+
+      // Cascade soft-delete to all related entities
+      await softDeleteTestCascade(testId);
     });
 
     return NextResponse.json({
@@ -232,6 +310,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       message: 'Test byl smazán'
     });
   } catch (error) {
+    console.error('[DELETE /api/tests/[id]] Error:', error);
     return NextResponse.json(
       { error: 'Chyba při mazání testu' },
       { status: 500 }

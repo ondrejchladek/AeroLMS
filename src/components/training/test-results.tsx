@@ -14,7 +14,8 @@ import {
   RefreshCw,
   Home,
   TrendingUp,
-  Target
+  Target,
+  Download
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -26,6 +27,12 @@ interface TestResultsProps {
     earnedPoints: number;
     passingScore: number;
     message: string;
+    certificate?: {
+      id: number;
+      certificateNumber: string;
+      issuedAt: string;
+      validUntil: string;
+    };
   };
   testTitle: string;
   onRetry?: () => void;
@@ -102,7 +109,7 @@ export function TestResults({
           {/* Score Details */}
           <div className='grid grid-cols-3 gap-4 text-center'>
             <Card>
-              <CardContent className='pt-6'>
+              <CardContent className='pt-3'>
                 <Target className='text-muted-foreground mx-auto mb-2 h-8 w-8' />
                 <div className='text-2xl font-bold'>{results.earnedPoints}</div>
                 <p className='text-muted-foreground text-xs'>Získané body</p>
@@ -110,7 +117,7 @@ export function TestResults({
             </Card>
 
             <Card>
-              <CardContent className='pt-6'>
+              <CardContent className='pt-3'>
                 <TrendingUp className='text-muted-foreground mx-auto mb-2 h-8 w-8' />
                 <div className='text-2xl font-bold'>{results.totalPoints}</div>
                 <p className='text-muted-foreground text-xs'>Celkem bodů</p>
@@ -118,7 +125,7 @@ export function TestResults({
             </Card>
 
             <Card>
-              <CardContent className='pt-6'>
+              <CardContent className='pt-3'>
                 <Award className='text-muted-foreground mx-auto mb-2 h-8 w-8' />
                 <div className='text-2xl font-bold'>
                   {results.passingScore}%
@@ -148,7 +155,7 @@ export function TestResults({
           {/* Actions */}
           <div className='flex flex-col gap-3 sm:flex-row'>
             {!results.passed && onRetry && (
-              <Button onClick={onRetry} variant='default' className='flex-1'>
+              <Button onClick={onRetry} variant='default' className='flex-1 cursor-pointer'>
                 <RefreshCw className='mr-2 h-4 w-4' />
                 Zkusit znovu
               </Button>
@@ -158,7 +165,7 @@ export function TestResults({
               <Button
                 onClick={onBackToTraining}
                 variant={results.passed ? 'default' : 'outline'}
-                className='flex-1'
+                className='flex-1 cursor-pointer'
               >
                 <Home className='mr-2 h-4 w-4' />
                 Zpět na školení
@@ -166,9 +173,9 @@ export function TestResults({
             )}
 
             <Button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/')}
               variant='outline'
-              className='flex-1'
+              className='flex-1 cursor-pointer'
             >
               <Home className='mr-2 h-4 w-4' />
               Na přehled
@@ -179,17 +186,36 @@ export function TestResults({
           {results.passed && (
             <Card className='border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20'>
               <CardContent className='pt-6'>
-                <div className='flex items-start gap-3'>
-                  <CheckCircle className='mt-0.5 h-5 w-5 text-green-600' />
-                  <div className='space-y-1'>
-                    <p className='font-semibold text-green-900 dark:text-green-100'>
-                      Certifikát vystaven
-                    </p>
-                    <p className='text-sm text-green-700 dark:text-green-300'>
-                      Vaše školení bylo úspěšně dokončeno a zaznamenáno v
-                      systému. Platnost školení je 1 rok od dnešního data.
-                    </p>
+                <div className='space-y-4'>
+                  <div className='flex items-start gap-3'>
+                    <CheckCircle className='mt-0.5 h-5 w-5 text-green-600' />
+                    <div className='flex-1 space-y-1'>
+                      <p className='font-semibold text-green-900 dark:text-green-100'>
+                        Certifikát vystaven
+                      </p>
+                      <p className='text-sm text-green-700 dark:text-green-300'>
+                        Vaše školení bylo úspěšně dokončeno a zaznamenáno v
+                        systému. Platnost školení je 1 rok od dnešního data.
+                      </p>
+                      {results.certificate && (
+                        <p className='text-sm font-mono text-green-600 dark:text-green-400'>
+                          Číslo certifikátu: {results.certificate.certificateNumber}
+                        </p>
+                      )}
+                    </div>
                   </div>
+                  {results.certificate && (
+                    <Button
+                      onClick={() => {
+                        window.open(`/api/certificates/${results.certificate!.id}/pdf`, '_blank');
+                      }}
+                      variant='outline'
+                      className='w-full cursor-pointer border-green-300 hover:bg-green-100 dark:border-green-700 dark:hover:bg-green-900/20'
+                    >
+                      <Download className='mr-2 h-4 w-4' />
+                      Stáhnout certifikát (PDF)
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -197,7 +223,7 @@ export function TestResults({
 
           {!results.passed && (
             <Card className='border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/20'>
-              <CardContent className='pt-6'>
+              <CardContent className='pt-0'>
                 <div className='flex items-start gap-3'>
                   <AlertTriangle className='mt-0.5 h-5 w-5 text-yellow-600' />
                   <div className='space-y-1'>

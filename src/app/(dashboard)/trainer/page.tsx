@@ -26,6 +26,9 @@ export default async function TrainerPage() {
       training: {
         include: {
           tests: {
+            where: {
+              deletedAt: null // Exclude soft-deleted tests
+            },
             select: {
               id: true,
               title: true,

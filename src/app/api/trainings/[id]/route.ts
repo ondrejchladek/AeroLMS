@@ -59,6 +59,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       where: { id: trainingId },
       include: {
         tests: {
+          where: { deletedAt: null }, // Exclude soft-deleted tests
           select: {
             id: true,
             title: true,

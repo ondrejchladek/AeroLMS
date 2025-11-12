@@ -25,16 +25,34 @@ export async function GET() {
     }
 
     // Načíst uživatele - školitelé vidí pouze zaměstnance
-    const whereClause = isTrainer(session.user.role)
-      ? { role: ROLES.WORKER }
-      : {};
+    // IMPORTANT: Use raw SQL to get dynamic training columns (_*Pozadovano, _*DatumPosl, _*DatumPristi)
+    let rawUsers: any[];
 
-    const users = await prisma.user.findMany({
-      where: whereClause,
-      orderBy: {
-        cislo: 'asc'
-      }
-    });
+    if (isTrainer(session.user.role)) {
+      // Školitelé vidí pouze WORKER
+      rawUsers = await prisma.$queryRaw<any[]>`
+        SELECT * FROM InspiritCisZam
+        WHERE role = ${ROLES.WORKER}
+        ORDER BY Cislo ASC
+      `;
+    } else {
+      // Admins vidí všechny uživatele
+      rawUsers = await prisma.$queryRaw<any[]>`
+        SELECT * FROM InspiritCisZam
+        ORDER BY Cislo ASC
+      `;
+    }
+
+    // Transform to match expected field names (Czech DB columns -> English JS names)
+    const users = rawUsers.map((user) => ({
+      ...user,
+      id: user.ID,
+      cislo: user.Cislo,
+      firstName: user.Jmeno,
+      lastName: user.Prijmeni,
+      email: user.email,
+      role: user.role
+    }));
 
     return NextResponse.json({
       users,

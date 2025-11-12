@@ -94,7 +94,7 @@ export default function TrainingEditClient({
               Upravte název a obsah školení
             </p>
           </div>
-          <Button variant='outline' asChild>
+          <Button variant='outline' asChild className='cursor-pointer'>
             <Link href='/trainer'>
               <ArrowLeft className='mr-2 h-4 w-4' />
               Zpět na přehled

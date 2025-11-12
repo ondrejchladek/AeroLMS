@@ -73,6 +73,11 @@ export function TrainingClient({
   const [attemptId, setAttemptId] = useState<number | null>(null);
   const [testResults, setTestResults] = useState<any>(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [testEligibility, setTestEligibility] = useState<{
+    canStart: boolean;
+    reason: string;
+    message?: string;
+  } | null>(null);
 
   const handleStartTest = async () => {
     if (!training?.id) return;
@@ -155,10 +160,6 @@ export function TrainingClient({
 
       if (results.passed) {
         toast.success('Gratulujeme! Test jste úspěšně složili.');
-        // Reload page to update the training data
-        setTimeout(() => {
-          window.location.reload();
-        }, 3000);
       } else {
         toast.error('Test nebyl úspěšný. Zkuste to prosím znovu.');
       }
@@ -173,27 +174,78 @@ export function TrainingClient({
     setAttemptId(null);
     setTest(null);
 
-    // Start new test immediately
+    // Start new test immediately (same logic as handleStartTest)
     if (!training?.id) return;
 
     try {
-      // Fetch test data
-      const testResponse = await fetch(`/api/trainings/${training.id}/test`);
-      if (!testResponse.ok) throw new Error('Failed to fetch test');
-      const testData = await testResponse.json();
-      setTest(testData);
+      // First fetch available tests
+      const testsResponse = await fetch(`/api/trainings/${training.id}/tests`);
+      if (!testsResponse.ok) throw new Error('Failed to fetch tests');
+      const testsData = await testsResponse.json();
 
-      // Start test attempt
+      if (!testsData.tests || testsData.tests.length === 0) {
+        toast.error('Pro toto školení není k dispozici žádný test');
+        return;
+      }
+
+      // Get the first (and only for WORKER) active test
+      const activeTest = testsData.tests[0];
+
+      // Try to start test attempt
       const startResponse = await fetch(
         `/api/trainings/${training.id}/test/start`,
         {
-          method: 'POST'
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ testId: activeTest.id })
         }
       );
-      if (!startResponse.ok) throw new Error('Failed to start test');
-      const { attemptId } = await startResponse.json();
-      setAttemptId(attemptId);
 
+      const startData = await startResponse.json();
+
+      if (!startResponse.ok) {
+        // Handle specific error codes
+        if (startData.errorCode === 'FIRST_TEST_REQUIRED') {
+          toast.error(startData.error, {
+            duration: 5000,
+            description:
+              'Kontaktujte svého školitele pro absolvování prvního testu.'
+          });
+          return;
+        } else if (startData.errorCode === 'TOO_EARLY_TO_RETAKE') {
+          toast.error(startData.error, {
+            duration: 5000,
+            description: `Můžete opakovat test od: ${new Date(startData.nextAllowedDate).toLocaleDateString('cs-CZ')}`
+          });
+          return;
+        } else if (startData.errorCode === 'MAX_ATTEMPTS_REACHED') {
+          toast.error(startData.error, {
+            duration: 5000,
+            description: 'Kontaktujte svého školitele pro další pokus.'
+          });
+
+          // Fetch fresh eligibility from server to update button state
+          if (training?.id && userRole === 'WORKER') {
+            try {
+              const eligRes = await fetch(
+                `/api/trainings/${training.id}/test/check-eligibility`
+              );
+              const eligData = await eligRes.json();
+              setTestEligibility(eligData);
+            } catch {
+              setTestEligibility(null);
+            }
+          }
+
+          // Return to overview with updated eligibility (button will show "Kontaktujte školitele")
+          setViewMode('overview');
+          return;
+        }
+        throw new Error(startData.error || 'Failed to start test');
+      }
+
+      setTest(activeTest);
+      setAttemptId(startData.attemptId);
       setViewMode('test');
       toast.success('Test byl úspěšně spuštěn znovu');
     } catch {
@@ -201,11 +253,30 @@ export function TrainingClient({
     }
   };
 
-  const handleBackToOverview = () => {
-    setViewMode('overview');
-    setTestResults(null);
-    setAttemptId(null);
-    setTest(null);
+  const handleBackToOverview = async () => {
+    // If user passed the test, reload page to show updated training data
+    if (testResults?.passed) {
+      window.location.reload();
+    } else {
+      // Refresh eligibility BEFORE switching view (eligibility may have changed after failed test)
+      if (training?.id && userRole === 'WORKER') {
+        try {
+          const res = await fetch(
+            `/api/trainings/${training.id}/test/check-eligibility`
+          );
+          const data = await res.json();
+          setTestEligibility(data);
+        } catch {
+          setTestEligibility(null);
+        }
+      }
+
+      // Now switch to overview with updated eligibility
+      setViewMode('overview');
+      setTestResults(null);
+      setAttemptId(null);
+      setTest(null);
+    }
   };
 
   const handleDownloadPdf = async () => {
@@ -267,6 +338,16 @@ export function TrainingClient({
     }
   }, [trainingData.datumPristi]);
 
+  // Fetch test eligibility from server
+  useEffect(() => {
+    if (training?.id && viewMode === 'overview' && userRole === 'WORKER') {
+      fetch(`/api/trainings/${training.id}/test/check-eligibility`)
+        .then((res) => res.json())
+        .then((data) => setTestEligibility(data))
+        .catch(() => setTestEligibility(null));
+    }
+  }, [training?.id, viewMode, userRole]);
+
   // Test mode
   if (viewMode === 'test' && test && attemptId) {
     return (
@@ -299,7 +380,7 @@ export function TrainingClient({
         <Button
           variant='outline'
           onClick={() => router.push('/')}
-          className='gap-2'
+          className='cursor-pointer gap-2'
         >
           <ArrowLeft className='h-4 w-4' />
           Zpět na přehled
@@ -474,11 +555,21 @@ export function TrainingClient({
             className='cursor-pointer gap-2 px-8 py-6 text-base'
           >
             <FileText className='h-6 w-6' />
-            {!canStartTest() && userRole === 'WORKER'
-              ? isCompleted
-                ? 'Test zatím nedostupný'
-                : 'První test osobně'
-              : 'Spustit test'}
+            {userRole === 'WORKER' && testEligibility
+              ? testEligibility.reason === 'max_attempts'
+                ? 'Kontaktujte školitele'
+                : testEligibility.reason === 'first_test'
+                  ? 'První test osobně'
+                  : testEligibility.reason === 'too_early'
+                    ? 'Test zatím nedostupný'
+                    : testEligibility.reason === 'no_test'
+                      ? 'Test není dostupný'
+                      : 'Spustit test'
+              : !canStartTest() && userRole === 'WORKER'
+                ? isCompleted
+                  ? 'Test zatím nedostupný'
+                  : 'První test osobně'
+                : 'Spustit test'}
           </Button>
         </div>
       )}

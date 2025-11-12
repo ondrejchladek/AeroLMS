@@ -23,11 +23,60 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { trainingId } = body;
+    const { trainingId, testId } = body;
 
+    // Restore test if testId provided
+    if (testId) {
+      if (typeof testId !== 'number') {
+        return NextResponse.json(
+          { error: 'Neplatné testId' },
+          { status: 400 }
+        );
+      }
+
+      // Check if test exists and is soft-deleted
+      const test = await prisma.inspiritTest.findUnique({
+        where: { id: testId },
+        select: { id: true, title: true, deletedAt: true, training: { select: { code: true, name: true } } }
+      });
+
+      if (!test) {
+        return NextResponse.json(
+          { error: 'Test nenalezen' },
+          { status: 404 }
+        );
+      }
+
+      if (!test.deletedAt) {
+        return NextResponse.json(
+          { error: 'Test není smazaný' },
+          { status: 400 }
+        );
+      }
+
+      // Restore test
+      await prisma.inspiritTest.update({
+        where: { id: testId },
+        data: { deletedAt: null }
+      });
+
+      // Cascade restore all related entities
+      await restoreTestCascade(testId);
+
+      return NextResponse.json({
+        success: true,
+        message: `Test "${test.title}" (${test.training.code}) byl obnoven`,
+        test: {
+          id: test.id,
+          title: test.title
+        }
+      });
+    }
+
+    // Restore training if trainingId provided
     if (!trainingId || typeof trainingId !== 'number') {
       return NextResponse.json(
-        { error: 'Chybí nebo neplatné trainingId' },
+        { error: 'Chybí nebo neplatné trainingId nebo testId' },
         { status: 400 }
       );
     }
@@ -76,6 +125,45 @@ export async function POST(request: NextRequest) {
       { error: 'Chyba při obnovování školení' },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * Cascade restore all related entities when a test is restored
+ * Sets deletedAt = NULL on: questions, test attempts, certificates
+ */
+async function restoreTestCascade(testId: number): Promise<void> {
+  try {
+    // Restore questions
+    await prisma.inspiritQuestion.updateMany({
+      where: { testId },
+      data: { deletedAt: null }
+    });
+
+    // Restore test attempts
+    await prisma.inspiritTestAttempt.updateMany({
+      where: { testId },
+      data: { deletedAt: null }
+    });
+
+    // Restore certificates related to this test's attempts
+    const testAttempts = await prisma.inspiritTestAttempt.findMany({
+      where: { testId },
+      select: { id: true }
+    });
+    const attemptIds = testAttempts.map((a) => a.id);
+
+    if (attemptIds.length > 0) {
+      await prisma.inspiritCertificate.updateMany({
+        where: { testAttemptId: { in: attemptIds } },
+        data: { deletedAt: null }
+      });
+    }
+
+    console.log(`[restoreTestCascade] Restored all entities for test ${testId}`);
+  } catch (error) {
+    console.error(`[restoreTestCascade] Error for test ${testId}:`, error);
+    throw error;
   }
 }
 

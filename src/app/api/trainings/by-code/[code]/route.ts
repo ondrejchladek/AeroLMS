@@ -19,7 +19,10 @@ export async function GET(
     const training = await prisma.inspiritTraining.findUnique({
       where: { code },
       include: {
-        tests: true
+        tests: {
+          where: { deletedAt: null }, // Exclude soft-deleted tests
+          orderBy: { createdAt: 'asc' }
+        }
       }
     });
 
@@ -49,9 +52,11 @@ export async function GET(
       where: {
         userId: parseInt(session.user.id),
         test: {
-          trainingId: training.id
+          trainingId: training.id,
+          deletedAt: null // Exclude soft-deleted tests
         },
-        passed: true
+        passed: true,
+        deletedAt: null // Exclude soft-deleted attempts
       },
       orderBy: {
         completedAt: 'desc'

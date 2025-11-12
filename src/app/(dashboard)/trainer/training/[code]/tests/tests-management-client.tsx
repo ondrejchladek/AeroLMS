@@ -34,6 +34,12 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip';
+import {
   ArrowLeft,
   Plus,
   Edit,
@@ -185,7 +191,7 @@ export default function TestsManagementClient({
             </p>
           </div>
           <div className='flex gap-2'>
-            <Button variant='outline' asChild>
+            <Button variant='outline' asChild className='cursor-pointer'>
               <Link href='/trainer'>
                 <ArrowLeft className='mr-2 h-4 w-4' />
                 Zpět na přehled
@@ -193,7 +199,7 @@ export default function TestsManagementClient({
             </Button>
             <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
               <DialogTrigger asChild>
-                <Button>
+                <Button className='cursor-pointer'>
                   <Plus className='mr-2 h-4 w-4' />
                   Nový test
                 </Button>
@@ -272,12 +278,14 @@ export default function TestsManagementClient({
                     variant='outline'
                     onClick={() => setIsCreateOpen(false)}
                     disabled={isCreating}
+                    className='cursor-pointer'
                   >
                     Zrušit
                   </Button>
                   <Button
                     onClick={handleCreateTest}
                     disabled={isCreating || !newTest.title}
+                    className='cursor-pointer'
                   >
                     {isCreating ? (
                       <>
@@ -310,11 +318,9 @@ export default function TestsManagementClient({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Název testu</TableHead>
-                    <TableHead>Popis</TableHead>
                     <TableHead>Úspěšnost</TableHead>
                     <TableHead>Časový limit</TableHead>
                     <TableHead>Otázky</TableHead>
-                    <TableHead>Pokusy</TableHead>
                     <TableHead>Stav</TableHead>
                     <TableHead>Vytvořeno</TableHead>
                     <TableHead>Akce</TableHead>
@@ -326,7 +332,6 @@ export default function TestsManagementClient({
                       <TableCell className='font-medium'>
                         {test.title}
                       </TableCell>
-                      <TableCell>{test.description || '-'}</TableCell>
                       <TableCell>{test.passingScore}%</TableCell>
                       <TableCell>
                         {test.timeLimit
@@ -338,7 +343,6 @@ export default function TestsManagementClient({
                           {test._count.questions}
                         </Badge>
                       </TableCell>
-                      <TableCell>{test._count.testAttempts}</TableCell>
                       <TableCell>
                         <Switch
                           checked={test.isActive}
@@ -349,30 +353,74 @@ export default function TestsManagementClient({
                       </TableCell>
                       <TableCell>{formatDate(test.createdAt)}</TableCell>
                       <TableCell>
-                        <div className='flex gap-1'>
-                          <Button size='sm' variant='ghost' asChild>
-                            <Link href={`/trainer/test/${test.id}/edit`}>
-                              <Edit className='h-4 w-4' />
-                            </Link>
-                          </Button>
-                          <Button size='sm' variant='ghost' asChild>
-                            <Link href={`/trainer/test/${test.id}/questions`}>
-                              <FileText className='h-4 w-4' />
-                            </Link>
-                          </Button>
-                          <Button
-                            size='sm'
-                            variant='ghost'
-                            onClick={() => handleDeleteTest(test.id)}
-                            disabled={isDeleting === test.id}
-                          >
-                            {isDeleting === test.id ? (
-                              <Loader2 className='h-4 w-4 animate-spin' />
-                            ) : (
-                              <Trash2 className='h-4 w-4 text-red-500' />
-                            )}
-                          </Button>
-                        </div>
+                        <TooltipProvider>
+                          <div className='flex gap-2'>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size='sm'
+                                  variant='ghost'
+                                  className='cursor-pointer'
+                                  asChild
+                                >
+                                  <Link href={`/trainer/test/${test.id}/edit`}>
+                                    <Edit className='h-4 w-4 mr-1' />
+                                    <span>Editovat</span>
+                                  </Link>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Editovat test</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size='sm'
+                                  variant='ghost'
+                                  className='cursor-pointer'
+                                  asChild
+                                >
+                                  <Link
+                                    href={`/trainer/test/${test.id}/questions`}
+                                  >
+                                    <FileText className='h-4 w-4 mr-1' />
+                                    <span>Otázky</span>
+                                  </Link>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Spravovat otázky</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size='sm'
+                                  variant='ghost'
+                                  className='cursor-pointer'
+                                  onClick={() => handleDeleteTest(test.id)}
+                                  disabled={isDeleting === test.id}
+                                >
+                                  {isDeleting === test.id ? (
+                                    <>
+                                      <Loader2 className='h-4 w-4 animate-spin mr-1' />
+                                      <span>Mazání...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Trash2 className='h-4 w-4 text-red-500 mr-1' />
+                                      <span>Smazat</span>
+                                    </>
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Smazat test</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -392,11 +440,13 @@ export default function TestsManagementClient({
               • Každé školení může mít libovolný počet testů
             </p>
             <p className='text-muted-foreground text-sm'>
-              • Zaměstnanci musí splnit <strong>všechny aktivní testy</strong>{' '}
-              pro dokončení školení
+              • Pro každé školení může být aktivní <strong>pouze JEDEN test</strong>
             </p>
             <p className='text-muted-foreground text-sm'>
-              • Deaktivované testy se nezobrazují zaměstnancům
+              • Zaměstnanci vidí pouze aktivní test
+            </p>
+            <p className='text-muted-foreground text-sm'>
+              • Deaktivované testy slouží jako záloha nebo archiv
             </p>
             <p className='text-muted-foreground text-sm'>
               • Po vytvoření testu nezapomeňte přidat otázky

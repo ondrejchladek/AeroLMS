@@ -48,7 +48,10 @@ export async function getTrainerAssignedTrainingIds(
   trainerId: number
 ): Promise<number[]> {
   const assignments = await prisma.inspiritTrainingAssignment.findMany({
-    where: { trainerId },
+    where: {
+      trainerId,
+      deletedAt: null // Exclude soft-deleted assignments
+    },
     select: { trainingId: true }
   });
 
@@ -67,11 +70,15 @@ export async function getTrainerAssignedTrainingIds(
  */
 export async function getTrainerAssignedTrainings(trainerId: number) {
   const assignments = await prisma.inspiritTrainingAssignment.findMany({
-    where: { trainerId },
+    where: {
+      trainerId,
+      deletedAt: null // Exclude soft-deleted assignments
+    },
     include: {
       training: {
         include: {
           tests: {
+            where: { deletedAt: null }, // Exclude soft-deleted tests
             orderBy: { createdAt: 'desc' }
           }
         }
@@ -109,7 +116,8 @@ export async function isTrainerAssignedToTraining(
     }
   });
 
-  return assignment !== null;
+  // Check if assignment exists AND is not soft-deleted
+  return assignment !== null && assignment.deletedAt === null;
 }
 
 /**
@@ -319,9 +327,13 @@ export async function getTrainingsForUser(
   // Admin gets all trainings
   if (isAdmin(userRole)) {
     return prisma.inspiritTraining.findMany({
+      where: {
+        deletedAt: null // Exclude soft-deleted trainings
+      },
       include: includeTests
         ? {
             tests: {
+              where: { deletedAt: null }, // Exclude soft-deleted tests
               orderBy: { createdAt: 'desc' }
             }
           }
@@ -338,11 +350,13 @@ export async function getTrainingsForUser(
 
     return prisma.inspiritTraining.findMany({
       where: {
-        id: { in: trainingIds }
+        id: { in: trainingIds },
+        deletedAt: null // Exclude soft-deleted trainings
       },
       include: includeTests
         ? {
             tests: {
+              where: { deletedAt: null }, // Exclude soft-deleted tests
               orderBy: { createdAt: 'desc' }
             }
           }

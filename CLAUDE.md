@@ -426,6 +426,14 @@ The system uses a **hybrid database pattern** combining existing Helios ERP tabl
    - Uses `CREATE OR ALTER VIEW` (preserves existing view, no data loss)
    - INSTEAD OF triggers handle INSERT/UPDATE operations
    - Routes auth data to InspiritUserAuth, preserves Helios data
+   - **⚠️ CRITICAL - Dynamic Training Columns:**
+     - VIEW **OBSAHUJE** všechny dynamické sloupce školení (_CMMPozadovano, _EDMPozadovano, _ITBezpecnostPozadovano, atd.)
+     - NICMÉNĚ tyto sloupce **NEJSOU v Prisma schema** (záměrně!)
+     - **Důvod**: Prisma ORM neumí pracovat s dynamickými sloupci načítanými podle patternu názvu
+     - **Proto**: K training sloupcům přistupujeme POUZE přes raw SQL (`$queryRawUnsafe`, `$executeRawUnsafe`)
+     - **Chyba**: `prisma.user.findUnique()` vrátí `undefined` pro training sloupce (nejsou v schema)
+     - **Správně**: Použij funkce z `lib/training-sync.ts` (getUserTrainingData, updateUserTrainingData)
+     - **Example problém**: `user._ITBezpecnostPozadovano` z Prisma = `undefined`, ale sloupec v DB existuje!
 
 5. **Prisma User Model** (JavaScript alias, not database SYNONYM)
    - Prisma model `User` maps to `InspiritCisZam` VIEW in schema

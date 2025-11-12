@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ import {
   HelpCircle
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 interface Question {
   id: number;
@@ -44,13 +45,18 @@ interface TestFormProps {
   onSubmit: (data: any) => Promise<void>;
 }
 
-export function TestForm({ test, onSubmit }: TestFormProps) {
+export function TestForm({ test, attemptId, onSubmit }: TestFormProps) {
+  const router = useRouter();
   const { data: session } = useSession();
   const [answers, setAnswers] = useState<Record<number, any>>({});
   const [timeLeft, setTimeLeft] = useState(
     test.timeLimit ? test.timeLimit * 60 : null
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [testCompleted, setTestCompleted] = useState(false);
+
+  // Ref for synchronous navigation check (prevents double alert)
+  const allowNavigationRef = useRef(false);
 
   const handleSubmit = useCallback(async () => {
     setIsSubmitting(true);
@@ -58,6 +64,8 @@ export function TestForm({ test, onSubmit }: TestFormProps) {
       await onSubmit({
         answers
       });
+      setTestCompleted(true); // Mark test as successfully completed
+      allowNavigationRef.current = true; // Allow navigation after successful submit
     } catch {
       // Error is handled by parent component
     } finally {
@@ -81,6 +89,84 @@ export function TestForm({ test, onSubmit }: TestFormProps) {
 
     return () => clearInterval(timer);
   }, [timeLeft, handleSubmit]);
+
+  // PROTECTION: Abandon test if user leaves without submitting
+  useEffect(() => {
+    // Warn user before leaving page (browser close/refresh)
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Skip if test completed OR navigation already confirmed via handleClick
+      if (!testCompleted && !allowNavigationRef.current) {
+        e.preventDefault();
+        e.returnValue = ''; // Chrome requires returnValue to be set
+        return 'Test není dokončen. Pokud opustíte stránku, test bude označen jako neúspěšný.';
+      }
+    };
+
+    // Mark test as abandoned on page unload
+    const handlePageHide = () => {
+      // Skip if test completed OR navigation already confirmed via handleClick
+      if (!testCompleted && !allowNavigationRef.current) {
+        // Use fetch with keepalive for reliable request on page unload
+        fetch(`/api/test-attempts/${attemptId}/abandon`, {
+          method: 'POST',
+          keepalive: true, // Ensures request completes even if page unloads
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }).catch(() => {
+          // Silently fail - page is unloading anyway
+        });
+      }
+    };
+
+    // Intercept navigation via links (sidebar, etc.)
+    const handleClick = (e: MouseEvent) => {
+      if (testCompleted) return;
+
+      // Check if clicked element is a link or inside a link
+      const target = e.target as HTMLElement;
+      const link = target.closest('a');
+
+      if (link && link.href && !link.href.startsWith('javascript:')) {
+        // It's a navigation link
+        e.preventDefault();
+        e.stopPropagation();
+
+        const confirmed = window.confirm(
+          'Test není dokončen. Pokud opustíte stránku, test bude automaticky označen jako neúspěšný.\n\nOpravdu chcete odejít?'
+        );
+
+        if (confirmed) {
+          // User confirmed - set flag to prevent beforeunload double alert
+          allowNavigationRef.current = true;
+
+          // Abandon test
+          fetch(`/api/test-attempts/${attemptId}/abandon`, {
+            method: 'POST',
+            keepalive: true,
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }).catch(() => {
+            // Silently fail
+          });
+
+          // Navigate to the link (won't trigger beforeunload because ref is true)
+          window.location.href = link.href;
+        }
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
+    document.addEventListener('click', handleClick, true); // Use capture phase
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
+      document.removeEventListener('click', handleClick, true);
+    };
+  }, [testCompleted, attemptId]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -123,6 +209,11 @@ export function TestForm({ test, onSubmit }: TestFormProps) {
   };
 
   const isFormValid = () => {
+    // Must have at least one question
+    if (test.questions.length === 0) {
+      return false;
+    }
+
     // Check required questions
     const requiredQuestions = test.questions.filter((q) => q.required);
     for (const question of requiredQuestions) {
@@ -136,6 +227,9 @@ export function TestForm({ test, onSubmit }: TestFormProps) {
   };
 
   const renderQuestion = (question: Question) => {
+    // Filter out empty options before rendering
+    const filteredOptions = question.options?.filter((option) => option && option.trim() !== '') || [];
+
     switch (question.type) {
       case 'single':
         return (
@@ -144,7 +238,7 @@ export function TestForm({ test, onSubmit }: TestFormProps) {
             onValueChange={(value) => handleAnswerChange(question.id, value)}
           >
             <div className='space-y-2'>
-              {question.options?.map((option, i) => (
+              {filteredOptions.map((option, i) => (
                 <div key={i} className='flex items-center space-x-2'>
                   <RadioGroupItem value={option} id={`q${question.id}-${i}`} />
                   <Label
@@ -162,7 +256,7 @@ export function TestForm({ test, onSubmit }: TestFormProps) {
       case 'multiple':
         return (
           <div className='space-y-2'>
-            {question.options?.map((option, i) => (
+            {filteredOptions.map((option, i) => (
               <div key={i} className='flex items-center space-x-2'>
                 <Checkbox
                   id={`q${question.id}-${i}`}
@@ -218,6 +312,16 @@ export function TestForm({ test, onSubmit }: TestFormProps) {
           </div>
         </div>
         <Progress value={calculateProgress()} className='mt-4' />
+
+        {/* Warning about leaving test */}
+        <Alert className='mt-4 border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/20'>
+          <AlertTriangle className='h-4 w-4 text-yellow-600' />
+          <AlertDescription className='text-yellow-900 dark:text-yellow-100'>
+            <strong>Upozornění:</strong> Neopouštějte tuto stránku během testu.
+            Pokud zavřete prohlížeč nebo refreshnete stránku před dokončením,
+            test bude automaticky označen jako neúspěšný.
+          </AlertDescription>
+        </Alert>
       </div>
 
       {/* Content */}
@@ -288,12 +392,9 @@ export function TestForm({ test, onSubmit }: TestFormProps) {
                   <div className='flex items-center gap-2'>
                     {question.required}
                     <Badge variant='secondary' className='text-xs'>
-                      {question.points}{' '}
                       {question.points === 1
-                        ? 'bod'
-                        : question.points < 5
-                          ? 'body'
-                          : 'bodů'}
+                        ? 'Jedna správná odpověď'
+                        : 'Více správných odpovědí'}
                     </Badge>
                   </div>
                 </div>
@@ -325,7 +426,7 @@ export function TestForm({ test, onSubmit }: TestFormProps) {
                   size='lg'
                   onClick={handleSubmit}
                   disabled={!isFormValid() || isSubmitting}
-                  className='gap-2'
+                  className='cursor-pointer gap-2'
                 >
                   {isSubmitting ? (
                     <>Odesílám...</>

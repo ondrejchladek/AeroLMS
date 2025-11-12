@@ -80,7 +80,7 @@ export default function TestEditClient({ test }: TestEditClientProps) {
               Školení: {test.training.name} ({test.training.code})
             </p>
           </div>
-          <Button variant='outline' asChild>
+          <Button variant='outline' asChild className='cursor-pointer'>
             <Link href={`/trainer/training/${test.training.code}/tests`}>
               <ArrowLeft className='mr-2 h-4 w-4' />
               Zpět na testy
@@ -171,7 +171,7 @@ export default function TestEditClient({ test }: TestEditClientProps) {
 
               {/* Submit buttons */}
               <div className='flex gap-3'>
-                <Button type='submit' disabled={isLoading} className='flex-1'>
+                <Button type='submit' disabled={isLoading} className='flex-1 cursor-pointer'>
                   {isLoading ? (
                     <>
                       <Loader2 className='mr-2 h-4 w-4 animate-spin' />
@@ -191,6 +191,7 @@ export default function TestEditClient({ test }: TestEditClientProps) {
                     router.push(`/trainer/training/${test.training.code}/tests`)
                   }
                   disabled={isLoading}
+                  className='cursor-pointer'
                 >
                   Zrušit
                 </Button>
@@ -208,7 +209,7 @@ export default function TestEditClient({ test }: TestEditClientProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild>
+            <Button asChild className='cursor-pointer'>
               <Link href={`/trainer/test/${test.id}/questions`}>
                 Upravit otázky
               </Link>

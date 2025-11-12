@@ -82,9 +82,72 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // Get soft-deleted tests (where test is deleted but training is NOT deleted)
+    const deletedTests = await prisma.inspiritTest.findMany({
+      where: {
+        deletedAt: { not: null },
+        training: {
+          deletedAt: null // Training is NOT deleted (orphaned tests)
+        }
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        deletedAt: true,
+        training: {
+          select: {
+            id: true,
+            code: true,
+            name: true
+          }
+        },
+        questions: {
+          where: { deletedAt: { not: null } },
+          select: { id: true }
+        },
+        testAttempts: {
+          where: { deletedAt: { not: null } },
+          select: {
+            id: true,
+            certificates: {
+              where: { deletedAt: { not: null } },
+              select: { id: true }
+            }
+          }
+        }
+      },
+      orderBy: { deletedAt: 'desc' }
+    });
+
+    // Format deleted tests with counts
+    const formattedTests = deletedTests.map((test) => {
+      const questionCount = test.questions.length;
+      const attemptCount = test.testAttempts.length;
+      const certificateCount = test.testAttempts.reduce(
+        (sum, attempt) => sum + attempt.certificates.length,
+        0
+      );
+
+      return {
+        id: test.id,
+        title: test.title,
+        description: test.description,
+        deletedAt: test.deletedAt,
+        training: test.training,
+        counts: {
+          questions: questionCount,
+          testAttempts: attemptCount,
+          certificates: certificateCount,
+          total: questionCount + attemptCount + certificateCount
+        }
+      };
+    });
+
     return NextResponse.json({
       deletedTrainings: formattedData,
-      totalCount: formattedData.length
+      deletedTests: formattedTests,
+      totalCount: formattedData.length + formattedTests.length
     });
   } catch (error) {
     console.error('[GET /api/admin/deleted-data] Error:', error);

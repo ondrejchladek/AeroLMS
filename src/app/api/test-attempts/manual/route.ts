@@ -196,13 +196,20 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
     const trainingId = searchParams.get('trainingId');
     const testId = searchParams.get('testId');
+    const includeAll = searchParams.get('includeAll') === 'true'; // New parameter to include all attempts
 
     // Build where clause - userId is now optional
     let whereClause: any = {
-      answers: {
-        contains: '"manual":true'
-      }
+      completedAt: { not: null }, // Only show completed attempts
+      deletedAt: null // Exclude soft-deleted attempts
     };
+
+    // Filter to manual tests only if includeAll is false
+    if (!includeAll) {
+      whereClause.answers = {
+        contains: '"manual":true'
+      };
+    }
 
     // Filter by userId if provided
     if (userId) {
@@ -217,7 +224,13 @@ export async function GET(request: NextRequest) {
     // Filter by trainingId if provided
     if (trainingId) {
       whereClause.test = {
-        trainingId: parseInt(trainingId)
+        trainingId: parseInt(trainingId),
+        deletedAt: null // Exclude soft-deleted tests
+      };
+    } else {
+      // Always exclude soft-deleted tests
+      whereClause.test = {
+        deletedAt: null
       };
     }
 
@@ -227,17 +240,12 @@ export async function GET(request: NextRequest) {
         parseInt(session.user.id)
       );
 
-      // Merge with existing test filter if present
-      if (whereClause.test) {
-        whereClause.test = {
-          ...whereClause.test,
-          trainingId: { in: assignedTrainingIds }
-        };
-      } else {
-        whereClause.test = {
-          trainingId: { in: assignedTrainingIds }
-        };
-      }
+      // Merge with existing test filter
+      whereClause.test = {
+        ...whereClause.test,
+        trainingId: { in: assignedTrainingIds },
+        deletedAt: null // Ensure soft-deleted tests are excluded
+      };
     }
 
     const manualAttempts = await prisma.inspiritTestAttempt.findMany({

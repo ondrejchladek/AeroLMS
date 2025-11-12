@@ -304,7 +304,7 @@ export default function AppSidebar() {
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size='lg'
-                  className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground'
+                  className='data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground cursor-pointer'
                 >
                   {user && (
                     <UserAvatarProfile
@@ -351,7 +351,7 @@ export default function AppSidebar() {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={() => router.push('/profil')}>
+                  <DropdownMenuItem onClick={() => router.push('/profil')} className='cursor-pointer'>
                     <IconUserCircle className='mr-2 h-4 w-4' />
                     Profil uživatele
                   </DropdownMenuItem>
@@ -364,6 +364,7 @@ export default function AppSidebar() {
                     onClick={() =>
                       setTheme(theme === 'dark' ? 'light' : 'dark')
                     }
+                    className='cursor-pointer'
                   >
                     {theme === 'dark' ? (
                       <IconSun className='mr-2 h-4 w-4' />
@@ -378,6 +379,7 @@ export default function AppSidebar() {
 
                 <DropdownMenuItem
                   onClick={() => signOut({ callbackUrl: '/login' })}
+                  className='cursor-pointer'
                 >
                   <IconLogout className='mr-2 h-4 w-4' />
                   Odhlásit

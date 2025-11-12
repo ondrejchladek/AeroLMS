@@ -146,6 +146,7 @@ export function TrainingsTable({ trainings }: TrainingsTableProps) {
                     <Button
                       variant='outline'
                       size='sm'
+                      className='cursor-pointer'
                       onClick={() => router.push(`/${training.slug}`)}
                     >
                       Otevřít

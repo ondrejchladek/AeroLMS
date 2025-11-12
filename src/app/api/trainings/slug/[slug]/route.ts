@@ -18,8 +18,11 @@ export async function GET(
     const { slug } = await context.params;
 
     // First try to find by direct code match
-    const trainingByCode = await prisma.inspiritTraining.findUnique({
-      where: { code: slug.toUpperCase() },
+    const trainingByCode = await prisma.inspiritTraining.findFirst({
+      where: {
+        code: slug.toUpperCase(),
+        deletedAt: null // Exclude soft-deleted trainings
+      },
       select: {
         id: true,
         name: true,
@@ -34,6 +37,9 @@ export async function GET(
 
     // If not found by code, load all trainings and compare slugs
     const allTrainings = await prisma.inspiritTraining.findMany({
+      where: {
+        deletedAt: null // Exclude soft-deleted trainings
+      },
       select: {
         id: true,
         name: true,

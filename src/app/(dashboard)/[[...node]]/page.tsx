@@ -255,10 +255,23 @@ export default async function DynamicPage({ params }: PageProps) {
   };
 
   // Načti detaily školení včetně testů
+  // RBAC: WORKER vidí pouze aktivní testy, ostatní vidí všechny (ale ne smazané)
+  const userRole = user.role || 'WORKER';
+  const testWhereClause =
+    userRole === 'WORKER'
+      ? {
+          deletedAt: null, // Nesmazané testy
+          isActive: true // Pouze aktivní testy
+        }
+      : {
+          deletedAt: null // Nesmazané testy
+        };
+
   const trainingWithTests = await prisma.inspiritTraining.findUnique({
     where: { code: training.code },
     include: {
       tests: {
+        where: testWhereClause,
         select: {
           id: true
         }

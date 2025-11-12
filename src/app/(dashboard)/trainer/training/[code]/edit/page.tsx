@@ -39,7 +39,8 @@ export default async function TrainingEditPage({ params }: PageProps) {
     const assignment = await prisma.inspiritTrainingAssignment.findFirst({
       where: {
         trainerId: parseInt(session.user.id),
-        trainingId: training.id
+        trainingId: training.id,
+        deletedAt: null // Exclude soft-deleted assignments
       }
     });
 

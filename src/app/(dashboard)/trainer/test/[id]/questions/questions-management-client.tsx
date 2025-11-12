@@ -39,6 +39,12 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip';
+import {
   ArrowLeft,
   Plus,
   Edit,
@@ -71,11 +77,25 @@ export default function QuestionsManagementClient({
 }: QuestionsManagementClientProps) {
   const router = useRouter();
   const [questions, setQuestions] = useState<Question[]>(
-    test.questions.map((q: any) => ({
-      ...q,
-      options: q.options ? JSON.parse(q.options) : null,
-      correctAnswer: q.correctAnswer || ''
-    }))
+    test.questions.map((q: any) => {
+      const options = q.options ? JSON.parse(q.options) : null;
+      let correctAnswer = q.correctAnswer || '';
+
+      // Parse correctAnswer if it's a JSON string
+      try {
+        if (typeof correctAnswer === 'string' && correctAnswer.startsWith('[')) {
+          correctAnswer = JSON.parse(correctAnswer);
+        }
+      } catch {
+        // Keep as string if parse fails
+      }
+
+      return {
+        ...q,
+        options,
+        correctAnswer
+      };
+    })
   );
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -143,9 +163,30 @@ export default function QuestionsManagementClient({
 
   const handleEditQuestion = (index: number) => {
     const q = questions[index];
+    const options = q.options || ['', '', '', ''];
+
+    // Convert correctAnswer from option values back to indices for UI
+    let correctAnswerIndices: any = q.correctAnswer;
+    if (q.options) {
+      if (q.type === 'single') {
+        // Find index of the correct option value
+        const optionIndex = options.indexOf(q.correctAnswer);
+        correctAnswerIndices = optionIndex !== -1 ? optionIndex.toString() : '';
+      } else if (q.type === 'multiple') {
+        // Find indices of all correct option values
+        if (Array.isArray(q.correctAnswer)) {
+          correctAnswerIndices = q.correctAnswer
+            .map((val: string) => options.indexOf(val))
+            .filter((idx: number) => idx !== -1)
+            .map((idx: number) => idx.toString());
+        }
+      }
+    }
+
     setCurrentQuestion({
       ...q,
-      options: q.options || ['', '', '', '']
+      options,
+      correctAnswer: correctAnswerIndices
     });
     setEditingIndex(index);
     setIsDialogOpen(true);
@@ -157,11 +198,71 @@ export default function QuestionsManagementClient({
       return;
     }
 
+    // Validate correct answers are selected
+    if (currentQuestion.type === 'single') {
+      if (!currentQuestion.correctAnswer || currentQuestion.correctAnswer === '') {
+        toast.error('Musíte vybrat správnou odpověď');
+        return;
+      }
+    } else if (currentQuestion.type === 'multiple') {
+      if (!Array.isArray(currentQuestion.correctAnswer) || currentQuestion.correctAnswer.length === 0) {
+        toast.error('Musíte vybrat alespoň jednu správnou odpověď');
+        return;
+      }
+    }
+
+    // Filter out empty options before saving
+    const filteredOptions = currentQuestion.options
+      ? currentQuestion.options.filter((opt) => opt && opt.trim() !== '')
+      : null;
+
+    // Convert correctAnswer from indices to actual option values
+    let correctAnswerValue: any = currentQuestion.correctAnswer;
+    if (currentQuestion.options && filteredOptions) {
+      if (currentQuestion.type === 'single') {
+        // Convert single index to option value
+        const index = parseInt(currentQuestion.correctAnswer);
+        if (!isNaN(index) && currentQuestion.options[index]) {
+          correctAnswerValue = currentQuestion.options[index];
+        }
+      } else if (currentQuestion.type === 'multiple') {
+        // Convert array of indices to array of option values
+        if (Array.isArray(currentQuestion.correctAnswer)) {
+          correctAnswerValue = currentQuestion.correctAnswer
+            .map((idx: string) => {
+              const index = parseInt(idx);
+              return !isNaN(index) && currentQuestion.options
+                ? currentQuestion.options[index]
+                : null;
+            })
+            .filter((val) => val !== null && val.trim() !== '');
+        }
+      }
+    }
+
+    // AUTO-SET POINTS: Based on number of correct answers
+    let autoPoints = currentQuestion.points;
+    if (currentQuestion.type === 'multiple' && Array.isArray(correctAnswerValue)) {
+      // For multiple choice: 1 point per correct answer
+      autoPoints = correctAnswerValue.length || 1;
+    } else if (currentQuestion.type === 'single') {
+      // For single choice: always 1 point
+      autoPoints = 1;
+    }
+
+    const questionToSave = {
+      ...currentQuestion,
+      options: filteredOptions,
+      correctAnswer: correctAnswerValue,
+      points: autoPoints, // Override with auto-calculated points
+      required: true // All questions are always required
+    };
+
     const newQuestions = [...questions];
     if (editingIndex !== null) {
-      newQuestions[editingIndex] = currentQuestion;
+      newQuestions[editingIndex] = questionToSave;
     } else {
-      newQuestions.push(currentQuestion);
+      newQuestions.push(questionToSave);
     }
 
     // Update order
@@ -225,13 +326,13 @@ export default function QuestionsManagementClient({
             </p>
           </div>
           <div className='flex gap-2'>
-            <Button variant='outline' asChild>
+            <Button variant='outline' asChild className='cursor-pointer'>
               <Link href={`/trainer/training/${test.training.code}/tests`}>
                 <ArrowLeft className='mr-2 h-4 w-4' />
                 Zpět na testy
               </Link>
             </Button>
-            <Button onClick={handleAddQuestion}>
+            <Button onClick={handleAddQuestion} className='cursor-pointer'>
               <Plus className='mr-2 h-4 w-4' />
               Nová otázka
             </Button>
@@ -277,38 +378,76 @@ export default function QuestionsManagementClient({
                       <TableCell>{question.points}</TableCell>
                       <TableCell>{question.required ? 'Ano' : 'Ne'}</TableCell>
                       <TableCell>
-                        <div className='flex gap-1'>
-                          <Button
-                            size='sm'
-                            variant='ghost'
-                            onClick={() => handleMoveQuestion(index, 'up')}
-                            disabled={index === 0}
-                          >
-                            <MoveUp className='h-4 w-4' />
-                          </Button>
-                          <Button
-                            size='sm'
-                            variant='ghost'
-                            onClick={() => handleMoveQuestion(index, 'down')}
-                            disabled={index === questions.length - 1}
-                          >
-                            <MoveDown className='h-4 w-4' />
-                          </Button>
-                          <Button
-                            size='sm'
-                            variant='ghost'
-                            onClick={() => handleEditQuestion(index)}
-                          >
-                            <Edit className='h-4 w-4' />
-                          </Button>
-                          <Button
-                            size='sm'
-                            variant='ghost'
-                            onClick={() => handleDeleteQuestion(index)}
-                          >
-                            <Trash2 className='h-4 w-4 text-red-500' />
-                          </Button>
-                        </div>
+                        <TooltipProvider>
+                          <div className='flex gap-1'>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size='sm'
+                                  variant='ghost'
+                                  className='cursor-pointer'
+                                  onClick={() => handleMoveQuestion(index, 'up')}
+                                  disabled={index === 0}
+                                >
+                                  <MoveUp className='h-4 w-4 mr-1' />
+                                  <span>Nahoru</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Posunout otázku nahoru</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size='sm'
+                                  variant='ghost'
+                                  className='cursor-pointer'
+                                  onClick={() => handleMoveQuestion(index, 'down')}
+                                  disabled={index === questions.length - 1}
+                                >
+                                  <MoveDown className='h-4 w-4 mr-1' />
+                                  <span>Dolů</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Posunout otázku dolů</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size='sm'
+                                  variant='ghost'
+                                  className='cursor-pointer'
+                                  onClick={() => handleEditQuestion(index)}
+                                >
+                                  <Edit className='h-4 w-4 mr-1' />
+                                  <span>Editovat</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Upravit otázku</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size='sm'
+                                  variant='ghost'
+                                  className='cursor-pointer'
+                                  onClick={() => handleDeleteQuestion(index)}
+                                >
+                                  <Trash2 className='h-4 w-4 text-red-500 mr-1' />
+                                  <span>Smazat</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Smazat otázku</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -432,42 +571,53 @@ export default function QuestionsManagementClient({
                 </div>
               )}
 
-              <div className='grid grid-cols-2 gap-4'>
-                <div className='grid gap-2'>
-                  <Label htmlFor='points'>Body</Label>
-                  <Input
-                    id='points'
-                    type='number'
-                    min='1'
-                    value={currentQuestion.points}
-                    onChange={(e) =>
-                      setCurrentQuestion({
-                        ...currentQuestion,
-                        points: parseInt(e.target.value) || 1
-                      })
-                    }
-                  />
-                </div>
-                <div className='flex items-center space-x-2'>
-                  <Checkbox
-                    id='required'
-                    checked={currentQuestion.required}
-                    onCheckedChange={(checked) =>
-                      setCurrentQuestion({
-                        ...currentQuestion,
-                        required: !!checked
-                      })
-                    }
-                  />
-                  <Label htmlFor='required'>Povinná otázka</Label>
-                </div>
+              <div className='grid gap-2'>
+                <Label htmlFor='points'>Body za otázku</Label>
+                {currentQuestion.type === 'multiple' ? (
+                  <>
+                    <Input
+                      id='points'
+                      type='number'
+                      value={
+                        Array.isArray(currentQuestion.correctAnswer)
+                          ? currentQuestion.correctAnswer.length
+                          : 0
+                      }
+                      disabled
+                      className='bg-muted'
+                    />
+                    <p className='text-muted-foreground text-xs'>
+                      Automaticky: 1 bod za každou správnou odpověď
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Input
+                      id='points'
+                      type='number'
+                      value={
+                        currentQuestion.correctAnswer && currentQuestion.correctAnswer !== ''
+                          ? 1
+                          : 0
+                      }
+                      disabled
+                      className='bg-muted'
+                    />
+                    <p className='text-muted-foreground text-xs'>
+                      Automaticky: 1 bod za správnou odpověď
+                    </p>
+                  </>
+                )}
+                <p className='text-muted-foreground text-xs mt-2'>
+                  ℹ️ Všechny otázky jsou automaticky povinné
+                </p>
               </div>
             </div>
             <DialogFooter>
-              <Button variant='outline' onClick={() => setIsDialogOpen(false)}>
+              <Button variant='outline' onClick={() => setIsDialogOpen(false)} className='cursor-pointer'>
                 Zrušit
               </Button>
-              <Button onClick={handleSaveQuestion}>
+              <Button onClick={handleSaveQuestion} className='cursor-pointer'>
                 {editingIndex !== null ? 'Uložit změny' : 'Přidat otázku'}
               </Button>
             </DialogFooter>

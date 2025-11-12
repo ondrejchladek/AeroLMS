@@ -19,6 +19,12 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip';
 import { BookOpen, FileText, Edit } from 'lucide-react';
 import Link from 'next/link';
 import { format } from 'date-fns';
@@ -162,24 +168,40 @@ export default function TrainerDashboard({
                       </TableCell>
                       <TableCell>{formatDate(assignment.assignedAt)}</TableCell>
                       <TableCell>
-                        <div className='flex gap-2'>
-                          <Button size='sm' variant='outline' asChild>
-                            <Link
-                              href={`/trainer/training/${assignment.training.code}/edit`}
-                            >
-                              <Edit className='mr-1 h-4 w-4' />
-                              Upravit
-                            </Link>
-                          </Button>
-                          <Button size='sm' variant='outline' asChild>
-                            <Link
-                              href={`/trainer/training/${assignment.training.code}/tests`}
-                            >
-                              <FileText className='mr-1 h-4 w-4' />
-                              Testy
-                            </Link>
-                          </Button>
-                        </div>
+                        <TooltipProvider>
+                          <div className='flex gap-2'>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size='sm' variant='outline' className='cursor-pointer' asChild>
+                                  <Link
+                                    href={`/trainer/training/${assignment.training.code}/edit`}
+                                  >
+                                    <Edit className='mr-1 h-4 w-4' />
+                                    Upravit
+                                  </Link>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Upravit školení</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button size='sm' variant='outline' className='cursor-pointer' asChild>
+                                  <Link
+                                    href={`/trainer/training/${assignment.training.code}/tests`}
+                                  >
+                                    <FileText className='mr-1 h-4 w-4' />
+                                    Testy
+                                  </Link>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Spravovat testy</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))}

@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { DatePickerInput } from '@/components/ui/date-picker-input';
+import { toast } from 'sonner';
 import {
   Table,
   TableBody,
@@ -34,6 +35,12 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger
+} from '@/components/ui/tooltip';
 import {
   Popover,
   PopoverContent,
@@ -101,11 +108,7 @@ interface EditingUser {
 
 interface GeneralUserEdit {
   id: number;
-  cislo: number | null;
-  firstName: string;
-  lastName: string;
   email: string;
-  alias: string;
   role: string;
 }
 
@@ -120,10 +123,8 @@ export default function AdminPrehledClient() {
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<EditingUser | null>(null);
   const [savingUser, setSavingUser] = useState<number | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [selectedTraining, setSelectedTraining] = useState<string>('');
   const [openCombobox, setOpenCombobox] = useState(false);
   const [trainingDisplayNames, setTrainingDisplayNames] = useState<
@@ -148,7 +149,6 @@ export default function AdminPrehledClient() {
 
   const fetchData = async () => {
     setLoading(true);
-    setError(null);
     try {
       // Načíst školení z databáze (admin request)
       const trainingsResponse = await fetch('/api/trainings?admin=true');
@@ -175,7 +175,7 @@ export default function AdminPrehledClient() {
       const usersData = await usersResponse.json();
       setUsers(usersData.users || []);
     } catch (error) {
-      setError(
+      toast.error(
         error instanceof Error ? error.message : 'Chyba při načítání dat'
       );
     } finally {
@@ -183,66 +183,50 @@ export default function AdminPrehledClient() {
     }
   };
 
-  const handleEditUser = (
-    user: User,
+  // Pomocná funkce pro refresh pouze uživatelů (po auto-save)
+  const refreshUsers = async () => {
+    try {
+      const usersResponse = await fetch('/api/users');
+      if (!usersResponse.ok) throw new Error('Nepodařilo se načíst uživatele');
+      const usersData = await usersResponse.json();
+      setUsers(usersData.users || []);
+    } catch (error) {
+      console.error('Error refreshing users:', error);
+    }
+  };
+
+  const handleAutoSave = async (
+    userId: number,
     training: string,
     field: string,
     value: any
   ) => {
-    const fieldName = `${training}${field}`;
-
-    // Pokud ještě není v režimu editace, inicializuj editingUser
-    if (!editingUser || editingUser.id !== user.id) {
-      setEditingUser({
-        id: user.id,
-        changes: {
-          [fieldName]: value
-        }
-      });
-    } else {
-      // Už je v režimu editace, aktualizuj změny
-      setEditingUser({
-        ...editingUser,
-        changes: {
-          ...editingUser.changes,
-          [fieldName]: value
-        }
-      });
-    }
-  };
-
-  const handleSaveUser = async (userId: number) => {
-    if (!editingUser || editingUser.id !== userId) return;
+    const fieldName = `_${training}${field}`;
 
     setSavingUser(userId);
-    setError(null);
-    setSuccess(null);
 
     try {
+      const payload = { [fieldName]: value };
+
       const response = await fetch(`/api/users/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingUser.changes)
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
+        const errorData = await response.json();
         throw new Error('Nepodařilo se uložit změny');
       }
 
-      await response.json();
+      // Refresh uživatelů z databáze (aby se načetly computed fields jako DatumPristi)
+      await refreshUsers();
 
-      // Aktualizovat lokální data - pouze pro konkrétního uživatele
-      setUsers((prevUsers) =>
-        prevUsers.map((u) =>
-          u.UserID === userId ? { ...u, ...editingUser.changes } : u
-        )
+      toast.success('Změny byly úspěšně uloženy');
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Nepodařilo se uložit změny'
       );
-
-      setEditingUser(null);
-      setSuccess('Změny byly úspěšně uloženy');
-      setTimeout(() => setSuccess(null), 3000);
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Chyba při ukládání');
     } finally {
       setSavingUser(null);
     }
@@ -262,8 +246,6 @@ export default function AdminPrehledClient() {
     if (!trainingEdit) return;
 
     setSavingTraining(true);
-    setError(null);
-    setSuccess(null);
 
     try {
       const response = await fetch(`/api/trainings/${trainingEdit.id}`, {
@@ -302,10 +284,9 @@ export default function AdminPrehledClient() {
 
       setIsTrainingEditDialogOpen(false);
       setTrainingEdit(null);
-      setSuccess('Školení bylo úspěšně aktualizováno');
-      setTimeout(() => setSuccess(null), 3000);
+      toast.success('Školení bylo úspěšně aktualizováno');
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Chyba při ukládání');
+      toast.error(error instanceof Error ? error.message : 'Chyba při ukládání');
     } finally {
       setSavingTraining(false);
     }
@@ -314,11 +295,7 @@ export default function AdminPrehledClient() {
   const handleOpenGeneralEditDialog = (user: User) => {
     setGeneralUserEdit({
       id: user.id,
-      cislo: user.cislo,
-      firstName: user.firstName,
-      lastName: user.lastName,
       email: user.email || '',
-      alias: '', // Prázdné heslo = nebude změněno
       role: user.role
     });
     setIsEditDialogOpen(true);
@@ -328,22 +305,12 @@ export default function AdminPrehledClient() {
     if (!generalUserEdit) return;
 
     setSavingGeneralUser(true);
-    setError(null);
-    setSuccess(null);
 
     try {
-      const updateData: any = {
-        cislo: generalUserEdit.cislo,
-        firstName: generalUserEdit.firstName,
-        lastName: generalUserEdit.lastName,
+      const updateData = {
         email: generalUserEdit.email,
         role: generalUserEdit.role
       };
-
-      // Pouze pokud je vyplněno heslo, přidej ho do update
-      if (generalUserEdit.alias && generalUserEdit.alias.trim() !== '') {
-        updateData.alias = generalUserEdit.alias;
-      }
 
       const response = await fetch(`/api/users/${generalUserEdit.id}`, {
         method: 'PATCH',
@@ -361,9 +328,6 @@ export default function AdminPrehledClient() {
           u.id === generalUserEdit.id
             ? {
               ...u,
-              cislo: generalUserEdit.cislo,
-              firstName: generalUserEdit.firstName,
-              lastName: generalUserEdit.lastName,
               email: generalUserEdit.email,
               role: generalUserEdit.role
             }
@@ -373,10 +337,9 @@ export default function AdminPrehledClient() {
 
       setIsEditDialogOpen(false);
       setGeneralUserEdit(null);
-      setSuccess('Uživatel byl úspěšně aktualizován');
-      setTimeout(() => setSuccess(null), 3000);
+      toast.success('Uživatel byl úspěšně aktualizován');
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Chyba při ukládání');
+      toast.error(error instanceof Error ? error.message : 'Chyba při ukládání');
     } finally {
       setSavingGeneralUser(false);
     }
@@ -441,20 +404,6 @@ export default function AdminPrehledClient() {
           <p className='text-muted-foreground'>Správa školení a uživatelů</p>
         </div>
 
-        {error && (
-          <Alert variant='destructive'>
-            <AlertCircle className='h-4 w-4' />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {success && (
-          <Alert>
-            <CheckCircle className='h-4 w-4' />
-            <AlertDescription>{success}</AlertDescription>
-          </Alert>
-        )}
-
         {/* Synchronizace školení */}
         <Card>
           <CardHeader>
@@ -480,7 +429,7 @@ export default function AdminPrehledClient() {
               <Button
                 onClick={handleSync}
                 disabled={isSyncing}
-                className='flex items-center gap-2'
+                className='flex items-center gap-2 cursor-pointer'
               >
                 {isSyncing ? (
                   <>
@@ -682,14 +631,24 @@ export default function AdminPrehledClient() {
                       <TableCell>{formatDate(training.createdAt)}</TableCell>
                       <TableCell>{formatDate(training.updatedAt)}</TableCell>
                       <TableCell>
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          onClick={() => handleOpenTrainingEditDialog(training)}
-                          className='cursor-pointer'
-                        >
-                          <Edit className='h-4 w-4' />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size='sm'
+                                variant='outline'
+                                onClick={() => handleOpenTrainingEditDialog(training)}
+                                className='cursor-pointer'
+                              >
+                                <Edit className='h-4 w-4 mr-1' />
+                                <span>Editovat</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Editovat školení</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))
@@ -707,7 +666,7 @@ export default function AdminPrehledClient() {
               Správa uživatelů
             </CardTitle>
             <CardDescription>
-              Správa základních údajů uživatelů - kód, jméno, email, heslo, role
+              Správa základních údajů uživatelů - kód, jméno, email, role
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -717,7 +676,6 @@ export default function AdminPrehledClient() {
                   <TableHead>Kód</TableHead>
                   <TableHead>Jméno</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Heslo</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Akce</TableHead>
                 </TableRow>
@@ -726,7 +684,7 @@ export default function AdminPrehledClient() {
                 {users.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={5}
                       className='text-muted-foreground text-center'
                     >
                       Žádní uživatelé
@@ -738,9 +696,6 @@ export default function AdminPrehledClient() {
                       <TableCell className='font-mono'>{user.cislo}</TableCell>
                       <TableCell className='font-medium'>{`${user.firstName} ${user.lastName}`}</TableCell>
                       <TableCell>{user.email || '-'}</TableCell>
-                      <TableCell className='text-muted-foreground font-mono'>
-                        ••••••••
-                      </TableCell>
                       <TableCell>
                         <Badge
                           variant={
@@ -755,14 +710,24 @@ export default function AdminPrehledClient() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          onClick={() => handleOpenGeneralEditDialog(user)}
-                          className='cursor-pointer'
-                        >
-                          <Edit className='h-4 w-4' />
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size='sm'
+                                variant='outline'
+                                onClick={() => handleOpenGeneralEditDialog(user)}
+                                className='cursor-pointer'
+                              >
+                                <Edit className='h-4 w-4 mr-1' />
+                                <span>Editovat</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Editovat uživatele</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))
@@ -846,14 +811,13 @@ export default function AdminPrehledClient() {
                     <TableHead>Požadováno</TableHead>
                     <TableHead>Datum poslední</TableHead>
                     <TableHead>Datum příští</TableHead>
-                    <TableHead>Akce</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.filter((u) => u.role === 'WORKER').length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={8}
+                        colSpan={7}
                         className='text-muted-foreground text-center'
                       >
                         Žádní pracovníci
@@ -863,30 +827,12 @@ export default function AdminPrehledClient() {
                     users
                       .filter((u) => u.role === 'WORKER')
                       .map((user) => {
-                        const isEditing = editingUser?.id === user.id;
                         const training = selectedTraining;
 
                         // Získat hodnoty pro vybrané školení
-                        const pozadovano =
-                          isEditing &&
-                            editingUser &&
-                            `${training}Pozadovano` in editingUser.changes
-                            ? editingUser.changes[`${training}Pozadovano`]
-                            : user[`${training}Pozadovano`];
-
-                        const datumPosl =
-                          isEditing &&
-                            editingUser &&
-                            `${training}DatumPosl` in editingUser.changes
-                            ? editingUser.changes[`${training}DatumPosl`]
-                            : user[`${training}DatumPosl`];
-
-                        const datumPristi =
-                          isEditing &&
-                            editingUser &&
-                            `${training}DatumPristi` in editingUser.changes
-                            ? editingUser.changes[`${training}DatumPristi`]
-                            : user[`${training}DatumPristi`];
+                        const pozadovano = user[`_${training}Pozadovano`];
+                        const datumPosl = user[`_${training}DatumPosl`];
+                        const datumPristi = user[`_${training}DatumPristi`];
 
                         return (
                           <TableRow key={user.id}>
@@ -914,13 +860,14 @@ export default function AdminPrehledClient() {
                               <Checkbox
                                 checked={Boolean(pozadovano)}
                                 onCheckedChange={(checked) =>
-                                  handleEditUser(
-                                    user,
+                                  handleAutoSave(
+                                    user.id,
                                     training,
                                     'Pozadovano',
                                     checked
                                   )
                                 }
+                                disabled={savingUser === user.id}
                                 className='cursor-pointer'
                               />
                             </TableCell>
@@ -928,8 +875,8 @@ export default function AdminPrehledClient() {
                               <DatePickerInput
                                 value={datumPosl}
                                 onChange={(date) =>
-                                  handleEditUser(
-                                    user,
+                                  handleAutoSave(
+                                    user.id,
                                     training,
                                     'DatumPosl',
                                     date
@@ -948,44 +895,6 @@ export default function AdminPrehledClient() {
                                 <span className='ml-1 text-xs'>(počítáno)</span>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              {isEditing ? (
-                                <div className='flex gap-2'>
-                                  <Button
-                                    size='sm'
-                                    onClick={() => handleSaveUser(user.id)}
-                                    disabled={savingUser === user.id}
-                                    className='cursor-pointer'
-                                  >
-                                    {savingUser === user.id ? (
-                                      'Ukládání...'
-                                    ) : (
-                                      <Save className='h-4 w-4' />
-                                    )}
-                                  </Button>
-                                  <Button
-                                    size='sm'
-                                    variant='outline'
-                                    onClick={() => setEditingUser(null)}
-                                    disabled={savingUser === user.id}
-                                    className='cursor-pointer'
-                                  >
-                                    <X className='h-4 w-4' />
-                                  </Button>
-                                </div>
-                              ) : (
-                                <Button
-                                  size='sm'
-                                  variant='outline'
-                                  onClick={() =>
-                                    setEditingUser({ id: user.id, changes: {} })
-                                  }
-                                  className='cursor-pointer'
-                                >
-                                  <Edit className='h-4 w-4' />
-                                </Button>
-                              )}
-                            </TableCell>
                           </TableRow>
                         );
                       })
@@ -1002,61 +911,11 @@ export default function AdminPrehledClient() {
             <DialogHeader>
               <DialogTitle>Upravit uživatele</DialogTitle>
               <DialogDescription>
-                Upravte základní údaje uživatele. Pokud heslo necháte prázdné,
-                nebude změněno.
+                Upravte email a roli uživatele. Tyto údaje jsou spravovány přes INSTEAD OF trigger na VIEW InspiritCisZam.
               </DialogDescription>
             </DialogHeader>
             {generalUserEdit && (
               <div className='grid gap-4 py-4'>
-                <div className='grid grid-cols-4 items-center gap-4'>
-                  <Label htmlFor='edit-code' className='text-right'>
-                    Kód
-                  </Label>
-                  <Input
-                    id='edit-code'
-                    type='number'
-                    value={generalUserEdit.cislo || ''}
-                    onChange={(e) =>
-                      setGeneralUserEdit({
-                        ...generalUserEdit,
-                        cislo: Number(e.target.value)
-                      })
-                    }
-                    className='col-span-3'
-                  />
-                </div>
-                <div className='grid grid-cols-4 items-center gap-4'>
-                  <Label htmlFor='edit-firstName' className='text-right'>
-                    Křestní jméno
-                  </Label>
-                  <Input
-                    id='edit-firstName'
-                    value={generalUserEdit.firstName}
-                    onChange={(e) =>
-                      setGeneralUserEdit({
-                        ...generalUserEdit,
-                        firstName: e.target.value
-                      })
-                    }
-                    className='col-span-3'
-                  />
-                </div>
-                <div className='grid grid-cols-4 items-center gap-4'>
-                  <Label htmlFor='edit-lastName' className='text-right'>
-                    Příjmení
-                  </Label>
-                  <Input
-                    id='edit-lastName'
-                    value={generalUserEdit.lastName}
-                    onChange={(e) =>
-                      setGeneralUserEdit({
-                        ...generalUserEdit,
-                        lastName: e.target.value
-                      })
-                    }
-                    className='col-span-3'
-                  />
-                </div>
                 <div className='grid grid-cols-4 items-center gap-4'>
                   <Label htmlFor='edit-email' className='text-right'>
                     Email
@@ -1071,24 +930,6 @@ export default function AdminPrehledClient() {
                         email: e.target.value
                       })
                     }
-                    className='col-span-3'
-                  />
-                </div>
-                <div className='grid grid-cols-4 items-center gap-4'>
-                  <Label htmlFor='edit-password' className='text-right'>
-                    Heslo
-                  </Label>
-                  <Input
-                    id='edit-password'
-                    type='password'
-                    value={generalUserEdit.alias}
-                    onChange={(e) =>
-                      setGeneralUserEdit({
-                        ...generalUserEdit,
-                        alias: e.target.value
-                      })
-                    }
-                    placeholder='Ponechte prázdné pro zachování'
                     className='col-span-3'
                   />
                 </div>
@@ -1122,12 +963,14 @@ export default function AdminPrehledClient() {
                 variant='outline'
                 onClick={() => setIsEditDialogOpen(false)}
                 disabled={savingGeneralUser}
+                className='cursor-pointer'
               >
                 Zrušit
               </Button>
               <Button
                 onClick={handleSaveGeneralUser}
                 disabled={savingGeneralUser}
+                className='cursor-pointer'
               >
                 {savingGeneralUser ? 'Ukládání...' : 'Uložit změny'}
               </Button>
@@ -1203,10 +1046,11 @@ export default function AdminPrehledClient() {
                 variant='outline'
                 onClick={() => setIsTrainingEditDialogOpen(false)}
                 disabled={savingTraining}
+                className='cursor-pointer'
               >
                 Zrušit
               </Button>
-              <Button onClick={handleSaveTraining} disabled={savingTraining}>
+              <Button onClick={handleSaveTraining} disabled={savingTraining} className='cursor-pointer'>
                 {savingTraining ? 'Ukládání...' : 'Uložit změny'}
               </Button>
             </DialogFooter>

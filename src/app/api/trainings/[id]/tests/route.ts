@@ -58,15 +58,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       select: { role: true }
     });
 
-    // WORKER sees only active test, others see all tests
+    // WORKER sees only active test, others see all tests (but not soft-deleted)
     const whereClause =
       user?.role === 'WORKER'
         ? {
             trainingId: trainingId,
-            isActive: true
+            isActive: true,
+            deletedAt: null // Never show deleted tests to workers
           }
         : {
-            trainingId: trainingId
+            trainingId: trainingId,
+            deletedAt: null // Only active tests (soft-deleted excluded)
           };
 
     // Získej testy podle role
@@ -74,12 +76,17 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       where: whereClause,
       include: {
         questions: {
+          where: { deletedAt: null }, // Only active questions
           orderBy: { order: 'asc' }
         },
         _count: {
           select: {
-            testAttempts: true,
-            questions: true
+            testAttempts: {
+              where: { deletedAt: null } // Count only active attempts
+            },
+            questions: {
+              where: { deletedAt: null } // Count only active questions
+            }
           }
         }
       },

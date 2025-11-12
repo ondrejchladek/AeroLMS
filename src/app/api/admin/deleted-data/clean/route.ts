@@ -25,10 +25,23 @@ export async function DELETE(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { trainingId, olderThanDays } = body;
+    const { trainingId, testId, olderThanDays } = body;
+
+    // Single test deletion
+    if (testId !== undefined) {
+      if (typeof testId !== 'number') {
+        return NextResponse.json(
+          { error: 'Neplatné testId' },
+          { status: 400 }
+        );
+      }
+
+      const result = await deleteSingleTest(testId);
+      return NextResponse.json(result);
+    }
 
     // Single training deletion
-    if (trainingId) {
+    if (trainingId !== undefined) {
       if (typeof trainingId !== 'number') {
         return NextResponse.json(
           { error: 'Neplatné trainingId' },
@@ -54,7 +67,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Chybí parametr trainingId nebo olderThanDays' },
+      { error: 'Chybí parametr trainingId, testId nebo olderThanDays' },
       { status: 400 }
     );
   } catch (error) {
@@ -67,9 +80,95 @@ export async function DELETE(request: NextRequest) {
 }
 
 /**
+ * Permanently delete a single soft-deleted test
+ */
+async function deleteSingleTest(testId: number): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+  status?: number;
+  test?: {
+    id: number;
+    title: string;
+  };
+  deletedCounts?: {
+    questions: number;
+    testAttempts: number;
+    certificates: number;
+  };
+}> {
+  try {
+    // Check if test exists and is soft-deleted
+    const test = await prisma.inspiritTest.findUnique({
+      where: { id: testId },
+      select: {
+        id: true,
+        title: true,
+        deletedAt: true,
+        training: {
+          select: { code: true, name: true }
+        }
+      }
+    });
+
+    if (!test) {
+      return {
+        success: false,
+        error: 'Test nenalezen',
+        status: 404
+      };
+    }
+
+    if (!test.deletedAt) {
+      return {
+        success: false,
+        error: 'Test není smazaný - nelze trvale odstranit',
+        status: 400
+      };
+    }
+
+    // Get counts before deletion for reporting
+    const counts = await getTestCounts(testId);
+
+    // Hard delete cascade
+    await hardDeleteTestCascade(testId);
+
+    return {
+      success: true,
+      message: `Test "${test.title}" (${test.training.code}) byl trvale smazán`,
+      test: {
+        id: test.id,
+        title: test.title
+      },
+      deletedCounts: counts
+    };
+  } catch (error) {
+    console.error(`[deleteSingleTest] Error for test ${testId}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Permanently delete a single soft-deleted training
  */
-async function deleteSingleTraining(trainingId: number) {
+async function deleteSingleTraining(trainingId: number): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+  status?: number;
+  training?: {
+    id: number;
+    code: string;
+    name: string;
+  };
+  deletedCounts?: {
+    tests: number;
+    questions: number;
+    testAttempts: number;
+    certificates: number;
+    trainingAssignments: number;
+  };
+}> {
   try {
     // Check if training exists and is soft-deleted
     const training = await prisma.inspiritTraining.findUnique({
@@ -276,6 +375,87 @@ async function hardDeleteTrainingCascade(trainingId: number): Promise<void> {
     console.log(`[hardDeleteCascade] Permanently deleted training ${trainingId} and all related data`);
   } catch (error) {
     console.error(`[hardDeleteCascade] Error for training ${trainingId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Get counts of related entities for a test
+ */
+async function getTestCounts(testId: number): Promise<{
+  questions: number;
+  testAttempts: number;
+  certificates: number;
+}> {
+  const questions = await prisma.inspiritQuestion.count({
+    where: { testId, deletedAt: { not: null } }
+  });
+
+  const testAttempts = await prisma.inspiritTestAttempt.count({
+    where: { testId, deletedAt: { not: null } }
+  });
+
+  // Get certificates for this test's attempts
+  const attempts = await prisma.inspiritTestAttempt.findMany({
+    where: { testId, deletedAt: { not: null } },
+    select: { id: true }
+  });
+  const attemptIds = attempts.map((a) => a.id);
+
+  const certificates = attemptIds.length > 0
+    ? await prisma.inspiritCertificate.count({
+        where: {
+          testAttemptId: { in: attemptIds },
+          deletedAt: { not: null }
+        }
+      })
+    : 0;
+
+  return {
+    questions,
+    testAttempts,
+    certificates
+  };
+}
+
+/**
+ * Permanently delete test and all related entities
+ * IRREVERSIBLE - hard delete from database
+ */
+async function hardDeleteTestCascade(testId: number): Promise<void> {
+  try {
+    // Get all test attempts for this test
+    const testAttempts = await prisma.inspiritTestAttempt.findMany({
+      where: { testId },
+      select: { id: true }
+    });
+    const attemptIds = testAttempts.map((a) => a.id);
+
+    if (attemptIds.length > 0) {
+      // Delete certificates first (has FK to testAttempt)
+      await prisma.inspiritCertificate.deleteMany({
+        where: { testAttemptId: { in: attemptIds } }
+      });
+    }
+
+    // Delete test attempts
+    await prisma.inspiritTestAttempt.deleteMany({
+      where: { testId }
+    });
+
+    // Delete questions
+    await prisma.inspiritQuestion.deleteMany({
+      where: { testId }
+    });
+
+    // Finally delete the test itself
+    await prisma.inspiritTest.delete({
+      where: { id: testId }
+    });
+
+    console.log(`[hardDeleteTestCascade] Permanently deleted test ${testId} and all related data`);
+  } catch (error) {
+    console.error(`[hardDeleteTestCascade] Error for test ${testId}:`, error);
     throw error;
   }
 }
