@@ -25,12 +25,15 @@ The system implements three user roles with distinct permissions:
 
 - **TRAINER** 👨‍🏫
   - Edit assigned trainings (name, description, content)
-  - Create and manage tests for assigned trainings
+  - Create and manage tests for assigned trainings (soft delete tests)
   - View training statistics and test results
   - Can override training names from database codes
   - Can manually enter test results for first-time tests
   - View all test variants and activate/deactivate them
   - Manage multiple test variants per training
+  - **CANNOT** create new trainings (auto-synced from database)
+  - **CANNOT** delete trainings (admin only)
+  - **CANNOT** manage unassigned trainings
 
 - **WORKER** 👷
   - View required trainings
@@ -222,30 +225,199 @@ Example computed column in VIEW: `_CMMDatumPristi = DATEADD(month, 24, _CMMDatum
 
 ### Test Configuration
 - **Multiple Test Variants**: Each training can have multiple test variants
-- **Visibility Control**: Workers see only active test, trainers/admins see all
+- **One Active Test Rule**: ⚠️ **ONLY ONE test can be active per training at any time**
+  - Workers see only the active test
+  - Trainers/admins see all test variants (active and inactive)
+  - Trainers can activate/deactivate tests via toggle in test management
+- **Test Ownership**: Tests belong to training, NOT to trainer
+  - Tests have NO `createdBy` field - by design
+  - Removing trainer assignment (`TrainingAssignment`) keeps tests intact
+  - Tests remain in system as part of training content
+- **Soft Delete**: Tests use soft delete system
+  - Deleted tests are marked with `deletedAt` timestamp
+  - Can be restored by admins if needed
+  - Not permanently removed from database
 - **Default Settings**:
   - Passing score: 75%
   - Time limit: 15 minutes (configurable by trainer)
 - **Question Types**:
-  - Single choice
-  - Multiple choice (with partial scoring)
-  - Yes/No
-  - Text (keyword matching or exact match)
+  - Single choice (1 point per question)
+  - Multiple choice (multi-point based on number of correct answers)
+- **Automatic Point Calculation**:
+  - Question points are calculated automatically when creating questions
+  - Single choice: 1 point (always)
+  - Multiple choice: Number of points = number of correct answers
+  - Example: Question with 3 correct answers = 3 points
+  - Trainers cannot manually set points - calculated by system
 
 ### Testing Rules for Workers
-1. **First Test**: Must be taken in person with trainer
-2. **Retake Policy**: Can retake test only 1 month before expiration (DatumPristi)
-3. **Attempt Limit**: Maximum 2 failed attempts, then must take in person
-4. **Scoring System**:
-   - Each question can have multiple correct answers
-   - Partial points for multiple choice questions
-   - Penalty for incorrect selections
-   - Must achieve 75% to pass
+
+**Test Eligibility Logic** (enforced in `/api/trainings/[id]/test/start`):
+
+1. **First Test Rule** (DatumPosl = NULL):
+   - Worker CANNOT take test online if `_{code}DatumPosl` is NULL
+   - First test MUST be taken in person with trainer (manual entry)
+   - Eligibility check returns: `{ eligible: false, reason: "První test musí být absolvován osobně" }`
+
+2. **Retake Window Rule**:
+   - Worker can ONLY retake test 1 month before expiration (`DatumPristi`)
+   - Current date must be >= (DatumPristi - 30 days)
+   - If too early: `{ eligible: false, reason: "Test lze opakovat až měsíc před vypršením platnosti" }`
+
+3. **Attempt Limit Rule** (Max 2 attempts):
+   - Count incomplete attempts since last successful test
+   - Query: `WHERE userId = X AND testId = Y AND completedAt IS NOT NULL AND passed = false`
+   - If attemptCount >= 2: `{ eligible: false, reason: "Překročen limit pokusů" }`
+   - **Counter reset**: After successful test completion (online OR manual entry)
+     - Counter resets to 0 when new `DatumPosl` is written to database
+     - Query counts attempts since `DatumPosl` date
+
+4. **Pre-flight Check Endpoint**:
+   - `GET /api/trainings/[id]/test/check-eligibility` - Check eligibility before showing "Start Test" button
+   - Returns: `{ eligible: boolean, reason: string, attemptCount: number }`
+   - UI disables "Start Test" button if not eligible
+
+5. **Scoring System**:
+   - **Single Choice**: 1 point per question (correctAnswer = plain string)
+   - **Multiple Choice**: 1 point per correct answer selected
+     - Example: 3 correct answers → 3 points max
+     - Partial credit: Select 2/3 correct → 2 points
+     - Incorrect selection penalty: -1 point per wrong answer
+   - **Passing threshold**: 75% (or custom passingScore)
+   - Total score = (earnedPoints / totalPoints) * 100
+
+### One Active Test Rule - Automatic Enforcement
+
+**Implementation** (enforced in `PUT /api/tests/[id]`):
+
+When trainer/admin activates a test (sets `isActive = true`):
+```typescript
+// Automatic deactivation of other tests for same training
+if (isActive) {
+  await prisma.inspiritTest.updateMany({
+    where: {
+      trainingId: test.trainingId,
+      id: { not: testId },
+      isActive: true,
+      deletedAt: null
+    },
+    data: { isActive: false }
+  });
+}
+```
+
+**Business Rule**:
+- ONLY ONE test can be active per training at any time
+- When activating test A → all other tests for same training are automatically deactivated
+- WORKER sees only active test in UI
+- TRAINER/ADMIN sees all tests (can switch active test via toggle)
+
+**Use Case**: Multiple test variants (Test A, Test B, Test C) for same training → only one shown to workers
+
+### Soft Delete System - Cascade Behavior
+
+**Entities with soft delete**:
+- `InspiritTest` (deletedAt)
+- `InspiritQuestion` (deletedAt)
+- `InspiritTestAttempt` (deletedAt)
+- `InspiritCertificate` (deletedAt)
+- `InspiritTrainingAssignment` (deletedAt)
+
+**Cascade Soft Delete Logic** (enforced in `DELETE /api/tests/[id]`):
+
+When deleting a test:
+```typescript
+await prisma.$transaction(async (tx) => {
+  // 1. Soft delete test
+  await tx.inspiritTest.update({
+    where: { id: testId },
+    data: { deletedAt: new Date() }
+  });
+
+  // 2. Cascade to questions
+  await tx.inspiritQuestion.updateMany({
+    where: { testId: testId },
+    data: { deletedAt: new Date() }
+  });
+
+  // 3. Cascade to test attempts
+  await tx.inspiritTestAttempt.updateMany({
+    where: { testId: testId },
+    data: { deletedAt: new Date() }
+  });
+
+  // 4. Cascade to certificates
+  await tx.inspiritCertificate.updateMany({
+    where: { testAttemptId: { in: attemptIds } },
+    data: { deletedAt: new Date() }
+  });
+});
+```
+
+**Admin Recovery**:
+- `GET /api/admin/deleted-data` - List all soft-deleted entities
+- `POST /api/admin/deleted-data/restore` - Restore entity (sets deletedAt = NULL)
+- `DELETE /api/admin/deleted-data/clean` - Permanently delete (hard delete from DB)
+
+**Query Pattern**:
+- Always filter: `WHERE deletedAt IS NULL` for active entities
+- Include deleted: `WHERE deletedAt IS NOT NULL` for recovery UI
+
+### Transaction Atomicity - Critical Operations
+
+**Test Submission** (`POST /api/test-attempts/[id]/submit`):
+```typescript
+await prisma.$transaction(async (tx) => {
+  // 1. Update test attempt (score, passed)
+  await tx.inspiritTestAttempt.update({ ... });
+
+  // 2. Update training dates (using raw SQL)
+  await tx.$executeRawUnsafe(`
+    UPDATE [TabCisZam_EXT]
+    SET [_${trainingCode}DatumPosl] = @p0
+    WHERE [ID] = @p1
+  `, new Date(), userId);
+
+  // 3. Create certificate (if passed)
+  if (passed) {
+    await tx.inspiritCertificate.create({ ... });
+  }
+});
+```
+
+**Manual Test Entry** (`POST /api/test-attempts/manual`):
+```typescript
+await prisma.$transaction(async (tx) => {
+  // 1. Create manual attempt
+  await tx.inspiritTestAttempt.create({ ... });
+
+  // 2. Update training dates (raw SQL in transaction!)
+  await tx.$executeRawUnsafe(`
+    UPDATE [TabCisZam_EXT]
+    SET [_${trainingCode}DatumPosl] = @p0
+    WHERE [ID] = @p1
+  `, datumPosl, userId);
+
+  // 3. Create certificate (if passed)
+  if (passed) {
+    await tx.inspiritCertificate.create({ ... });
+  }
+});
+```
+
+**CRITICAL**: Raw SQL (`$executeRawUnsafe`) WORKS inside Prisma transactions!
+
+**Real-time Revalidation** (after assignments):
+```typescript
+// POST /api/admin/assignments
+await prisma.inspiritTrainingAssignment.create({ ... });
+revalidatePath('/trainer');  // Immediate UI update for trainers
+```
 
 ### Certificate Generation
 - Automatic PDF certificate upon successful test completion
 - Unique certificate number (format: CERT-YYYY-XXXXX)
-- Valid for 1 year from issue date
+- Validity period: 1-2 years from issue date (configurable per training via database VIEW)
 - Stored in database with training and test attempt reference
 
 ## Available MCP Servers
@@ -388,7 +560,7 @@ Components currently in the project:
 ### Authentication Flow
 - NextAuth with JWT strategy using email or personal code + password
 - **Login form**: Single universal field "E-mail / Osobní číslo" + password
-  - Admins/Trainers: Use email (e.g., test@test.cz) + password
+  - Admins/Trainers: Use personal code (e.g., 123456) OR email (e.g., test@test.cz) + password
   - Workers: Use personal code (e.g., 123456) + password
 - System automatically detects if identifier is email or code (by presence of '@')
 - All users must have password in database
@@ -573,7 +745,8 @@ import {
   - `app/login/` - Authentication page with sign-in-view component
 - Admin routes:
   - `/admin/prehled` - Admin dashboard (includes synchronization, user management, training management)
-  - `/admin/assignments` - Training assignments for workers
+  - `/admin/assignments` - Training assignments management (assign trainers to trainings)
+  - `/admin/smazana-data` - Soft-deleted data management (restore or permanently delete)
 - Trainer routes:
   - `/trainer` - Trainer dashboard (My trainings overview)
   - `/trainer/prvni-testy` - First tests page (Manual test result entry for in-person tests)
@@ -622,37 +795,88 @@ src/features/     # Feature-based modules
 - **Input OTP v1.4**: One-time password inputs
 - **React Day Picker v8**: Date picker component
 
-## API Endpoints - Complete List (16 files)
+## API Endpoints - Complete List (24 routes)
 
-### Training APIs
+### Training APIs (9 routes)
 - **GET /api/trainings** - List trainings (role-based: admin/trainer gets all, workers get their assigned)
-- **GET /api/trainings/[id]/content** - Get training content sections
+  - Query params: `?admin=true` (TRAINER/ADMIN only - get assigned/all trainings)
+  - WORKER: Returns only `Pozadovano = TRUE` trainings
+- **GET /api/trainings/[id]** - Get training detail with authorization check
+  - TRAINER: Checks InspiritTrainingAssignment
+  - Returns: Training object with tests
 - **PUT /api/trainings/[id]** - Update training (name, description, content) - trainer/admin only
+  - Body: UpdateTrainingSchema (Zod validated)
+- **DELETE /api/trainings/[id]** - Soft delete training (admin only)
+  - Cascade soft delete: Tests, Questions, TestAttempts, Certificates
+- **GET /api/trainings/[id]/content** - Get training content sections
+- **GET /api/trainings/[id]/pdf** - Generate and download training content as PDF
 - **GET /api/trainings/[id]/tests** - Get all tests for a training (multiple test support)
+  - WORKER: Only active tests (isActive = true)
+  - TRAINER/ADMIN: All tests (including inactive)
 - **POST /api/trainings/[id]/tests** - Create new test for training (trainer/admin only)
+  - Body: CreateTestSchema (Zod validated, max 100 questions)
+  - Auto-calculates points per question
+- **GET /api/trainings/[id]/test/check-eligibility** - Pre-flight eligibility check
+  - Returns: eligible (boolean), reason (string), attemptCount (number)
 - **POST /api/trainings/[id]/test/start** - Start a new test attempt (with testId in body)
+  - Eligibility checks: First test, max attempts, retake window
+  - Body: { testId: number }
 - **GET /api/trainings/by-code/[code]** - Get training by code
 - **GET /api/trainings/slug/[slug]** - Get training by URL slug
-- **GET /api/trainings/[id]/pdf** - Generate and download training content as PDF
 
-### Test Management
+### Test Management (3 routes)
 - **GET /api/tests/[id]** - Get test details with questions
+  - Authorization check via training ownership
 - **PUT /api/tests/[id]** - Update test including questions (trainer/admin only)
-- **DELETE /api/tests/[id]** - Delete test (admin only)
+  - Body: CreateTestSchema (Zod validated)
+  - One-active-test rule: Deactivates other tests if isActive = true
+  - Auto-recalculates points
+- **DELETE /api/tests/[id]** - Soft delete test (admin only)
+  - Cascade soft delete: Questions, TestAttempts, Certificates
 
-### Test Attempts
+### Test Attempts (4 routes)
+- **GET /api/test-attempts/[id]** - Get attempt detail
+  - Authorization: Own attempt or TRAINER/ADMIN
 - **POST /api/test-attempts/[id]/submit** - Submit test answers and calculate score
+  - Body: SubmitTestSchema (Zod validated)
+  - Transaction: Update attempt + Update training dates + Create certificate (atomic)
+  - Auto-scoring with partial points for multiple choice
+  - Resets attempt counter on pass
+- **POST /api/test-attempts/[id]/abandon** - Mark test as abandoned
+  - Sets completedAt, passed = false, score = 0
 - **POST /api/test-attempts/manual** - Create manual test attempt (trainers/admins only, for in-person tests)
+  - Body: ManualTestAttemptSchema (Zod validated)
+  - Transaction: Create attempt + Update training dates + Create certificate (atomic)
+  - Resets attempt counter on pass
 - **GET /api/test-attempts/manual** - Get manual test attempts for a user (trainers/admins only)
 
-### User Management
+### User Management (2 routes)
 - **GET /api/users** - List all users (admin only)
+  - Query params: role filter
 - **PATCH /api/users/[userId]** - Update user (admin only, for role assignment)
+  - Training column updates use validated updateUserTrainingData()
 
-### Admin Functions
+### Admin Functions (5 routes)
 - **POST /api/admin/sync-trainings** - Manually sync trainings from User columns to Training table
+- **GET /api/admin/assignments** - List all training assignments
+- **POST /api/admin/assignments** - Create training assignment (assign trainer to training)
+  - Body: { trainerId: number, trainingId: number }
+  - Real-time revalidation: revalidatePath('/trainer')
+- **DELETE /api/admin/assignments** - Remove training assignment
+  - Body: { trainerId: number, trainingId: number }
+  - Real-time revalidation: revalidatePath('/trainer')
+- **GET /api/admin/deleted-data** - List soft-deleted entities
+  - Returns: Tests, Questions, TestAttempts, Certificates, TrainingAssignments
+- **POST /api/admin/deleted-data/restore** - Restore soft-deleted entity
+  - Body: { entityType: string, entityId: number }
+- **DELETE /api/admin/deleted-data/clean** - Permanently delete soft-deleted entity
+  - Body: { entityType: string, entityId: number }
 
-### Data Import (Legacy)
+### Certificate APIs (1 route)
+- **GET /api/certificates/[id]/pdf** - Download certificate PDF
+  - Returns: Base64 PDF data
+
+### Data Import (1 route - Legacy)
 - **POST /api/excel-data** - Import data from Excel (kept for future use)
 
 ## Security & Validation
