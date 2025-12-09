@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TestForm } from '@/components/training/test-form';
 import { TestResults } from '@/components/training/test-results';
+import PdfViewer from '@/components/training/pdf-viewer';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
 import {
   BookOpen,
@@ -22,12 +24,19 @@ import {
   FileCheck,
   Settings,
   BarChart3,
-  ListChecks
+  ListChecks,
+  User
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 type ViewMode = 'overview' | 'test' | 'results';
+
+interface Trainer {
+  id: number;
+  name: string;
+  email: string | null;
+}
 
 interface TrainingClientProps {
   trainingData: {
@@ -46,6 +55,7 @@ interface TrainingClientProps {
   } | null;
   displayName: string;
   userRole: string;
+  trainers: Trainer[];
 }
 
 // Helper function to check if content is in Tiptap JSON format
@@ -65,7 +75,8 @@ export function TrainingClient({
   trainingData,
   training,
   displayName,
-  userRole
+  userRole,
+  trainers
 }: TrainingClientProps) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
@@ -73,11 +84,21 @@ export function TrainingClient({
   const [attemptId, setAttemptId] = useState<number | null>(null);
   const [testResults, setTestResults] = useState<any>(null);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [hasPdfDocument, setHasPdfDocument] = useState(false);
   const [testEligibility, setTestEligibility] = useState<{
     canStart: boolean;
     reason: string;
     message?: string;
   } | null>(null);
+
+  // Check if PDF document exists for this training
+  useEffect(() => {
+    if (training?.id) {
+      fetch(`/api/trainings/${training.id}/assignment/pdf`, { method: 'HEAD' })
+        .then((res) => setHasPdfDocument(res.ok))
+        .catch(() => setHasPdfDocument(false));
+    }
+  }, [training?.id]);
 
   const handleStartTest = async () => {
     if (!training?.id) return;
@@ -283,24 +304,63 @@ export function TrainingClient({
     if (!training?.id) return;
 
     setIsDownloadingPdf(true);
-    try {
-      const response = await fetch(`/api/trainings/${training.id}/pdf`);
+    const dateStr = new Date().toISOString().split('T')[0];
+    let downloadedCount = 0;
 
-      if (!response.ok) {
-        throw new Error('Failed to generate PDF');
+    try {
+      // Download generated text content PDF if available
+      if (training.content) {
+        try {
+          const textResponse = await fetch(`/api/trainings/${training.id}/pdf`);
+          if (textResponse.ok) {
+            const blob = await textResponse.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${displayName}_obsah_${dateStr}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            downloadedCount++;
+          }
+        } catch {
+          console.error('Failed to download text content PDF');
+        }
       }
 
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${displayName}_${new Date().toISOString().split('T')[0]}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // Download uploaded PDF document if available
+      if (hasPdfDocument) {
+        try {
+          const pdfResponse = await fetch(
+            `/api/trainings/${training.id}/assignment/pdf?mode=download`
+          );
+          if (pdfResponse.ok) {
+            const blob = await pdfResponse.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${displayName}_dokument_${dateStr}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            downloadedCount++;
+          }
+        } catch {
+          console.error('Failed to download uploaded PDF document');
+        }
+      }
 
-      toast.success('PDF byl úspěšně stažen');
+      if (downloadedCount > 0) {
+        toast.success(
+          downloadedCount === 1
+            ? 'PDF byl úspěšně stažen'
+            : `${downloadedCount} PDF soubory byly úspěšně staženy`
+        );
+      } else {
+        toast.error('Žádný PDF obsah není k dispozici');
+      }
     } catch {
       toast.error('Nepodařilo se stáhnout PDF');
     } finally {
@@ -389,7 +449,7 @@ export function TrainingClient({
 
       {/* Status Cards */}
       <div className='grid gap-4 md:grid-cols-4'>
-        <Card>
+        <Card className='gap-1'>
           <CardHeader className='pb-3'>
             <CardTitle className='text-muted-foreground flex items-center gap-2 text-sm font-medium'>
               <Calendar className='h-4 w-4' />
@@ -405,7 +465,7 @@ export function TrainingClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className='gap-1'>
           <CardHeader className='pb-3'>
             <CardTitle className='text-muted-foreground flex items-center gap-2 text-sm font-medium'>
               <AlertCircle className='h-4 w-4' />
@@ -425,7 +485,7 @@ export function TrainingClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className='gap-1'>
           <CardHeader className='pb-3'>
             <CardTitle className='text-muted-foreground flex items-center gap-2 text-sm font-medium'>
               <Clock className='h-4 w-4' />
@@ -443,7 +503,7 @@ export function TrainingClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className='gap-1'>
           <CardHeader className='pb-3'>
             <CardTitle className='text-muted-foreground flex items-center gap-2 text-sm font-medium'>
               <Award className='h-4 w-4' />
@@ -467,6 +527,41 @@ export function TrainingClient({
           </CardContent>
         </Card>
       </div>
+
+      {/* Trainer Info - visible for all users */}
+      {trainers && trainers.length > 0 && (
+        <Card className='border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20'>
+          <CardContent className='py-0'>
+            <div className='flex items-center gap-3'>
+              <div className='rounded-full bg-blue-100 p-2 dark:bg-blue-900'>
+                <User className='h-5 w-5 text-blue-600 dark:text-blue-400' />
+              </div>
+              <div>
+                <p className='text-sm font-medium text-blue-900 dark:text-blue-100'>
+                  {trainers.length === 1 ? 'Školitel' : 'Školitelé'}
+                </p>
+                <div className='mt-1 flex flex-col gap-1'>
+                  {trainers.map((trainer) => (
+                    <div key={trainer.id} className='flex items-center gap-2'>
+                      <span className='font-semibold text-blue-800 dark:text-blue-200'>
+                        {trainer.name || 'Neznámý'}
+                      </span>
+                      {trainer.email && (
+                        <a
+                          href={`mailto:${trainer.email}`}
+                          className='text-sm text-blue-600 hover:underline dark:text-blue-400'
+                        >
+                          ({trainer.email})
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Warnings */}
       {isExpired && (
@@ -541,11 +636,11 @@ export function TrainingClient({
             size='lg'
             variant='outline'
             onClick={handleDownloadPdf}
-            disabled={isDownloadingPdf || !training.content}
+            disabled={isDownloadingPdf || (!training.content && !hasPdfDocument)}
             className='cursor-pointer gap-2 px-8 py-6 text-base'
           >
             <FileText className='h-6 w-6' />
-            {isDownloadingPdf ? 'Generuji PDF...' : 'Stáhnout obsah v .pdf'}
+            {isDownloadingPdf ? 'Stahuji PDF...' : 'Stáhnout obsah v .pdf'}
           </Button>
 
           <Button
@@ -574,357 +669,406 @@ export function TrainingClient({
         </div>
       )}
 
-      {/* Training Content Display */}
-      {training && training.content && (
-        <Card>
-          <CardHeader>
-            <CardTitle className='flex items-center gap-2'>
+      {/* Training Content Display with Tabs */}
+      {training && (
+        <Tabs defaultValue='text' className='w-full'>
+          <TabsList className='grid h-auto w-full grid-cols-2 p-[2px]'>
+            <TabsTrigger value='text' className='cursor-pointer gap-2 py-3 text-base'>
               <BookOpen className='h-5 w-5' />
-              Obsah školení
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className='mx-auto max-w-[1200px] space-y-8'>
-              {isTiptapFormat(training.content) ? (
-                // New Tiptap format - render with read-only editor
-                <TiptapEditor
-                  value={
-                    typeof training.content === 'string'
-                      ? training.content
-                      : JSON.stringify(training.content)
-                  }
-                  editable={false}
-                />
-              ) : training.content.sections ? (
-                // Legacy format - render with old structure
-                training.content.sections.map((section: any, index: number) => {
-                  const content = section.content;
+              Textový obsah
+            </TabsTrigger>
+            <TabsTrigger value='pdf' className='cursor-pointer gap-2 py-3 text-base'>
+              <FileText className='h-5 w-5' />
+              PDF dokument
+              {hasPdfDocument ? (
+                <Badge variant='default' className='ml-1 bg-green-600 px-2 py-0.5 text-xs'>
+                  ✓
+                </Badge>
+              ) : (
+                <Badge variant='destructive' className='ml-1 px-2 py-0.5 text-xs'>
+                  ✗
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-                  if (!content) {
-                    return null;
-                  }
+          {/* Text Content Tab */}
+          <TabsContent value='text' className='mt-4'>
+            {training.content ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-2'>
+                    <BookOpen className='h-5 w-5' />
+                    Obsah školení
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className='mx-auto max-w-[1200px] space-y-8'>
+                    {isTiptapFormat(training.content) ? (
+                      // New Tiptap format - render with read-only editor
+                      <TiptapEditor
+                        value={
+                          typeof training.content === 'string'
+                            ? training.content
+                            : JSON.stringify(training.content)
+                        }
+                        editable={false}
+                      />
+                    ) : training.content.sections ? (
+                      // Legacy format - render with old structure
+                      training.content.sections.map((section: any, index: number) => {
+                        const content = section.content;
 
-                  // Render structured content as continuous flow
-                  return (
-                    <div key={index} className='space-y-6'>
-                      {/* Introduction */}
-                      {content.introduction && (
-                        <div className='prose prose-sm max-w-none'>
-                          <p className='text-muted-foreground text-base leading-relaxed'>
-                            {content.introduction}
-                          </p>
-                        </div>
-                      )}
+                        if (!content) {
+                          return null;
+                        }
 
-                      {/* Key Points */}
-                      {content.keyPoints && (
-                        <Card className='bg-primary/5 border-primary/20'>
-                          <CardHeader className='pb-3'>
-                            <CardTitle className='flex items-center gap-2 text-sm'>
-                              <Info className='h-4 w-4' />
-                              Klíčové body
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <ul className='space-y-2'>
-                              {content.keyPoints.map(
-                                (point: string, i: number) => (
-                                  <li
-                                    key={i}
-                                    className='flex items-start gap-2'
-                                  >
-                                    <CheckCircle className='text-primary mt-0.5 h-4 w-4 flex-shrink-0' />
-                                    <span className='text-sm'>{point}</span>
-                                  </li>
-                                )
-                              )}
-                            </ul>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {/* Image placeholder */}
-                      {content.image && (
-                        <div className='bg-muted relative flex h-64 w-full items-center justify-center rounded-lg'>
-                          <div className='text-muted-foreground text-center'>
-                            <BarChart3 className='mx-auto mb-2 h-12 w-12' />
-                            <p className='text-sm'>Ilustrační diagram</p>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Rules */}
-                      {content.rules && (
-                        <div className='space-y-4'>
-                          {content.rules.map((rule: any, i: number) => (
-                            <Card key={i}>
-                              <CardHeader className='pb-3'>
-                                <CardTitle className='flex items-center gap-2 text-base'>
-                                  <Badge variant='outline'>{rule.number}</Badge>
-                                  {rule.title}
-                                </CardTitle>
-                              </CardHeader>
-                              <CardContent className='space-y-3'>
-                                <p className='text-muted-foreground text-sm'>
-                                  {rule.description}
+                        // Render structured content as continuous flow
+                        return (
+                          <div key={index} className='space-y-6'>
+                            {/* Introduction */}
+                            {content.introduction && (
+                              <div className='prose prose-sm max-w-none'>
+                                <p className='text-muted-foreground text-base leading-relaxed'>
+                                  {content.introduction}
                                 </p>
+                              </div>
+                            )}
 
-                                {rule.checklist && (
-                                  <div className='space-y-1'>
-                                    {rule.checklist.map(
-                                      (item: string, j: number) => (
-                                        <div
-                                          key={j}
-                                          className='flex items-center gap-2'
+                            {/* Key Points */}
+                            {content.keyPoints && (
+                              <Card className='bg-primary/5 border-primary/20'>
+                                <CardHeader className='pb-3'>
+                                  <CardTitle className='flex items-center gap-2 text-sm'>
+                                    <Info className='h-4 w-4' />
+                                    Klíčové body
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <ul className='space-y-2'>
+                                    {content.keyPoints.map(
+                                      (point: string, i: number) => (
+                                        <li
+                                          key={i}
+                                          className='flex items-start gap-2'
                                         >
-                                          <ListChecks className='text-muted-foreground h-3 w-3' />
-                                          <span className='text-sm'>
-                                            {item}
-                                          </span>
+                                          <CheckCircle className='text-primary mt-0.5 h-4 w-4 flex-shrink-0' />
+                                          <span className='text-sm'>{point}</span>
+                                        </li>
+                                      )
+                                    )}
+                                  </ul>
+                                </CardContent>
+                              </Card>
+                            )}
+
+                            {/* Image placeholder */}
+                            {content.image && (
+                              <div className='bg-muted relative flex h-64 w-full items-center justify-center rounded-lg'>
+                                <div className='text-muted-foreground text-center'>
+                                  <BarChart3 className='mx-auto mb-2 h-12 w-12' />
+                                  <p className='text-sm'>Ilustrační diagram</p>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Rules */}
+                            {content.rules && (
+                              <div className='space-y-4'>
+                                {content.rules.map((rule: any, i: number) => (
+                                  <Card key={i}>
+                                    <CardHeader className='pb-3'>
+                                      <CardTitle className='flex items-center gap-2 text-base'>
+                                        <Badge variant='outline'>{rule.number}</Badge>
+                                        {rule.title}
+                                      </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className='space-y-3'>
+                                      <p className='text-muted-foreground text-sm'>
+                                        {rule.description}
+                                      </p>
+
+                                      {rule.checklist && (
+                                        <div className='space-y-1'>
+                                          {rule.checklist.map(
+                                            (item: string, j: number) => (
+                                              <div
+                                                key={j}
+                                                className='flex items-center gap-2'
+                                              >
+                                                <ListChecks className='text-muted-foreground h-3 w-3' />
+                                                <span className='text-sm'>
+                                                  {item}
+                                                </span>
+                                              </div>
+                                            )
+                                          )}
+                                        </div>
+                                      )}
+
+                                      {rule.parameters && (
+                                        <div className='mt-3 grid grid-cols-2 gap-2'>
+                                          {Object.entries(rule.parameters).map(
+                                            ([key, value]) => (
+                                              <div
+                                                key={key}
+                                                className='bg-muted flex justify-between rounded p-2 text-sm'
+                                              >
+                                                <span className='font-medium'>
+                                                  {key}:
+                                                </span>
+                                                <span className='text-muted-foreground'>
+                                                  {value as string}
+                                                </span>
+                                              </div>
+                                            )
+                                          )}
+                                        </div>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Standards */}
+                            {content.standards && (
+                              <div className='flex flex-wrap gap-2'>
+                                {content.standards.map(
+                                  (standard: string, i: number) => (
+                                    <Badge key={i} variant='secondary'>
+                                      <FileCheck className='mr-1 h-3 w-3' />
+                                      {standard}
+                                    </Badge>
+                                  )
+                                )}
+                              </div>
+                            )}
+
+                            {/* Tolerances */}
+                            {content.tolerances && (
+                              <Card>
+                                <CardHeader className='pb-3'>
+                                  <CardTitle className='flex items-center gap-2 text-sm'>
+                                    <Settings className='h-4 w-4' />
+                                    Tolerance
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className='grid grid-cols-2 gap-3'>
+                                    {Object.entries(content.tolerances).map(
+                                      ([key, value]) => (
+                                        <div
+                                          key={key}
+                                          className='rounded-lg border p-3'
+                                        >
+                                          <div className='text-muted-foreground mb-1 text-xs'>
+                                            {key}
+                                          </div>
+                                          <div className='font-mono font-semibold'>
+                                            {value as string}
+                                          </div>
                                         </div>
                                       )
                                     )}
                                   </div>
-                                )}
+                                </CardContent>
+                              </Card>
+                            )}
 
-                                {rule.parameters && (
-                                  <div className='mt-3 grid grid-cols-2 gap-2'>
-                                    {Object.entries(rule.parameters).map(
+                            {/* Defects */}
+                            {content.defects && (
+                              <Card className='border-destructive/20 bg-destructive/5'>
+                                <CardHeader className='pb-3'>
+                                  <CardTitle className='text-destructive flex items-center gap-2 text-sm'>
+                                    <AlertTriangle className='h-4 w-4' />
+                                    Možné vady
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className='flex flex-wrap gap-2'>
+                                    {content.defects.map(
+                                      (defect: string, i: number) => (
+                                        <Badge
+                                          key={i}
+                                          variant='outline'
+                                          className='border-destructive/30 text-destructive'
+                                        >
+                                          {defect}
+                                        </Badge>
+                                      )
+                                    )}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+
+                            {/* Documents */}
+                            {content.documents && (
+                              <div className='space-y-3'>
+                                {content.documents.map((doc: any, i: number) => (
+                                  <Card key={i} className='overflow-hidden'>
+                                    <div className='flex'>
+                                      <div className='bg-primary w-2' />
+                                      <div className='flex-1 p-4'>
+                                        <div className='flex items-start justify-between'>
+                                          <div className='space-y-1'>
+                                            <div className='flex items-center gap-2'>
+                                              <FileText className='text-primary h-4 w-4' />
+                                              <h4 className='text-sm font-semibold'>
+                                                {doc.name}
+                                              </h4>
+                                            </div>
+                                            <p className='text-muted-foreground text-xs'>
+                                              {doc.purpose}
+                                            </p>
+                                          </div>
+                                          {doc.frequency && (
+                                            <Badge variant='secondary'>
+                                              <Clock className='mr-1 h-3 w-3' />
+                                              {doc.frequency}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        {doc.fields && (
+                                          <div className='mt-2 flex flex-wrap gap-1'>
+                                            {doc.fields.map(
+                                              (field: string, j: number) => (
+                                                <Badge
+                                                  key={j}
+                                                  variant='outline'
+                                                  className='text-xs'
+                                                >
+                                                  {field}
+                                                </Badge>
+                                              )
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </Card>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* PPE */}
+                            {content.ppe && (
+                              <Card>
+                                <CardHeader className='pb-3'>
+                                  <CardTitle className='flex items-center gap-2 text-sm'>
+                                    <Shield className='h-4 w-4' />
+                                    Osobní ochranné pomůcky
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className='grid grid-cols-2 gap-2'>
+                                    {content.ppe.map((item: string, i: number) => (
+                                      <div
+                                        key={i}
+                                        className='bg-muted flex items-center gap-2 rounded p-2'
+                                      >
+                                        <Shield className='text-primary h-4 w-4' />
+                                        <span className='text-sm'>{item}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            )}
+
+                            {/* Hazards */}
+                            {content.hazards && (
+                              <Card className='border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20'>
+                                <CardHeader className='pb-3'>
+                                  <CardTitle className='flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-300'>
+                                    <AlertTriangle className='h-4 w-4' />
+                                    Nebezpečí
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <ul className='space-y-1'>
+                                    {content.hazards.map(
+                                      (hazard: string, i: number) => (
+                                        <li
+                                          key={i}
+                                          className='flex items-center gap-2 text-sm'
+                                        >
+                                          <div className='h-1.5 w-1.5 rounded-full bg-yellow-600' />
+                                          {hazard}
+                                        </li>
+                                      )
+                                    )}
+                                  </ul>
+                                </CardContent>
+                              </Card>
+                            )}
+
+                            {/* Emergency */}
+                            {content.emergency && (
+                              <Card className='border-destructive bg-destructive/5'>
+                                <CardHeader className='pb-3'>
+                                  <CardTitle className='text-destructive text-sm'>
+                                    Tísňové kontakty
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className='space-y-2'>
+                                    {Object.entries(content.emergency).map(
                                       ([key, value]) => (
                                         <div
                                           key={key}
-                                          className='bg-muted flex justify-between rounded p-2 text-sm'
+                                          className='bg-background flex justify-between rounded p-2'
                                         >
-                                          <span className='font-medium'>
+                                          <span className='text-sm font-medium'>
                                             {key}:
                                           </span>
-                                          <span className='text-muted-foreground'>
+                                          <span className='text-destructive font-mono text-sm font-bold'>
                                             {value as string}
                                           </span>
                                         </div>
                                       )
                                     )}
                                   </div>
-                                )}
-                              </CardContent>
-                            </Card>
-                          ))}
-                        </div>
-                      )}
+                                </CardContent>
+                              </Card>
+                            )}
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <p className='text-muted-foreground'>
+                        Pro toto školení není dostupný online obsah.
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className='py-12 text-center'>
+                  <BookOpen className='mx-auto h-12 w-12 text-muted-foreground mb-4' />
+                  <p className='text-muted-foreground'>
+                    Pro toto školení není dostupný textový obsah.
+                  </p>
+                  <p className='text-muted-foreground text-sm mt-2'>
+                    Zkontrolujte záložku PDF dokument.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
 
-                      {/* Standards */}
-                      {content.standards && (
-                        <div className='flex flex-wrap gap-2'>
-                          {content.standards.map(
-                            (standard: string, i: number) => (
-                              <Badge key={i} variant='secondary'>
-                                <FileCheck className='mr-1 h-3 w-3' />
-                                {standard}
-                              </Badge>
-                            )
-                          )}
-                        </div>
-                      )}
-
-                      {/* Tolerances */}
-                      {content.tolerances && (
-                        <Card>
-                          <CardHeader className='pb-3'>
-                            <CardTitle className='flex items-center gap-2 text-sm'>
-                              <Settings className='h-4 w-4' />
-                              Tolerance
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className='grid grid-cols-2 gap-3'>
-                              {Object.entries(content.tolerances).map(
-                                ([key, value]) => (
-                                  <div
-                                    key={key}
-                                    className='rounded-lg border p-3'
-                                  >
-                                    <div className='text-muted-foreground mb-1 text-xs'>
-                                      {key}
-                                    </div>
-                                    <div className='font-mono font-semibold'>
-                                      {value as string}
-                                    </div>
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {/* Defects */}
-                      {content.defects && (
-                        <Card className='border-destructive/20 bg-destructive/5'>
-                          <CardHeader className='pb-3'>
-                            <CardTitle className='text-destructive flex items-center gap-2 text-sm'>
-                              <AlertTriangle className='h-4 w-4' />
-                              Možné vady
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className='flex flex-wrap gap-2'>
-                              {content.defects.map(
-                                (defect: string, i: number) => (
-                                  <Badge
-                                    key={i}
-                                    variant='outline'
-                                    className='border-destructive/30 text-destructive'
-                                  >
-                                    {defect}
-                                  </Badge>
-                                )
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {/* Documents */}
-                      {content.documents && (
-                        <div className='space-y-3'>
-                          {content.documents.map((doc: any, i: number) => (
-                            <Card key={i} className='overflow-hidden'>
-                              <div className='flex'>
-                                <div className='bg-primary w-2' />
-                                <div className='flex-1 p-4'>
-                                  <div className='flex items-start justify-between'>
-                                    <div className='space-y-1'>
-                                      <div className='flex items-center gap-2'>
-                                        <FileText className='text-primary h-4 w-4' />
-                                        <h4 className='text-sm font-semibold'>
-                                          {doc.name}
-                                        </h4>
-                                      </div>
-                                      <p className='text-muted-foreground text-xs'>
-                                        {doc.purpose}
-                                      </p>
-                                    </div>
-                                    {doc.frequency && (
-                                      <Badge variant='secondary'>
-                                        <Clock className='mr-1 h-3 w-3' />
-                                        {doc.frequency}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  {doc.fields && (
-                                    <div className='mt-2 flex flex-wrap gap-1'>
-                                      {doc.fields.map(
-                                        (field: string, j: number) => (
-                                          <Badge
-                                            key={j}
-                                            variant='outline'
-                                            className='text-xs'
-                                          >
-                                            {field}
-                                          </Badge>
-                                        )
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </Card>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* PPE */}
-                      {content.ppe && (
-                        <Card>
-                          <CardHeader className='pb-3'>
-                            <CardTitle className='flex items-center gap-2 text-sm'>
-                              <Shield className='h-4 w-4' />
-                              Osobní ochranné pomůcky
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className='grid grid-cols-2 gap-2'>
-                              {content.ppe.map((item: string, i: number) => (
-                                <div
-                                  key={i}
-                                  className='bg-muted flex items-center gap-2 rounded p-2'
-                                >
-                                  <Shield className='text-primary h-4 w-4' />
-                                  <span className='text-sm'>{item}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {/* Hazards */}
-                      {content.hazards && (
-                        <Card className='border-yellow-200 bg-yellow-50 dark:bg-yellow-950/20'>
-                          <CardHeader className='pb-3'>
-                            <CardTitle className='flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-300'>
-                              <AlertTriangle className='h-4 w-4' />
-                              Nebezpečí
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <ul className='space-y-1'>
-                              {content.hazards.map(
-                                (hazard: string, i: number) => (
-                                  <li
-                                    key={i}
-                                    className='flex items-center gap-2 text-sm'
-                                  >
-                                    <div className='h-1.5 w-1.5 rounded-full bg-yellow-600' />
-                                    {hazard}
-                                  </li>
-                                )
-                              )}
-                            </ul>
-                          </CardContent>
-                        </Card>
-                      )}
-
-                      {/* Emergency */}
-                      {content.emergency && (
-                        <Card className='border-destructive bg-destructive/5'>
-                          <CardHeader className='pb-3'>
-                            <CardTitle className='text-destructive text-sm'>
-                              Tísňové kontakty
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <div className='space-y-2'>
-                              {Object.entries(content.emergency).map(
-                                ([key, value]) => (
-                                  <div
-                                    key={key}
-                                    className='bg-background flex justify-between rounded p-2'
-                                  >
-                                    <span className='text-sm font-medium'>
-                                      {key}:
-                                    </span>
-                                    <span className='text-destructive font-mono text-sm font-bold'>
-                                      {value as string}
-                                    </span>
-                                  </div>
-                                )
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <p className='text-muted-foreground'>
-                  Pro toto školení není dostupný online obsah.
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+          {/* PDF Document Tab */}
+          <TabsContent value='pdf' className='mt-4'>
+            <PdfViewer
+              trainingId={training.id}
+              trainingName={displayName}
+              showCard={true}
+              height='700px'
+            />
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* No training data message */}

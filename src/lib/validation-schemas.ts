@@ -309,3 +309,78 @@ export function validateQueryParams<T>(
 
   return { success: true, data: result.data };
 }
+
+// ============================================================================
+// PDF UPLOAD SCHEMAS
+// ============================================================================
+
+/**
+ * Maximum PDF file size in bytes (50MB default)
+ */
+export const PDF_MAX_SIZE_BYTES = 50 * 1024 * 1024;
+
+/**
+ * Allowed MIME types for PDF upload
+ */
+export const PDF_ALLOWED_MIME_TYPES = ['application/pdf'] as const;
+
+/**
+ * Schema for PDF upload validation
+ */
+export const PdfUploadSchema = z.object({
+  fileName: z.string().min(1).max(255),
+  originalName: z.string().min(1).max(500),
+  fileSize: z.number().positive().max(PDF_MAX_SIZE_BYTES),
+  mimeType: z.enum(PDF_ALLOWED_MIME_TYPES)
+});
+
+export type PdfUploadInput = z.infer<typeof PdfUploadSchema>;
+
+/**
+ * Schema for PDF download query parameters
+ */
+export const PdfDownloadQuerySchema = z.object({
+  mode: z.enum(['download', 'view']).default('view')
+});
+
+export type PdfDownloadQuery = z.infer<typeof PdfDownloadQuerySchema>;
+
+/**
+ * Validates PDF file metadata before upload
+ * @returns validation result with detailed error messages
+ */
+export function validatePdfUpload(
+  file: {
+    name: string;
+    type: string;
+    size: number;
+  }
+): { valid: true } | { valid: false; error: string } {
+  // Check MIME type
+  if (!PDF_ALLOWED_MIME_TYPES.includes(file.type as any)) {
+    return {
+      valid: false,
+      error: `Neplatný typ souboru: ${file.type}. Povoleno: PDF`
+    };
+  }
+
+  // Check file size
+  if (file.size > PDF_MAX_SIZE_BYTES) {
+    const maxSizeMB = Math.round(PDF_MAX_SIZE_BYTES / 1024 / 1024);
+    const actualSizeMB = (file.size / 1024 / 1024).toFixed(2);
+    return {
+      valid: false,
+      error: `Soubor je příliš velký: ${actualSizeMB} MB. Maximum: ${maxSizeMB} MB`
+    };
+  }
+
+  // Check file name extension
+  if (!file.name.toLowerCase().endsWith('.pdf')) {
+    return {
+      valid: false,
+      error: 'Soubor musí mít příponu .pdf'
+    };
+  }
+
+  return { valid: true };
+}

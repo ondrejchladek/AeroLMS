@@ -279,6 +279,33 @@ export default async function DynamicPage({ params }: PageProps) {
     }
   });
 
+  // Načti školitelé přiřazené k tomuto školení
+  const trainersData = await prisma.inspiritTrainingAssignment.findMany({
+    where: {
+      trainingId: training.id,
+      deletedAt: null
+    },
+    include: {
+      trainer: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true
+        }
+      }
+    }
+  });
+
+  // Připrav seznam školitelů pro klienta
+  const trainers = trainersData
+    .filter((a) => a.trainer)
+    .map((a) => ({
+      id: a.trainer!.id,
+      name: `${a.trainer!.firstName || ''} ${a.trainer!.lastName || ''}`.trim(),
+      email: a.trainer!.email
+    }));
+
   // Připrav data pro klienta
   const trainingForClient = trainingWithTests
     ? {
@@ -301,6 +328,7 @@ export default async function DynamicPage({ params }: PageProps) {
         training={trainingForClient}
         displayName={training.name} // Použij name z databáze
         userRole={user.role || 'WORKER'} // Předej roli uživatele
+        trainers={trainers} // Seznam školitelů pro toto školení
       />
     </PageContainer>
   );

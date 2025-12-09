@@ -345,6 +345,15 @@ model InspiritTrainingAssignment {
   updatedAt  DateTime         @updatedAt
   deletedAt  DateTime?        // Soft delete timestamp (NULL = active, DATE = deleted)
 
+  // PDF document fields for enterprise-grade file management
+  // Pattern: content-{YYYYMMDD}-{HHmmss}-{uuid4short}.pdf
+  pdfFileName     String?   @db.NVarChar(255)  // Stored name: content-20250109-143022-a1b2c3d4.pdf
+  pdfOriginalName String?   @db.NVarChar(500)  // Original name: skoleni_cmm.pdf
+  pdfFileSize     BigInt?                       // Size in bytes (BigInt for >2GB support)
+  pdfMimeType     String?   @db.NVarChar(100)  // application/pdf
+  pdfUploadedAt   DateTime?                     // Upload timestamp
+  pdfUploadedBy   Int?                          // User ID who uploaded (audit trail)
+
   trainer    InspiritCisZam   @relation(fields: [trainerId], references: [id])
   training   InspiritTraining @relation(fields: [trainingId], references: [id])
 
@@ -352,5 +361,6 @@ model InspiritTrainingAssignment {
   @@index([trainerId])
   @@index([trainingId])
   @@index([deletedAt])
+  @@index([pdfUploadedBy])
   @@map("InspiritTrainingAssignment")
 }

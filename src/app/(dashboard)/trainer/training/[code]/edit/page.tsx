@@ -34,20 +34,44 @@ export default async function TrainingEditPage({ params }: PageProps) {
     redirect('/trainer');
   }
 
-  // Verify trainer has access to this training
-  if (isTrainer(session.user.role) && !isAdmin(session.user.role)) {
-    const assignment = await prisma.inspiritTrainingAssignment.findFirst({
-      where: {
-        trainerId: parseInt(session.user.id),
-        trainingId: training.id,
-        deletedAt: null // Exclude soft-deleted assignments
-      }
-    });
-
-    if (!assignment) {
-      redirect('/trainer');
+  // Verify trainer has access and get assignment with PDF info
+  const assignment = await prisma.inspiritTrainingAssignment.findFirst({
+    where: {
+      trainerId: parseInt(session.user.id),
+      trainingId: training.id,
+      deletedAt: null // Exclude soft-deleted assignments
+    },
+    select: {
+      id: true,
+      pdfFileName: true,
+      pdfOriginalName: true,
+      pdfFileSize: true,
+      pdfMimeType: true,
+      pdfUploadedAt: true,
+      pdfUploadedBy: true
     }
+  });
+
+  // Non-admin trainers must have an assignment
+  if (isTrainer(session.user.role) && !isAdmin(session.user.role) && !assignment) {
+    redirect('/trainer');
   }
 
-  return <TrainingEditClient training={training} />;
+  // Prepare PDF info for client (convert BigInt to number)
+  const pdfInfo = assignment
+    ? {
+        pdfFileName: assignment.pdfFileName,
+        pdfOriginalName: assignment.pdfOriginalName,
+        pdfFileSize: assignment.pdfFileSize ? Number(assignment.pdfFileSize) : null,
+        pdfUploadedAt: assignment.pdfUploadedAt?.toISOString() || null,
+        pdfUploadedBy: assignment.pdfUploadedBy
+      }
+    : null;
+
+  return (
+    <TrainingEditClient
+      training={training}
+      pdfInfo={pdfInfo}
+    />
+  );
 }

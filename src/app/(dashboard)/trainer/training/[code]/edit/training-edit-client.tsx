@@ -25,13 +25,24 @@ import {
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { TiptapEditor } from '@/components/editor/TiptapEditor';
+import PdfUploadSection from '@/components/training/pdf-upload-section';
+
+interface PdfInfo {
+  pdfFileName: string | null;
+  pdfOriginalName: string | null;
+  pdfFileSize: number | null;
+  pdfUploadedAt: string | null;
+  pdfUploadedBy: number | null;
+}
 
 interface TrainingEditClientProps {
   training: any;
+  pdfInfo?: PdfInfo | null;
 }
 
 export default function TrainingEditClient({
-  training
+  training,
+  pdfInfo
 }: TrainingEditClientProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -111,6 +122,15 @@ export default function TrainingEditClient({
             </AlertDescription>
           </Alert>
         )}
+
+
+        {/* PDF Upload Section */}
+        <PdfUploadSection
+          trainingId={training.id}
+          trainingCode={training.code}
+          initialPdfInfo={pdfInfo}
+          disabled={isLoading || success}
+        />
 
         {/* Edit form */}
         <Card>

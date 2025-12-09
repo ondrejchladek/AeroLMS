@@ -85,6 +85,7 @@ export async function GET(
           userId: parseInt(session.user.id),
           passed: false,
           completedAt: { not: null },
+          deletedAt: null, // Exclude soft-deleted attempts
           ...(lastSuccessfulAttempt && {
             createdAt: {
               gt: lastSuccessfulAttempt.createdAt
