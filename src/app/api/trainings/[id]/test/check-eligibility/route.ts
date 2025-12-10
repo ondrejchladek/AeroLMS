@@ -149,7 +149,8 @@ export async function GET(
       where: {
         testId: test.id,
         userId: parseInt(session.user.id),
-        completedAt: null
+        completedAt: null,
+        deletedAt: null // Exclude soft-deleted attempts
       }
     });
 

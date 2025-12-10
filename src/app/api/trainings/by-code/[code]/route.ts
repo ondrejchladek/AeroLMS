@@ -16,8 +16,8 @@ export async function GET(
     }
 
     const { code } = await params;
-    const training = await prisma.inspiritTraining.findUnique({
-      where: { code },
+    const training = await prisma.inspiritTraining.findFirst({
+      where: { code, deletedAt: null },
       include: {
         tests: {
           where: { deletedAt: null }, // Exclude soft-deleted tests

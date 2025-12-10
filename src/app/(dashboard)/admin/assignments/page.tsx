@@ -31,6 +31,7 @@ export default async function AssignmentsPage() {
       }
     }),
     prisma.inspiritTraining.findMany({
+      where: { deletedAt: null },
       select: {
         id: true,
         code: true,
@@ -39,6 +40,10 @@ export default async function AssignmentsPage() {
       }
     }),
     prisma.inspiritTrainingAssignment.findMany({
+      where: {
+        deletedAt: null,
+        training: { deletedAt: null }
+      },
       include: {
         trainer: {
           select: {

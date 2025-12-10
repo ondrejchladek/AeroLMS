@@ -25,6 +25,7 @@ export default async function DynamicPage({ params }: PageProps) {
 
   // Načti všechna školení z databáze pro použití v celé aplikaci
   const dbTrainings = await prisma.inspiritTraining.findMany({
+    where: { deletedAt: null },
     orderBy: {
       name: 'asc'
     }
@@ -267,8 +268,8 @@ export default async function DynamicPage({ params }: PageProps) {
           deletedAt: null // Nesmazané testy
         };
 
-  const trainingWithTests = await prisma.inspiritTraining.findUnique({
-    where: { code: training.code },
+  const trainingWithTests = await prisma.inspiritTraining.findFirst({
+    where: { code: training.code, deletedAt: null },
     include: {
       tests: {
         where: testWhereClause,
@@ -357,7 +358,8 @@ export async function generateMetadata({
   // SQL Server automaticky dělá case-insensitive porovnání
   const training = await prisma.inspiritTraining.findFirst({
     where: {
-      code: slug.toUpperCase() // Převeď na uppercase pro SQL Server
+      code: slug.toUpperCase(), // Převeď na uppercase pro SQL Server
+      deletedAt: null
     }
   });
 

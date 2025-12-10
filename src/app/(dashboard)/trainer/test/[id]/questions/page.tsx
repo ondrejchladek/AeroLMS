@@ -60,7 +60,8 @@ export default async function QuestionsManagementPage({ params }: PageProps) {
     const assignment = await prisma.inspiritTrainingAssignment.findFirst({
       where: {
         trainerId: parseInt(session.user.id),
-        trainingId: test.trainingId
+        trainingId: test.trainingId,
+        deletedAt: null
       }
     });
 

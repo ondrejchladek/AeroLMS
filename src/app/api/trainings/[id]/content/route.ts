@@ -32,8 +32,8 @@ export async function GET(
       }
     }
 
-    const training = await prisma.inspiritTraining.findUnique({
-      where: { id: trainingId }
+    const training = await prisma.inspiritTraining.findFirst({
+      where: { id: trainingId, deletedAt: null }
     });
 
     if (!training) {

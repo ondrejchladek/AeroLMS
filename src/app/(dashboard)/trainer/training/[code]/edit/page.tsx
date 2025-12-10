@@ -26,8 +26,8 @@ export default async function TrainingEditPage({ params }: PageProps) {
   const { code } = await params;
 
   // Get training by code
-  const training = await prisma.inspiritTraining.findUnique({
-    where: { code: code }
+  const training = await prisma.inspiritTraining.findFirst({
+    where: { code: code, deletedAt: null }
   });
 
   if (!training) {

@@ -26,8 +26,8 @@ export default async function TestsManagementPage({ params }: PageProps) {
   const { code } = await params;
 
   // Get training with tests (only active tests for trainers)
-  const training = await prisma.inspiritTraining.findUnique({
-    where: { code: code },
+  const training = await prisma.inspiritTraining.findFirst({
+    where: { code: code, deletedAt: null },
     include: {
       tests: {
         where: { deletedAt: null }, // Only show active tests (not soft-deleted)
