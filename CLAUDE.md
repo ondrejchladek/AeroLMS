@@ -1285,7 +1285,13 @@ PORT=3000
 
 # Sentry (Optional - can be disabled on corporate server)
 NEXT_PUBLIC_SENTRY_DISABLED=true
+
+# File Storage (PDF uploads)
+FILE_STORAGE_PATH=C:/AeroLMSFiles    # Absolute path on production server
+FILE_MAX_SIZE_MB=200                 # Maximum file size in MB (default: 200)
 ```
+
+**IMPORTANT:** The `C:/AeroLMSFiles` directory must exist on the production server with write permissions for the PM2 process user.
 
 ## Custom Hooks Available
 
