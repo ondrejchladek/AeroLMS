@@ -12,14 +12,17 @@ import {
   validateTestAccess,
   getTrainerAssignedTrainingIds
 } from '@/lib/authorization';
+import { randomUUID } from 'crypto';
 
-// Function to generate unique certificate number
+/**
+ * Generate unique certificate number using UUID to prevent collisions
+ * Format: CERT-{YEAR}-{8-char-UUID}
+ * Previous implementation used Math.random() which could collide under concurrent submissions
+ */
 function generateCertificateNumber(): string {
   const year = new Date().getFullYear();
-  const random = Math.floor(Math.random() * 100000)
-    .toString()
-    .padStart(5, '0');
-  return `CERT-${year}-${random}`;
+  const uuid = randomUUID().split('-')[0].toUpperCase(); // 8 chars from UUID
+  return `CERT-${year}-${uuid}`;
 }
 
 // POST - Create manual test attempt (for trainers/admins)
@@ -59,9 +62,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify test exists and get training info
-    const test = await prisma.inspiritTest.findUnique({
-      where: { id: testId },
+    // Verify test exists and get training info (exclude soft-deleted tests)
+    const test = await prisma.inspiritTest.findFirst({
+      where: { id: testId, deletedAt: null },
       include: {
         training: true
       }
@@ -121,7 +124,8 @@ export async function POST(request: NextRequest) {
 
         trainingDatesUpdated = true;
 
-        // Create certificate
+        // Create certificate with configurable validity per training
+        const validityMs = (test.training.validityMonths ?? 12) * 30 * 24 * 60 * 60 * 1000;
         certificate = await tx.inspiritCertificate.create({
           data: {
             userId,
@@ -129,7 +133,7 @@ export async function POST(request: NextRequest) {
             testAttemptId: testAttempt.id,
             certificateNumber: generateCertificateNumber(),
             issuedAt: new Date(),
-            validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // +1 year
+            validUntil: new Date(Date.now() + validityMs),
             pdfData: null // PDF will be generated separately
           }
         });

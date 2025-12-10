@@ -220,6 +220,7 @@ model InspiritTraining {
   name                String
   description         String?                      @db.NVarChar(Max)
   content             String?                      @db.NVarChar(Max)
+  validityMonths      Int                          @default(12)  // Certificate validity period in months (12-24)
   createdAt           DateTime                     @default(now())
   updatedAt           DateTime                     @updatedAt
   deletedAt           DateTime?                    // Soft delete timestamp (NULL = active, DATE = deleted)
@@ -337,6 +338,23 @@ model InspiritCertificate {
   @@map("InspiritCertificate")
 }
 
+// Trainer-Training Assignment - Links trainers to trainings they manage
+//
+// BUSINESS RULE: One Training = One Trainer (enforced at DB and application level)
+//   - Each training can have MAX ONE active trainer assigned
+//   - Enforced by: IX_InspiritTrainingAssignment_trainingId_active (filtered unique index)
+//   - SQL: CREATE UNIQUE INDEX ... ON (trainingId) WHERE deletedAt IS NULL
+//   - Script: deployment/sql/10_add_training_unique_constraint.sql
+//
+// SOFT DELETE COMPATIBILITY:
+//   - Composite @@unique([trainerId, trainingId]) prevents exact duplicates
+//   - Filtered index allows soft-deleted history (multiple records per training)
+//   - Only ONE record with deletedAt=NULL per trainingId
+//
+// PDF DOCUMENT SUPPORT:
+//   - Each assignment can have one PDF document attached
+//   - Files stored in: uploads/trainings/{code}/{trainingId}/
+//   - Script: deployment/sql/07_add_pdf_fields_to_assignment.sql
 model InspiritTrainingAssignment {
   id         Int              @id @default(autoincrement())
   trainerId  Int
@@ -357,6 +375,9 @@ model InspiritTrainingAssignment {
   trainer    InspiritCisZam   @relation(fields: [trainerId], references: [id])
   training   InspiritTraining @relation(fields: [trainingId], references: [id])
 
+  // Constraints and Indexes:
+  // - @@unique: Prevents duplicate trainer-training pairs (for soft-delete restore)
+  // - Filtered index IX_..._trainingId_active: Enforces ONE active trainer per training (SQL only)
   @@unique([trainerId, trainingId])
   @@index([trainerId])
   @@index([trainingId])

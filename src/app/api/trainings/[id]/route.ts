@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { isAdmin, isTrainer } from '@/types/roles';
 import {
   UpdateTrainingSchema,
@@ -55,8 +56,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    const training = await prisma.inspiritTraining.findUnique({
-      where: { id: trainingId },
+    const training = await prisma.inspiritTraining.findFirst({
+      where: { id: trainingId, deletedAt: null },
       include: {
         tests: {
           where: { deletedAt: null }, // Exclude soft-deleted tests
@@ -74,7 +75,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             createdAt: 'asc'
           }
         },
+        // BUSINESS RULE: One training = one trainer
+        // Get the single active assignment (should be max 1 due to business rule)
         trainingAssignments: {
+          where: { deletedAt: null },
           include: {
             trainer: {
               select: {
@@ -85,7 +89,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 cislo: true
               }
             }
-          }
+          },
+          take: 1 // Enforce single trainer at query level
         }
       }
     });
@@ -97,7 +102,25 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    return NextResponse.json(training);
+    // Transform response to include single trainer instead of array
+    const { trainingAssignments, ...trainingData } = training;
+    const assignment = trainingAssignments[0] || null;
+
+    return NextResponse.json({
+      ...trainingData,
+      // Single trainer object (or null if not assigned)
+      trainer: assignment
+        ? {
+            id: assignment.trainer.id,
+            firstName: assignment.trainer.firstName,
+            lastName: assignment.trainer.lastName,
+            email: assignment.trainer.email,
+            cislo: assignment.trainer.cislo
+          }
+        : null,
+      // Keep trainingAssignments for backwards compatibility during transition
+      trainingAssignments
+    });
   } catch (error) {
     return NextResponse.json(
       { error: 'Chyba při načítání školení' },
@@ -169,6 +192,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       data: updateData,
       include: {
         tests: {
+          where: { deletedAt: null }, // Only active tests
           select: {
             id: true,
             title: true,
@@ -190,7 +214,68 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * Cascade soft-delete all related entities when a training is soft-deleted
+ * Sets deletedAt timestamp on: tests, questions, test attempts, certificates, assignments
+ * CRITICAL: Must be called within a transaction context for atomicity
+ */
+async function softDeleteTrainingCascade(
+  trainingId: number,
+  tx: Prisma.TransactionClient
+): Promise<void> {
+  const now = new Date();
+
+  // Get all tests for this training
+  const tests = await tx.inspiritTest.findMany({
+    where: { trainingId, deletedAt: null },
+    select: { id: true }
+  });
+  const testIds = tests.map((t) => t.id);
+
+  if (testIds.length > 0) {
+    // Soft-delete questions
+    await tx.inspiritQuestion.updateMany({
+      where: { testId: { in: testIds }, deletedAt: null },
+      data: { deletedAt: now }
+    });
+
+    // Soft-delete test attempts
+    await tx.inspiritTestAttempt.updateMany({
+      where: { testId: { in: testIds }, deletedAt: null },
+      data: { deletedAt: now }
+    });
+
+    // Get attempt IDs for certificates
+    const attempts = await tx.inspiritTestAttempt.findMany({
+      where: { testId: { in: testIds } },
+      select: { id: true }
+    });
+    const attemptIds = attempts.map((a) => a.id);
+
+    // Soft-delete certificates
+    if (attemptIds.length > 0) {
+      await tx.inspiritCertificate.updateMany({
+        where: { testAttemptId: { in: attemptIds }, deletedAt: null },
+        data: { deletedAt: now }
+      });
+    }
+
+    // Soft-delete tests
+    await tx.inspiritTest.updateMany({
+      where: { id: { in: testIds }, deletedAt: null },
+      data: { deletedAt: now }
+    });
+  }
+
+  // Soft-delete training assignments
+  await tx.inspiritTrainingAssignment.updateMany({
+    where: { trainingId, deletedAt: null },
+    data: { deletedAt: now }
+  });
+}
+
 // DELETE - Smazání školení (pouze admin)
+// Uses SOFT DELETE to preserve data integrity and legal documents (certificates)
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
@@ -219,9 +304,35 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Smaž školení (cascade delete smaže i související záznamy)
-    await prisma.inspiritTraining.delete({
+    // Check if training exists and is not already deleted
+    const training = await prisma.inspiritTraining.findUnique({
       where: { id: trainingId }
+    });
+
+    if (!training) {
+      return NextResponse.json(
+        { error: 'Školení nenalezeno' },
+        { status: 404 }
+      );
+    }
+
+    if (training.deletedAt) {
+      return NextResponse.json(
+        { error: 'Školení již bylo smazáno' },
+        { status: 400 }
+      );
+    }
+
+    // SOFT DELETE: Use transaction to ensure atomicity
+    await prisma.$transaction(async (tx) => {
+      // Soft-delete the training
+      await tx.inspiritTraining.update({
+        where: { id: trainingId },
+        data: { deletedAt: new Date() }
+      });
+
+      // Cascade soft-delete to all related entities
+      await softDeleteTrainingCascade(trainingId, tx);
     });
 
     return NextResponse.json({
@@ -229,6 +340,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       message: 'Školení bylo smazáno'
     });
   } catch (error) {
+    console.error('[DELETE /api/trainings/[id]] Error:', error);
     return NextResponse.json(
       { error: 'Chyba při mazání školení' },
       { status: 500 }

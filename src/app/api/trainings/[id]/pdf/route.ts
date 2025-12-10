@@ -4,7 +4,6 @@ import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { TrainingPDFDocument } from '@/components/training/training-pdf-document';
-import { getFullNameSafe } from '@/lib/user-helpers';
 import { isTrainer } from '@/types/roles';
 import { isTrainerAssignedToTraining } from '@/lib/authorization';
 
@@ -34,9 +33,9 @@ export async function GET(
       }
     }
 
-    // Načti data školení z databáze
-    const training = await prisma.inspiritTraining.findUnique({
-      where: { id: trainingId },
+    // Načti data školení z databáze (pouze ne-smazané)
+    const training = await prisma.inspiritTraining.findFirst({
+      where: { id: trainingId, deletedAt: null },
       select: {
         name: true,
         description: true,
@@ -48,19 +47,16 @@ export async function GET(
       return new NextResponse('Training not found', { status: 404 });
     }
 
-    // Získej jméno uživatele ze session
-    const userName = getFullNameSafe(
-      {
-        firstName: session.user.firstName,
-        lastName: session.user.lastName
-      },
-      'Uživatel'
-    );
-
-    // Parse content z JSON stringu
-    const parsedContent = training.content
-      ? JSON.parse(training.content)
-      : null;
+    // Parse content z JSON stringu (může být Tiptap JSON nebo legacy sections)
+    let parsedContent = null;
+    if (training.content) {
+      try {
+        parsedContent = JSON.parse(training.content);
+      } catch {
+        // If not valid JSON, treat as plain text
+        parsedContent = training.content;
+      }
+    }
 
     // Vygeneruj PDF
     const TrainingPDF = TrainingPDFDocument({
@@ -69,7 +65,6 @@ export async function GET(
         description: training.description,
         content: parsedContent
       },
-      userName,
       generatedDate: new Date()
     });
 

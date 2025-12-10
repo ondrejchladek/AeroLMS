@@ -47,13 +47,33 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  if (!token || !token.id) {
-    // Pokud není token, přesměrovat na login
+  // Check for missing token, missing id, or expired session
+  // token.exp is the JWT expiration timestamp (Unix time in seconds)
+  const tokenExp = typeof token?.exp === 'number' ? token.exp : null;
+  const isExpired = tokenExp && Date.now() >= tokenExp * 1000;
+
+  if (!token || !token.id || isExpired) {
+    // Clear cookies and redirect to login with appropriate error
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('callbackUrl', pathname);
 
+    if (isExpired) {
+      loginUrl.searchParams.set('error', 'SessionExpired');
+    }
+
     const response = NextResponse.redirect(loginUrl);
-    // Přidání základních security headerů
+
+    // Clear auth cookies for expired sessions
+    if (isExpired) {
+      response.cookies.delete('next-auth.session-token');
+      response.cookies.delete('next-auth.csrf-token');
+      response.cookies.delete('next-auth.callback-url');
+      response.cookies.delete('__Secure-next-auth.session-token');
+      response.cookies.delete('__Secure-next-auth.csrf-token');
+      response.cookies.delete('__Secure-next-auth.callback-url');
+    }
+
+    // Security headers
     response.headers.set('X-Frame-Options', 'DENY');
     response.headers.set('X-Content-Type-Options', 'nosniff');
 

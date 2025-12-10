@@ -279,8 +279,9 @@ export default async function DynamicPage({ params }: PageProps) {
     }
   });
 
-  // Načti školitelé přiřazené k tomuto školení
-  const trainersData = await prisma.inspiritTrainingAssignment.findMany({
+  // BUSINESS RULE: One training = one trainer
+  // Načti jediného školitele přiřazeného k tomuto školení
+  const trainerAssignment = await prisma.inspiritTrainingAssignment.findFirst({
     where: {
       trainingId: training.id,
       deletedAt: null
@@ -297,14 +298,14 @@ export default async function DynamicPage({ params }: PageProps) {
     }
   });
 
-  // Připrav seznam školitelů pro klienta
-  const trainers = trainersData
-    .filter((a) => a.trainer)
-    .map((a) => ({
-      id: a.trainer!.id,
-      name: `${a.trainer!.firstName || ''} ${a.trainer!.lastName || ''}`.trim(),
-      email: a.trainer!.email
-    }));
+  // Připrav data školitele pro klienta (single trainer or null)
+  const trainer = trainerAssignment?.trainer
+    ? {
+        id: trainerAssignment.trainer.id,
+        name: `${trainerAssignment.trainer.firstName || ''} ${trainerAssignment.trainer.lastName || ''}`.trim(),
+        email: trainerAssignment.trainer.email
+      }
+    : null;
 
   // Připrav data pro klienta
   const trainingForClient = trainingWithTests
@@ -328,7 +329,7 @@ export default async function DynamicPage({ params }: PageProps) {
         training={trainingForClient}
         displayName={training.name} // Použij name z databáze
         userRole={user.role || 'WORKER'} // Předej roli uživatele
-        trainers={trainers} // Seznam školitelů pro toto školení
+        trainer={trainer} // BUSINESS RULE: One trainer per training (or null)
       />
     </PageContainer>
   );

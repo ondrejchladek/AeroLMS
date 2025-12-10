@@ -125,25 +125,6 @@ export async function POST(
         }
       });
 
-      // DEBUG: Log attempt counter logic for verification
-      console.log('[TEST START] Attempt counter check:', {
-        userId: session.user.id,
-        testId,
-        lastSuccessfulAttempt: lastSuccessfulAttempt
-          ? {
-              id: lastSuccessfulAttempt.id,
-              createdAt: lastSuccessfulAttempt.createdAt,
-              passed: lastSuccessfulAttempt.passed
-            }
-          : null,
-        failedAttemptsCount: failedAttempts.length,
-        failedAttemptsDetails: failedAttempts.map((a) => ({
-          id: a.id,
-          createdAt: a.createdAt,
-          score: a.score
-        }))
-      });
-
       if (failedAttempts.length >= 2) {
         // After 2 failed attempts since last success, must take test in person
         // WORKER must go to TRAINER who will conduct test in person and manually

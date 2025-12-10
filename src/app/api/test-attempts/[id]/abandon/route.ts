@@ -17,9 +17,9 @@ export async function POST(
 
     const attemptId = parseInt(id);
 
-    // Get test attempt
-    const attempt = await prisma.inspiritTestAttempt.findUnique({
-      where: { id: attemptId }
+    // Get test attempt (exclude soft-deleted)
+    const attempt = await prisma.inspiritTestAttempt.findFirst({
+      where: { id: attemptId, deletedAt: null }
     });
 
     if (!attempt) {

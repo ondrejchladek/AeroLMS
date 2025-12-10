@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { isAdmin, isTrainer } from '@/types/roles';
+import { Prisma } from '@prisma/client';
 import { validateTestAccess } from '@/lib/authorization';
 
 interface RouteParams {
@@ -156,9 +156,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
       // Pokud jsou dodány nové otázky, nahraď je
       if (questions && Array.isArray(questions)) {
-        // Smaž staré otázky
-        await tx.inspiritQuestion.deleteMany({
-          where: { testId: testId }
+        // SOFT DELETE: Soft-delete old questions instead of hard delete (preserves audit trail)
+        await tx.inspiritQuestion.updateMany({
+          where: { testId: testId, deletedAt: null },
+          data: { deletedAt: new Date() }
         });
 
         // Vytvoř nové otázky
@@ -181,11 +182,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         }
       }
 
-      // Vrať aktualizovaný test s otázkami
+      // Vrať aktualizovaný test s otázkami (only active questions)
       return await tx.inspiritTest.findUnique({
         where: { id: testId },
         include: {
           questions: {
+            where: { deletedAt: null },
             orderBy: { order: 'asc' }
           }
         }
@@ -207,43 +209,41 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 /**
  * Cascade soft-delete all related entities when a test is soft-deleted
  * Sets deletedAt timestamp on: questions, test attempts, certificates
+ * CRITICAL: Must be called within a transaction context for atomicity
  * @param testId - ID of test to soft-delete
+ * @param tx - Prisma transaction client (ensures atomicity with parent transaction)
  */
-async function softDeleteTestCascade(testId: number): Promise<void> {
-  try {
-    const now = new Date();
+async function softDeleteTestCascade(
+  testId: number,
+  tx: Prisma.TransactionClient
+): Promise<void> {
+  const now = new Date();
 
-    // Soft-delete questions
-    await prisma.inspiritQuestion.updateMany({
-      where: { testId, deletedAt: null },
+  // Soft-delete questions
+  await tx.inspiritQuestion.updateMany({
+    where: { testId, deletedAt: null },
+    data: { deletedAt: now }
+  });
+
+  // Soft-delete test attempts
+  await tx.inspiritTestAttempt.updateMany({
+    where: { testId, deletedAt: null },
+    data: { deletedAt: now }
+  });
+
+  // Soft-delete certificates related to this test's attempts
+  // Note: Certificates are legal documents, so they're preserved even when soft-deleted
+  const testAttempts = await tx.inspiritTestAttempt.findMany({
+    where: { testId },
+    select: { id: true }
+  });
+  const attemptIds = testAttempts.map((a) => a.id);
+
+  if (attemptIds.length > 0) {
+    await tx.inspiritCertificate.updateMany({
+      where: { testAttemptId: { in: attemptIds }, deletedAt: null },
       data: { deletedAt: now }
     });
-
-    // Soft-delete test attempts
-    await prisma.inspiritTestAttempt.updateMany({
-      where: { testId, deletedAt: null },
-      data: { deletedAt: now }
-    });
-
-    // Soft-delete certificates related to this test's attempts
-    // Note: Certificates are legal documents, so they're preserved even when soft-deleted
-    const testAttempts = await prisma.inspiritTestAttempt.findMany({
-      where: { testId },
-      select: { id: true }
-    });
-    const attemptIds = testAttempts.map((a) => a.id);
-
-    if (attemptIds.length > 0) {
-      await prisma.inspiritCertificate.updateMany({
-        where: { testAttemptId: { in: attemptIds }, deletedAt: null },
-        data: { deletedAt: now }
-      });
-    }
-
-    console.log(`[softDeleteTestCascade] Soft-deleted all entities for test ${testId}`);
-  } catch (error) {
-    console.error(`[softDeleteTestCascade] Error for test ${testId}:`, error);
-    throw error;
   }
 }
 
@@ -294,6 +294,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // SOFT DELETE: Use transaction to ensure atomicity
+    // CRITICAL: All cascade operations use tx (transaction client) for atomicity
     await prisma.$transaction(async (tx) => {
       // Soft-delete the test
       await tx.inspiritTest.update({
@@ -301,8 +302,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         data: { deletedAt: new Date() }
       });
 
-      // Cascade soft-delete to all related entities
-      await softDeleteTestCascade(testId);
+      // Cascade soft-delete to all related entities (MUST use tx for atomicity)
+      await softDeleteTestCascade(testId, tx);
     });
 
     return NextResponse.json({

@@ -8,14 +8,17 @@ import {
   validateRequestBody,
   safeJsonParse
 } from '@/lib/validation-schemas';
+import { randomUUID } from 'crypto';
 
-// Function to generate unique certificate number
+/**
+ * Generate unique certificate number using UUID to prevent collisions
+ * Format: CERT-{YEAR}-{8-char-UUID}
+ * Previous implementation used Math.random() which could collide under concurrent submissions
+ */
 function generateCertificateNumber(): string {
   const year = new Date().getFullYear();
-  const random = Math.floor(Math.random() * 100000)
-    .toString()
-    .padStart(5, '0');
-  return `CERT-${year}-${random}`;
+  const uuid = randomUUID().split('-')[0].toUpperCase(); // 8 chars from UUID
+  return `CERT-${year}-${uuid}`;
 }
 
 export async function POST(
@@ -73,6 +76,9 @@ export async function POST(
     }
 
     // Calculate score with support for multiple correct answers
+    // Scoring rules per CLAUDE.md:
+    // - Single choice: 1 point if correct, 0 if wrong
+    // - Multiple choice: +1 per correct selection, -1 per incorrect selection (minimum 0)
     let totalPoints = 0;
     let earnedPoints = 0;
 
@@ -82,53 +88,39 @@ export async function POST(
       const userAnswer = answers[question.id];
       if (!userAnswer && question.required) continue;
 
-      // DEBUG: Log comparison
-      console.log('🔍 DEBUG Question ID:', question.id);
-      console.log('   Question:', question.question.substring(0, 50));
-      console.log('   Type:', question.type);
-      console.log('   Question Points:', question.points);
-      console.log('   User Answer:', userAnswer);
-      console.log('   User Answer Type:', typeof userAnswer);
-      console.log('   Correct Answer (raw):', question.correctAnswer);
-
       if (question.type === 'single') {
         // Single choice - correctAnswer is a plain string, NOT JSON
         const correctAnswer = question.correctAnswer;
-        console.log('   Correct Answer (string):', correctAnswer);
-        console.log('   Match?:', userAnswer === correctAnswer);
-
         if (userAnswer === correctAnswer) {
           earnedPoints += question.points;
-          console.log(`   ✅ Points awarded: ${question.points}`);
-        } else {
-          console.log(`   ❌ No points awarded`);
         }
       } else if (question.type === 'multiple') {
         // Multiple choice - correctAnswer is JSON array
         const correctAnswer = safeJsonParse(question.correctAnswer);
-        console.log('   Correct Answer (parsed array):', correctAnswer);
 
-        // DIRECT SCORING: 1 point per correct answer selected
+        // PENALTY SCORING: Award points for correct, penalize for incorrect
         if (Array.isArray(userAnswer) && Array.isArray(correctAnswer)) {
           const userSet = new Set(userAnswer);
           const correctSet = new Set(correctAnswer);
 
-          // Count how many correct answers the user selected
+          // Count correct and incorrect selections
           let correctlySelected = 0;
+          let wronglySelected = 0;
+
           userSet.forEach((answer) => {
             if (correctSet.has(answer)) {
               correctlySelected++;
+            } else {
+              wronglySelected++; // Penalty for wrong selection
             }
           });
 
-          // Award 1 point for each correctly selected answer
-          earnedPoints += correctlySelected;
-
-          console.log(`   Correctly selected: ${correctlySelected} out of ${correctAnswer.length}`);
-          console.log(`   ✅ Points awarded: ${correctlySelected}`);
+          // Award points minus penalties (minimum 0 per question)
+          // This prevents negative scores while still penalizing guessing
+          const pointsForQuestion = Math.max(0, correctlySelected - wronglySelected);
+          earnedPoints += pointsForQuestion;
         }
       }
-      console.log('---');
     }
 
     const score = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
@@ -171,7 +163,8 @@ export async function POST(
           throw new Error('Failed to update training dates');
         }
 
-        // Create certificate record
+        // Create certificate record with configurable validity per training
+        const validityMs = (attempt.test.training.validityMonths ?? 12) * 30 * 24 * 60 * 60 * 1000;
         certificate = await tx.inspiritCertificate.create({
           data: {
             userId: parseInt(session.user.id),
@@ -179,7 +172,7 @@ export async function POST(
             testAttemptId: attemptId,
             certificateNumber: generateCertificateNumber(),
             issuedAt: new Date(),
-            validUntil: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // +1 year
+            validUntil: new Date(Date.now() + validityMs),
             pdfData: null // PDF will be generated separately
           }
         });

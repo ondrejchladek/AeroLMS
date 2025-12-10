@@ -17,11 +17,12 @@ export async function GET(
     const { id } = await params;
     const trainingId = parseInt(id);
 
-    // Get active test for this training
+    // Get active test for this training (exclude soft-deleted)
     const test = await prisma.inspiritTest.findFirst({
       where: {
         trainingId: trainingId,
-        isActive: true
+        isActive: true,
+        deletedAt: null
       },
       include: {
         training: true

@@ -124,7 +124,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       tests: transformedTests,
       count: transformedTests.length
     });
-  } catch {
+  } catch (error) {
+    console.error('[GET /api/trainings/[id]/tests] Error:', error);
     return NextResponse.json(
       { error: 'Failed to fetch tests' },
       { status: 500 }
@@ -178,7 +179,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Vytvoř test s otázkami v transakci
     const test = await prisma.$transaction(async (tx) => {
-      // Vytvoř test
+      // BUSINESS RULE: Only one active test per training
+      // When creating a new active test, deactivate all other tests for the same training
+      // This ensures workers see only one test at a time
+      await tx.inspiritTest.updateMany({
+        where: {
+          trainingId,
+          isActive: true,
+          deletedAt: null
+        },
+        data: { isActive: false }
+      });
+
+      // Vytvoř test (always active by default)
       const newTest = await tx.inspiritTest.create({
         data: {
           trainingId,
@@ -226,7 +239,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       success: true,
       test: test
     });
-  } catch {
+  } catch (error) {
+    console.error('[POST /api/trainings/[id]/tests] Error:', error);
     return NextResponse.json(
       { error: 'Failed to create test' },
       { status: 500 }

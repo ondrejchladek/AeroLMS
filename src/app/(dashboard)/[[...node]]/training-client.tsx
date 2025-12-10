@@ -32,6 +32,7 @@ import { toast } from 'sonner';
 
 type ViewMode = 'overview' | 'test' | 'results';
 
+// BUSINESS RULE: One training = one trainer (max)
 interface Trainer {
   id: number;
   name: string;
@@ -55,7 +56,8 @@ interface TrainingClientProps {
   } | null;
   displayName: string;
   userRole: string;
-  trainers: Trainer[];
+  // Single trainer (or null if not assigned) - BUSINESS RULE: one trainer per training
+  trainer: Trainer | null;
 }
 
 // Helper function to check if content is in Tiptap JSON format
@@ -76,7 +78,7 @@ export function TrainingClient({
   training,
   displayName,
   userRole,
-  trainers
+  trainer
 }: TrainingClientProps) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
@@ -529,7 +531,8 @@ export function TrainingClient({
       </div>
 
       {/* Trainer Info - visible for all users */}
-      {trainers && trainers.length > 0 && (
+      {/* BUSINESS RULE: One training = one trainer */}
+      {trainer && (
         <Card className='border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20'>
           <CardContent className='py-0'>
             <div className='flex items-center gap-3'>
@@ -538,24 +541,20 @@ export function TrainingClient({
               </div>
               <div>
                 <p className='text-sm font-medium text-blue-900 dark:text-blue-100'>
-                  {trainers.length === 1 ? 'Školitel' : 'Školitelé'}
+                  Školitel
                 </p>
-                <div className='mt-1 flex flex-col gap-1'>
-                  {trainers.map((trainer) => (
-                    <div key={trainer.id} className='flex items-center gap-2'>
-                      <span className='font-semibold text-blue-800 dark:text-blue-200'>
-                        {trainer.name || 'Neznámý'}
-                      </span>
-                      {trainer.email && (
-                        <a
-                          href={`mailto:${trainer.email}`}
-                          className='text-sm text-blue-600 hover:underline dark:text-blue-400'
-                        >
-                          ({trainer.email})
-                        </a>
-                      )}
-                    </div>
-                  ))}
+                <div className='mt-1 flex items-center gap-2'>
+                  <span className='font-semibold text-blue-800 dark:text-blue-200'>
+                    {trainer.name || 'Neznámý'}
+                  </span>
+                  {trainer.email && (
+                    <a
+                      href={`mailto:${trainer.email}`}
+                      className='text-sm text-blue-600 hover:underline dark:text-blue-400'
+                    >
+                      ({trainer.email})
+                    </a>
+                  )}
                 </div>
               </div>
             </div>

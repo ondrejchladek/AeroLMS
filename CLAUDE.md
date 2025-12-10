@@ -81,11 +81,14 @@ logAuthorizationCheck(log: AuthAuditLog): Promise<void>
 - Complete system access
 
 **TRAINER** - Training Assignment Based:
+- **BUSINESS RULE: One training = one trainer (1:1 relationship)**
+- Each training can have exactly ONE trainer assigned
 - Views ONLY trainings assigned via `InspiritTrainingAssignment` table
 - Assignment checked on every API call using `isTrainerAssignedToTraining()`
 - Endpoints return 403 Forbidden for non-assigned trainings
 - Dashboard `/trainer` shows only assigned trainings
 - Dropdown in `/trainer/prvni-testy` filtered by assignments
+- Trainer is responsible for training content (text + PDF) and tests
 
 **WORKER** - Required Training Based:
 - Views ONLY trainings where `_{code}Pozadovano = TRUE` in their user record
@@ -184,6 +187,56 @@ await logAuthorizationCheck({
 ```
 
 Currently logs to console (development), ready for database storage (production).
+
+### One Trainer Per Training - Business Rule
+
+**BUSINESS RULE**: Each training can have exactly **ONE trainer** assigned (1:1 relationship).
+
+**Implementation** (enforced at application level in `POST /api/admin/assignments`):
+
+```typescript
+// Check if training already has an active trainer assigned
+const existingTrainerAssignment = await prisma.inspiritTrainingAssignment.findFirst({
+  where: {
+    trainingId,
+    deletedAt: null // Only active assignments
+  }
+});
+
+if (existingTrainerAssignment) {
+  return NextResponse.json({
+    error: `Školení již má přiřazeného školitele: ${trainerName}. Jedno školení může mít pouze jednoho školitele.`
+  }, { status: 409 });
+}
+```
+
+**Data Model**:
+```
+InspiritTraining (1) ←→ (0..1) InspiritTrainingAssignment ←→ (1) Trainer (User)
+```
+
+**Trainer Responsibilities**:
+- Rich text content (via Tiptap editor)
+- PDF document upload
+- Test creation and management
+- Question management
+
+**What WORKER sees**:
+- Single trainer's content (both rich text and PDF)
+- Only the active test (One Active Test Rule)
+- Trainer contact information (name + email)
+
+**Admin UI** (`/admin/assignments`):
+- Shows which trainings have assigned trainers
+- Filters dropdown to show only unassigned trainings
+- Displays count of assigned/unassigned trainings
+- Prevents creating duplicate assignments (409 Conflict)
+
+**Changing Trainer**:
+1. Admin must first remove existing assignment (soft delete)
+2. Then assign new trainer
+3. Content (text + PDF) remains on the training
+4. Tests remain on the training
 
 ## 🔄 Automatic Training Synchronization
 
@@ -654,7 +707,10 @@ Prisma Query (prisma.user) → InspiritCisZam VIEW →
 - **Certificate**: PDF certificates for completed trainings
   - Indexes: `userId`, `trainingId`, `certificateNumber`, `validUntil`
   - Optimized for certificate lookups and expiration queries
-- **TrainingAssignment**: Many-to-many relationship between trainers and trainings
+- **TrainingAssignment**: One-to-one relationship between trainers and trainings
+  - **BUSINESS RULE: One training = one trainer**
+  - Each training can have exactly ONE trainer assigned (enforced at application level)
+  - Trainer is responsible for: training content (rich text + PDF), tests, and questions
   - Indexes: `trainerId`, `trainingId`
   - Unique constraint on `trainerId+trainingId` combination
 

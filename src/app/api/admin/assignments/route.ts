@@ -2,8 +2,18 @@ import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { isAdmin } from '@/types/roles';
+import { isAdmin, isTrainer } from '@/types/roles';
 import { prisma } from '@/lib/prisma';
+import { z } from 'zod';
+
+/**
+ * Zod schema for assignment creation
+ * Validates trainerId and trainingId are positive integers
+ */
+const AssignmentSchema = z.object({
+  trainerId: z.number().int().positive('trainerId must be a positive integer'),
+  trainingId: z.number().int().positive('trainingId must be a positive integer'),
+});
 
 // GET all training assignments
 export async function GET() {
@@ -56,6 +66,7 @@ export async function GET() {
 }
 
 // POST create new assignment
+// BUSINESS RULE: One training can have only ONE trainer (1:1 relationship)
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -70,28 +81,102 @@ export async function POST(request: Request) {
       );
     }
 
-    const { trainerId, trainingId } = await request.json();
+    // Validate request body with Zod schema
+    const body = await request.json();
+    const validation = AssignmentSchema.safeParse(body);
 
-    if (!trainerId || !trainingId) {
+    if (!validation.success) {
       return NextResponse.json(
-        { error: 'trainerId and trainingId are required' },
+        {
+          error: 'Validation failed',
+          details: validation.error.issues,
+        },
         { status: 400 }
       );
     }
 
-    // Check if assignment already exists (including soft-deleted)
-    const existing = await prisma.inspiritTrainingAssignment.findFirst({
-      where: {
-        trainerId,
-        trainingId
-      }
+    const { trainerId, trainingId } = validation.data;
+
+    // Verify trainer exists and has TRAINER role
+    const trainer = await prisma.user.findUnique({
+      where: { id: trainerId },
+      select: { id: true, role: true, firstName: true, lastName: true },
     });
 
-    if (existing) {
+    if (!trainer) {
+      return NextResponse.json(
+        { error: 'Uživatel nebyl nalezen' },
+        { status: 404 }
+      );
+    }
+
+    if (!isTrainer(trainer.role)) {
+      return NextResponse.json(
+        {
+          error: `Uživatel ${trainer.firstName} ${trainer.lastName} nemá roli TRAINER. Lze přiřadit pouze uživatele s rolí TRAINER.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Verify training exists and is not soft-deleted
+    const training = await prisma.inspiritTraining.findFirst({
+      where: { id: trainingId, deletedAt: null },
+      select: { id: true, code: true, name: true },
+    });
+
+    if (!training) {
+      return NextResponse.json(
+        { error: 'Školení nebylo nalezeno nebo bylo smazáno' },
+        { status: 404 }
+      );
+    }
+
+    // BUSINESS RULE: Check if training already has an active trainer assigned
+    // One training = one trainer (enterprise requirement)
+    const existingTrainerAssignment =
+      await prisma.inspiritTrainingAssignment.findFirst({
+        where: {
+          trainingId,
+          deletedAt: null // Only active assignments
+        },
+        include: {
+          trainer: {
+            select: {
+              firstName: true,
+              lastName: true
+            }
+          }
+        }
+      });
+
+    if (existingTrainerAssignment) {
+      // Training already has a trainer - return conflict error
+      const trainerName = `${existingTrainerAssignment.trainer.firstName} ${existingTrainerAssignment.trainer.lastName}`;
+      return NextResponse.json(
+        {
+          error: `Školení již má přiřazeného školitele: ${trainerName}. Jedno školení může mít pouze jednoho školitele.`,
+          existingTrainerId: existingTrainerAssignment.trainerId,
+          existingTrainerName: trainerName
+        },
+        { status: 409 }
+      );
+    }
+
+    // Check if this specific trainer-training combination exists (including soft-deleted)
+    const existingSameAssignment =
+      await prisma.inspiritTrainingAssignment.findFirst({
+        where: {
+          trainerId,
+          trainingId
+        }
+      });
+
+    if (existingSameAssignment) {
       // If soft-deleted, restore it instead of creating new
-      if (existing.deletedAt !== null) {
+      if (existingSameAssignment.deletedAt !== null) {
         const restored = await prisma.inspiritTrainingAssignment.update({
-          where: { id: existing.id },
+          where: { id: existingSameAssignment.id },
           data: { deletedAt: null },
           include: {
             trainer: {
@@ -122,7 +207,7 @@ export async function POST(request: Request) {
       }
 
       return NextResponse.json(
-        { error: 'Assignment already exists' },
+        { error: 'Toto přiřazení již existuje' },
         { status: 409 }
       );
     }

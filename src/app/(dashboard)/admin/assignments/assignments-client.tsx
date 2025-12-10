@@ -48,7 +48,9 @@ import {
   Trash2,
   AlertCircle,
   CheckCircle,
-  BookOpen
+  BookOpen,
+  UserCheck,
+  Info
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cs } from 'date-fns/locale';
@@ -107,6 +109,26 @@ export default function AssignmentsClient({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTrainer, setSelectedTrainer] = useState<string>('');
   const [selectedTraining, setSelectedTraining] = useState<string>('');
+
+  // BUSINESS RULE: One training = one trainer
+  // Get set of training IDs that already have active assignments
+  const assignedTrainingIds = new Set(
+    assignments.map((a) => a.trainingId)
+  );
+
+  // Filter trainings to show only unassigned ones in dialog
+  const availableTrainings = trainings.filter(
+    (t) => !assignedTrainingIds.has(t.id)
+  );
+
+  // Get trainer name for a training (if assigned)
+  const getAssignedTrainerForTraining = (trainingId: number) => {
+    const assignment = assignments.find((a) => a.trainingId === trainingId);
+    if (assignment) {
+      return `${assignment.trainer.firstName} ${assignment.trainer.lastName}`;
+    }
+    return null;
+  };
 
   const formatDate = (date: Date | string | null) => {
     if (!date) return '-';
@@ -226,8 +248,16 @@ export default function AssignmentsClient({
           </Alert>
         )}
 
+        {/* Business Rule Info */}
+        <Alert className='border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30'>
+          <Info className='h-4 w-4 text-blue-600' />
+          <AlertDescription className='text-blue-800 dark:text-blue-200'>
+            <strong>Pravidlo:</strong> Každé školení může mít přiřazeného pouze jednoho školitele. Tento školitel je zodpovědný za obsah školení (text i PDF) a testy daného školení.
+          </AlertDescription>
+        </Alert>
+
         {/* Přehled školitelů */}
-        <div className='grid grid-cols-1 gap-4 md:grid-cols-3'>
+        <div className='grid grid-cols-1 gap-4 md:grid-cols-4'>
           <Card>
             <CardHeader className='pb-2'>
               <CardTitle className='text-muted-foreground text-sm font-medium'>
@@ -253,11 +283,36 @@ export default function AssignmentsClient({
           <Card>
             <CardHeader className='pb-2'>
               <CardTitle className='text-muted-foreground text-sm font-medium'>
-                Aktivních přiřazení
+                Přiřazená školení
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className='text-2xl font-bold'>{assignments.length}</div>
+              <div className='flex items-center gap-2'>
+                <div className='text-2xl font-bold text-green-600'>
+                  {assignments.length}
+                </div>
+                <UserCheck className='h-5 w-5 text-green-600' />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className='pb-2'>
+              <CardTitle className='text-muted-foreground text-sm font-medium'>
+                Nepřiřazená školení
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className='flex items-center gap-2'>
+                <div
+                  className={`text-2xl font-bold ${availableTrainings.length > 0 ? 'text-orange-600' : 'text-green-600'}`}
+                >
+                  {availableTrainings.length}
+                </div>
+                {availableTrainings.length > 0 && (
+                  <AlertCircle className='h-5 w-5 text-orange-600' />
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -275,15 +330,15 @@ export default function AssignmentsClient({
           </CardHeader>
           <CardContent>
             <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Školitel</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Školení</TableHead>
-                    <TableHead>Přiřazeno</TableHead>
-                    <TableHead>Akce</TableHead>
-                  </TableRow>
-                </TableHeader>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Školitel</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Školení</TableHead>
+                  <TableHead>Přiřazeno</TableHead>
+                  <TableHead>Akce</TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>
                 {assignments.length === 0 ? (
                   <TableRow>
@@ -357,6 +412,15 @@ export default function AssignmentsClient({
                 Přiřaďte školení vybranému školiteli
               </DialogDescription>
             </DialogHeader>
+
+            {/* Business rule info */}
+            <Alert className='border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30'>
+              <Info className='h-4 w-4 text-blue-600' />
+              <AlertDescription className='text-blue-800 dark:text-blue-200'>
+                Jedno školení může mít pouze jednoho školitele. Zobrazena jsou pouze školení bez přiřazeného školitele.
+              </AlertDescription>
+            </Alert>
+
             <div className='space-y-4 py-4'>
               <div className='space-y-2'>
                 <Label htmlFor='trainer'>Školitel</Label>
@@ -381,7 +445,7 @@ export default function AssignmentsClient({
               </div>
 
               <div className='space-y-2'>
-                <Label htmlFor='training'>Školení</Label>
+                <Label htmlFor='training'>Školení (bez přiřazeného školitele)</Label>
                 <Select
                   value={selectedTraining}
                   onValueChange={setSelectedTraining}
@@ -390,16 +454,27 @@ export default function AssignmentsClient({
                     <SelectValue placeholder='Vyberte školení' />
                   </SelectTrigger>
                   <SelectContent>
-                    {trainings.map((training) => (
-                      <SelectItem
-                        key={training.id}
-                        value={training.id.toString()}
-                      >
-                        {training.name || training.code} ({training.code})
+                    {availableTrainings.length === 0 ? (
+                      <SelectItem value='none' disabled>
+                        Všechna školení již mají školitele
                       </SelectItem>
-                    ))}
+                    ) : (
+                      availableTrainings.map((training) => (
+                        <SelectItem
+                          key={training.id}
+                          value={training.id.toString()}
+                        >
+                          {training.name || training.code} ({training.code})
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
+                {availableTrainings.length === 0 && (
+                  <p className='text-muted-foreground text-sm'>
+                    Pro přiřazení nového školitele nejprve odeberte stávající přiřazení.
+                  </p>
+                )}
               </div>
             </div>
             <DialogFooter>
@@ -416,7 +491,7 @@ export default function AssignmentsClient({
               </Button>
               <Button
                 onClick={handleCreateAssignment}
-                disabled={loading}
+                disabled={loading || availableTrainings.length === 0}
                 className='cursor-pointer'
               >
                 {loading ? 'Ukládání...' : 'Přiřadit'}
