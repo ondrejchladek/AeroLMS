@@ -72,7 +72,8 @@ export async function GET(
           testId: test.id,
           userId: parseInt(session.user.id),
           passed: true,
-          completedAt: { not: null }
+          completedAt: { not: null },
+          deletedAt: null // Exclude soft-deleted attempts
         },
         orderBy: {
           createdAt: 'desc'
