@@ -52,6 +52,18 @@ export default async function DynamicPage({ params }: PageProps) {
       redirect('/login');
     }
 
+    // RBAC: Pro WORKER načti seznam školení s přiřazeným školitelem
+    // Školení bez školitele se workerům nezobrazují
+    const trainingsWithTrainer = await prisma.inspiritTrainingAssignment.findMany({
+      where: {
+        deletedAt: null
+      },
+      select: {
+        trainingId: true
+      }
+    });
+    const trainingsWithTrainerIds = new Set(trainingsWithTrainer.map(t => t.trainingId));
+
     // Připrav data všech školení pro tabulku ze skutečných dat uživatele
     const allTrainings = dbTrainings.map((training: any) => {
       // Dynamicky získej data o školení z databáze uživatele
@@ -67,6 +79,7 @@ export default async function DynamicPage({ params }: PageProps) {
       );
 
       return {
+        id: training.id,
         key: training.code,
         name: training.name,
         slug: training.code.toLowerCase(), // Použij code jako slug
@@ -77,11 +90,11 @@ export default async function DynamicPage({ params }: PageProps) {
     });
 
     // RBAC: Filter trainings based on user role
-    // WORKER: Vidí pouze požadovaná školení (Pozadovano = TRUE)
+    // WORKER: Vidí pouze požadovaná školení (Pozadovano = TRUE) A s přiřazeným školitelem
     // ADMIN/TRAINER: Vidí všechna školení na přehledu
     const filteredTrainings =
       user.role === 'WORKER'
-        ? allTrainings.filter((t: any) => t.required)
+        ? allTrainings.filter((t: any) => t.required && trainingsWithTrainerIds.has(t.id))
         : allTrainings;
 
     // Spočítej statistiky ze skutečných dat (podle role - WORKER vidí jen požadovaná)

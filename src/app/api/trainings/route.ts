@@ -77,6 +77,18 @@ export async function GET(request: Request) {
       }
     });
 
+    // RBAC: Pro WORKER načti seznam školení s přiřazeným školitelem
+    // Školení bez školitele se workerům nezobrazují
+    const trainingsWithTrainer = await prisma.inspiritTrainingAssignment.findMany({
+      where: {
+        deletedAt: null
+      },
+      select: {
+        trainingId: true
+      }
+    });
+    const trainingsWithTrainerIds = new Set(trainingsWithTrainer.map(t => t.trainingId));
+
     // Pro každé školení z databáze zkontroluj, zda je požadováno pro uživatele
     const trainings = dbTrainings.map((training: any) => {
       const slug = training.code.toLowerCase(); // Použij code jako slug
@@ -98,12 +110,12 @@ export async function GET(request: Request) {
     });
 
     // RBAC: Filtruj školení podle role uživatele
-    // WORKER: Vidí pouze požadovaná školení (Pozadovano = TRUE)
+    // WORKER: Vidí pouze požadovaná školení (Pozadovano = TRUE) A s přiřazeným školitelem
     // ADMIN/TRAINER: Vidí všechna školení
     const userRole = user.role || 'WORKER';
     const filteredTrainings =
       userRole === 'WORKER'
-        ? trainings.filter((t: any) => t.required)
+        ? trainings.filter((t: any) => t.required && trainingsWithTrainerIds.has(t.id))
         : trainings;
 
     return NextResponse.json({
