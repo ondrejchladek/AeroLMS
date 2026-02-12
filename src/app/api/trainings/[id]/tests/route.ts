@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { isAdmin, isTrainer } from '@/types/roles';
+import { isTrainer } from '@/types/roles';
 import {
   CreateTestSchema,
   validateRequestBody,
@@ -58,17 +58,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       select: { role: true }
     });
 
-    // WORKER sees only active test, others see all tests (but not soft-deleted)
+    // Zaměstnanecký pohled (?employee=true) - pouze aktivní testy (pro vyplňování)
+    // Management pohled (bez ?employee) - WORKER vidí jen aktivní, ADMIN/TRAINER vidí všechny
+    const url = new URL(request.url);
+    const isEmployeeView = url.searchParams.get('employee') === 'true';
+
     const whereClause =
-      user?.role === 'WORKER'
+      isEmployeeView || user?.role === 'WORKER'
         ? {
             trainingId: trainingId,
             isActive: true,
-            deletedAt: null // Never show deleted tests to workers
+            deletedAt: null
           }
         : {
             trainingId: trainingId,
-            deletedAt: null // Only active tests (soft-deleted excluded)
+            deletedAt: null
           };
 
     // Získej testy podle role

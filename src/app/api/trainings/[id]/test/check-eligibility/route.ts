@@ -46,100 +46,98 @@ export async function GET(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Only apply restrictions for WORKER role
-    if (user.role === 'WORKER') {
-      const trainingCode = test.training.code;
+    // Eligibility pravidla platí pro všechny role (ADMIN, TRAINER, WORKER)
+    const trainingCode = test.training.code;
 
-      // Get training data
-      const trainingData = await getUserTrainingData(
-        parseInt(session.user.id),
-        trainingCode
+    // Get training data
+    const trainingData = await getUserTrainingData(
+      parseInt(session.user.id),
+      trainingCode
+    );
+
+    if (!trainingData) {
+      return NextResponse.json(
+        { error: 'Training data not found' },
+        { status: 404 }
       );
+    }
 
-      if (!trainingData) {
-        return NextResponse.json(
-          { error: 'Training data not found' },
-          { status: 404 }
-        );
+    // Check if training is required
+    const isRequired = trainingData.pozadovano === true;
+
+    // SECURITY: Check number of failed attempts SINCE last successful attempt
+    const lastSuccessfulAttempt = await prisma.inspiritTestAttempt.findFirst({
+      where: {
+        testId: test.id,
+        userId: parseInt(session.user.id),
+        passed: true,
+        completedAt: { not: null },
+        deletedAt: null // Exclude soft-deleted attempts
+      },
+      orderBy: {
+        createdAt: 'desc'
       }
+    });
 
-      // Check if training is required
-      const isRequired = trainingData.pozadovano === true;
+    // Count failed attempts AFTER the last successful attempt
+    const failedAttempts = await prisma.inspiritTestAttempt.findMany({
+      where: {
+        testId: test.id,
+        userId: parseInt(session.user.id),
+        passed: false,
+        completedAt: { not: null },
+        deletedAt: null, // Exclude soft-deleted attempts
+        ...(lastSuccessfulAttempt && {
+          createdAt: {
+            gt: lastSuccessfulAttempt.createdAt
+          }
+        })
+      }
+    });
 
-      // SECURITY: Check number of failed attempts SINCE last successful attempt
-      const lastSuccessfulAttempt = await prisma.inspiritTestAttempt.findFirst({
-        where: {
-          testId: test.id,
-          userId: parseInt(session.user.id),
-          passed: true,
-          completedAt: { not: null },
-          deletedAt: null // Exclude soft-deleted attempts
-        },
-        orderBy: {
-          createdAt: 'desc'
-        }
+    if (failedAttempts.length >= 2) {
+      return NextResponse.json({
+        canStart: false,
+        reason: 'max_attempts',
+        failedAttempts: failedAttempts.length,
+        message:
+          'Po dvou neúspěšných pokusech musíte absolvovat test osobně se školitelem'
       });
+    }
 
-      // Count failed attempts AFTER the last successful attempt
-      const failedAttempts = await prisma.inspiritTestAttempt.findMany({
-        where: {
-          testId: test.id,
-          userId: parseInt(session.user.id),
-          passed: false,
-          completedAt: { not: null },
-          deletedAt: null, // Exclude soft-deleted attempts
-          ...(lastSuccessfulAttempt && {
-            createdAt: {
-              gt: lastSuccessfulAttempt.createdAt
-            }
-          })
-        }
-      });
+    if (isRequired) {
+      // Check if this is the first test
+      const lastCompletionDate = trainingData.datumPosl;
 
-      if (failedAttempts.length >= 2) {
+      if (!lastCompletionDate) {
         return NextResponse.json({
           canStart: false,
-          reason: 'max_attempts',
-          failedAttempts: failedAttempts.length,
-          message:
-            'Po dvou neúspěšných pokusech musíte absolvovat test osobně se školitelem'
+          reason: 'first_test',
+          message: 'První test musí být absolvován osobně se školitelem'
         });
       }
 
-      if (isRequired) {
-        // Check if this is the first test
-        const lastCompletionDate = trainingData.datumPosl;
+      // Check if user can retake test (one month before expiration)
+      const nextDueDate = trainingData.datumPristi;
 
-        if (!lastCompletionDate) {
+      if (nextDueDate) {
+        const today = new Date();
+        const dueDate = new Date(nextDueDate);
+        const oneMonthBefore = new Date(dueDate);
+        oneMonthBefore.setMonth(oneMonthBefore.getMonth() - 1);
+
+        if (today < oneMonthBefore) {
+          const daysUntilAllowed = Math.ceil(
+            (oneMonthBefore.getTime() - today.getTime()) /
+              (1000 * 60 * 60 * 24)
+          );
           return NextResponse.json({
             canStart: false,
-            reason: 'first_test',
-            message: 'První test musí být absolvován osobně se školitelem'
+            reason: 'too_early',
+            nextAllowedDate: oneMonthBefore.toISOString(),
+            daysUntilAllowed,
+            message: `Test můžete opakovat až měsíc před vypršením platnosti (za ${daysUntilAllowed} dní)`
           });
-        }
-
-        // Check if user can retake test (one month before expiration)
-        const nextDueDate = trainingData.datumPristi;
-
-        if (nextDueDate) {
-          const today = new Date();
-          const dueDate = new Date(nextDueDate);
-          const oneMonthBefore = new Date(dueDate);
-          oneMonthBefore.setMonth(oneMonthBefore.getMonth() - 1);
-
-          if (today < oneMonthBefore) {
-            const daysUntilAllowed = Math.ceil(
-              (oneMonthBefore.getTime() - today.getTime()) /
-                (1000 * 60 * 60 * 24)
-            );
-            return NextResponse.json({
-              canStart: false,
-              reason: 'too_early',
-              nextAllowedDate: oneMonthBefore.toISOString(),
-              daysUntilAllowed,
-              message: `Test můžete opakovat až měsíc před vypršením platnosti (za ${daysUntilAllowed} dní)`
-            });
-          }
         }
       }
     }

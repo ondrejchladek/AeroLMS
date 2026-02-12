@@ -107,7 +107,7 @@ export function TrainingClient({
 
     try {
       // First fetch available tests
-      const testsResponse = await fetch(`/api/trainings/${training.id}/tests`);
+      const testsResponse = await fetch(`/api/trainings/${training.id}/tests?employee=true`);
       if (!testsResponse.ok) throw new Error('Failed to fetch tests');
       const testsData = await testsResponse.json();
 
@@ -202,7 +202,7 @@ export function TrainingClient({
 
     try {
       // First fetch available tests
-      const testsResponse = await fetch(`/api/trainings/${training.id}/tests`);
+      const testsResponse = await fetch(`/api/trainings/${training.id}/tests?employee=true`);
       if (!testsResponse.ok) throw new Error('Failed to fetch tests');
       const testsData = await testsResponse.json();
 
@@ -248,7 +248,7 @@ export function TrainingClient({
           });
 
           // Fetch fresh eligibility from server to update button state
-          if (training?.id && userRole === 'WORKER') {
+          if (training?.id) {
             try {
               const eligRes = await fetch(
                 `/api/trainings/${training.id}/test/check-eligibility`
@@ -282,7 +282,7 @@ export function TrainingClient({
       window.location.reload();
     } else {
       // Refresh eligibility BEFORE switching view (eligibility may have changed after failed test)
-      if (training?.id && userRole === 'WORKER') {
+      if (training?.id) {
         try {
           const res = await fetch(
             `/api/trainings/${training.id}/test/check-eligibility`
@@ -373,12 +373,8 @@ export function TrainingClient({
   const [isExpired, setIsExpired] = useState(false);
   const isCompleted = trainingData.datumPosl !== null;
 
-  // Vypočítej, zda může uživatel spustit test
+  // Vypočítej, zda může uživatel spustit test (stejná pravidla pro všechny role)
   const canStartTest = () => {
-    // Admin a Trainer mohou vždy
-    if (userRole !== 'WORKER') return true;
-
-    // Worker specifické podmínky
     if (!isCompleted) return false; // První test musí být osobně
 
     // Zkontroluj, zda je měsíc před vypršením
@@ -402,7 +398,7 @@ export function TrainingClient({
 
   // Fetch test eligibility from server
   useEffect(() => {
-    if (training?.id && viewMode === 'overview' && userRole === 'WORKER') {
+    if (training?.id && viewMode === 'overview') {
       fetch(`/api/trainings/${training.id}/test/check-eligibility`)
         .then((res) => res.json())
         .then((data) => setTestEligibility(data))
@@ -581,8 +577,8 @@ export function TrainingClient({
         </Card>
       )}
 
-      {/* Info for Worker about test availability */}
-      {userRole === 'WORKER' && training?.hasTest && (
+      {/* Info about test availability - všechny role */}
+      {training?.hasTest && (
         <div>
           {!isCompleted && (
             <Card className='mb-4 border-blue-200 bg-blue-50 dark:bg-blue-950/20'>
@@ -649,7 +645,7 @@ export function TrainingClient({
             className='cursor-pointer gap-2 px-8 py-6 text-base'
           >
             <FileText className='h-6 w-6' />
-            {userRole === 'WORKER' && testEligibility
+            {testEligibility && !testEligibility.canStart
               ? testEligibility.reason === 'max_attempts'
                 ? 'Kontaktujte školitele'
                 : testEligibility.reason === 'first_test'
@@ -659,7 +655,7 @@ export function TrainingClient({
                     : testEligibility.reason === 'no_test'
                       ? 'Test není dostupný'
                       : 'Spustit test'
-              : !canStartTest() && userRole === 'WORKER'
+              : !canStartTest()
                 ? isCompleted
                   ? 'Test zatím nedostupný'
                   : 'První test osobně'

@@ -50,7 +50,7 @@ export type EligibilityReason =
  * @param userId - User ID
  * @param testId - Test ID
  * @param trainingCode - Training code for fetching training data
- * @param userRole - User role (WORKER restrictions apply only to WORKER role)
+ * @param userRole - User role (same rules for all roles)
  * @returns Eligibility result with reason and message
  *
  * @example
@@ -62,18 +62,8 @@ export type EligibilityReason =
 export async function checkTestEligibility(
   userId: number,
   testId: number,
-  trainingCode: string,
-  userRole: string
+  trainingCode: string
 ): Promise<EligibilityResult> {
-  // ADMIN and TRAINER have no restrictions
-  if (userRole !== 'WORKER') {
-    return {
-      eligible: true,
-      reason: 'eligible',
-      message: 'Test je připraven ke spuštění',
-    };
-  }
-
   // Get training data using raw SQL (Prisma can't access dynamic columns)
   const trainingData = await getUserTrainingData(userId, trainingCode);
 

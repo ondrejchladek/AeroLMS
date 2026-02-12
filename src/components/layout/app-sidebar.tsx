@@ -233,10 +233,10 @@ export default function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {/* Běžné Menu - zobrazí se jen pro workery (ne pro adminy a trenéry) */}
-        {!hasAdminAccess && !hasTrainerAccess && (
+        {/* Moje školení - požadovaná školení pro všechny role */}
+        {(
           <SidebarGroup>
-            <SidebarGroupLabel>Menu</SidebarGroupLabel>
+            <SidebarGroupLabel>Moje školení</SidebarGroupLabel>
             <SidebarMenu>
               {navItems.map((item) => {
                 const Icon = item.icon ? Icons[item.icon] : Icons.logo;

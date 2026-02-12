@@ -109,14 +109,11 @@ export async function GET(request: Request) {
       };
     });
 
-    // RBAC: Filtruj školení podle role uživatele
-    // WORKER: Vidí pouze požadovaná školení (Pozadovano = TRUE) A s přiřazeným školitelem
-    // ADMIN/TRAINER: Vidí všechna školení
-    const userRole = user.role || 'WORKER';
-    const filteredTrainings =
-      userRole === 'WORKER'
-        ? trainings.filter((t: any) => t.required && trainingsWithTrainerIds.has(t.id))
-        : trainings;
+    // Filtruj školení - všechny role vidí pouze svá požadovaná školení s přiřazeným školitelem
+    // Management pohled (všechna/přiřazená školení) je dostupný přes ?admin=true
+    const filteredTrainings = trainings.filter(
+      (t: any) => t.required && trainingsWithTrainerIds.has(t.id)
+    );
 
     return NextResponse.json({
       trainings: filteredTrainings,

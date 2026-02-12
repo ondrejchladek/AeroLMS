@@ -89,13 +89,10 @@ export default async function DynamicPage({ params }: PageProps) {
       };
     });
 
-    // RBAC: Filter trainings based on user role
-    // WORKER: Vidí pouze požadovaná školení (Pozadovano = TRUE) A s přiřazeným školitelem
-    // ADMIN/TRAINER: Vidí všechna školení na přehledu
-    const filteredTrainings =
-      user.role === 'WORKER'
-        ? allTrainings.filter((t: any) => t.required && trainingsWithTrainerIds.has(t.id))
-        : allTrainings;
+    // Filtruj školení - všechny role vidí pouze svá požadovaná školení s přiřazeným školitelem
+    const filteredTrainings = allTrainings.filter(
+      (t: any) => t.required && trainingsWithTrainerIds.has(t.id)
+    );
 
     // Spočítej statistiky ze skutečných dat (podle role - WORKER vidí jen požadovaná)
     const now = new Date();
@@ -269,17 +266,12 @@ export default async function DynamicPage({ params }: PageProps) {
   };
 
   // Načti detaily školení včetně testů
-  // RBAC: WORKER vidí pouze aktivní testy, ostatní vidí všechny (ale ne smazané)
-  const userRole = user.role || 'WORKER';
-  const testWhereClause =
-    userRole === 'WORKER'
-      ? {
-          deletedAt: null, // Nesmazané testy
-          isActive: true // Pouze aktivní testy
-        }
-      : {
-          deletedAt: null // Nesmazané testy
-        };
+  // Zaměstnanecký pohled - všechny role vidí pouze aktivní testy
+  // Management pohled (všechny testy) je na /trainer/training/[code]/tests
+  const testWhereClause = {
+    deletedAt: null,
+    isActive: true
+  };
 
   const trainingWithTests = await prisma.inspiritTraining.findFirst({
     where: { code: training.code, deletedAt: null },
