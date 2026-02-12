@@ -14,16 +14,25 @@ The system implements three user roles with distinct permissions:
 
 ### User Roles
 
+- **ALL ROLES** (shared employee features):
+  - View personal required trainings (Pozadovano=TRUE) on dashboard `/`
+  - See "Moje skoleni" section in sidebar with dynamic training links
+  - Take tests with same eligibility rules (first test in-person, max 2 online attempts, retake 1 month before expiration)
+  - View training materials, progress, and certificates
+
 - **ADMIN** 👑
-  - Full system access
+  - All shared employee features above
+  - Full system access via "Admin Menu" in sidebar
   - Manage trainers and training assignments
   - Create/edit/delete all trainings and tests
-  - Access admin dashboard and synchronization tools
+  - Access admin dashboard (`/admin/prehled`) and synchronization tools
   - Can manually enter test results for workers
   - View all test variants
   - Example user: `test@test.cz`
 
 - **TRAINER** 👨‍🏫
+  - All shared employee features above
+  - Management of assigned trainings via "Skolitel Menu" in sidebar
   - Edit assigned trainings (name, description, content)
   - Create and manage tests for assigned trainings (soft delete tests)
   - View training statistics and test results
@@ -36,13 +45,7 @@ The system implements three user roles with distinct permissions:
   - **CANNOT** manage unassigned trainings
 
 - **WORKER** 👷
-  - View required trainings
-  - Take tests and assessments (only active tests visible)
-  - View training materials and progress
-  - Must complete ALL active tests for each training
-  - Can retake test only 1 month before expiration
-  - Maximum 2 attempts, then must take test in person
-  - First test must be taken in person with trainer
+  - All shared employee features above
   - Login: personal code + password (example: code `123456` + password)
 
 ### RBAC Implementation - Enterprise-Grade Authorization
@@ -75,28 +78,29 @@ logAuthorizationCheck(log: AuthAuditLog): Promise<void>
 
 #### Role-Based Filtering Logic
 
-**ADMIN** - Full Access:
-- Views ALL trainings without restrictions
-- No filtering applied on any endpoint
-- Complete system access
+**Two separate data flows:**
 
-**TRAINER** - Training Assignment Based:
+1. **Employee View (personal trainings)** - ALL roles:
+   - Dashboard `/` shows only required trainings (Pozadovano=TRUE) with assigned trainer
+   - Sidebar "Moje skoleni" section shows same filtered trainings
+   - API: `GET /api/trainings` (default, without `?admin=true`)
+   - API: `GET /api/trainings/[id]/tests?employee=true` (only active tests)
+   - Test eligibility rules apply equally to ALL roles
+
+2. **Management View** - TRAINER/ADMIN only:
+   - TRAINER: `/trainer` dashboard + management pages use `?admin=true` or direct Prisma queries
+   - ADMIN: `/admin/prehled` + management pages use `?admin=true` or direct Prisma queries
+   - Management endpoints check `InspiritTrainingAssignment` for TRAINER access
+
+**TRAINER - Management Access (Training Assignment Based)**:
 - **BUSINESS RULE: One training = one trainer (1:1 relationship)**
 - Each training can have exactly ONE trainer assigned
-- Views ONLY trainings assigned via `InspiritTrainingAssignment` table
-- Assignment checked on every API call using `isTrainerAssignedToTraining()`
-- Endpoints return 403 Forbidden for non-assigned trainings
-- Dashboard `/trainer` shows only assigned trainings
-- Dropdown in `/trainer/prvni-testy` filtered by assignments
+- Views ONLY assigned trainings in management view (`/trainer`, `/trainer/prvni-testy`)
+- Assignment checked on every management API call using `isTrainerAssignedToTraining()`
+- Management endpoints return 403 Forbidden for non-assigned trainings
 - Trainer is responsible for training content (text + PDF) and tests
 
-**WORKER** - Required Training Based:
-- Views ONLY trainings where `_{code}Pozadovano = TRUE` in their user record
-- Filtering applied on:
-  - Main dashboard `/` (page and statistics)
-  - Sidebar navigation links
-  - API endpoint `/api/trainings` (default, without `?admin=true`)
-- Independent of `InspiritTrainingAssignment` (trainings can be unassigned to trainers)
+**Note:** A TRAINER may have different trainings in management view (assigned by admin) vs employee view (personal required trainings). These are independent.
 
 #### Protected API Endpoints
 
@@ -112,10 +116,14 @@ All API endpoints have been secured with proper authorization checks:
 - `POST/GET /api/test-attempts/manual` - Manual test entry
 
 **Role-Filtered Endpoints**:
-- `GET /api/trainings` - Returns trainings based on role:
-  - WORKER: Only `Pozadovano = TRUE` trainings
-  - TRAINER: Only assigned trainings (with `?admin=true` param)
-  - ADMIN: All trainings (with `?admin=true` param)
+- `GET /api/trainings` - Returns trainings based on context:
+  - Default (all roles): Only `Pozadovano = TRUE` trainings with assigned trainer
+  - With `?admin=true` (TRAINER): Only assigned trainings for management
+  - With `?admin=true` (ADMIN): All trainings for management
+- `GET /api/trainings/[id]/tests` - Returns tests based on context:
+  - With `?employee=true` (all roles): Only active tests (for test-taking)
+  - Without param (TRAINER/ADMIN management): All tests (active + inactive)
+  - WORKER always sees only active tests regardless of param
 
 #### Security Implementation Pattern
 
@@ -152,9 +160,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 Comprehensive testing guide: `RBAC-TESTING-GUIDE.md` in project root
 
 **Quick Verification**:
-1. TRAINER role: Should see only assigned trainings in `/trainer` and `/trainer/prvni-testy`
-2. WORKER role: Should see only required trainings (Pozadovano=TRUE) on dashboard and sidebar
-3. Security: Direct URL access to non-authorized trainings should return 403
+1. ALL roles: Should see only required trainings (Pozadovano=TRUE) with assigned trainer on dashboard `/` and sidebar "Moje skoleni"
+2. ALL roles: Test eligibility rules (first test in-person, max 2 attempts, retake window) apply equally
+3. TRAINER role: Should see only assigned trainings in management view `/trainer` and `/trainer/prvni-testy`
+4. Security: Direct URL access to non-authorized management endpoints should return 403
 
 **Database Queries for Testing**:
 ```sql
@@ -221,7 +230,7 @@ InspiritTraining (1) ←→ (0..1) InspiritTrainingAssignment ←→ (1) Trainer
 - Test creation and management
 - Question management
 
-**What WORKER sees**:
+**What employees see (all roles in employee view)**:
 - Single trainer's content (both rich text and PDF)
 - Only the active test (One Active Test Rule)
 - Trainer contact information (name + email)
@@ -332,17 +341,19 @@ Then in application:
   - Example: Question with 3 correct answers = 3 points
   - Trainers cannot manually set points - calculated by system
 
-### Testing Rules for Workers
+### Testing Rules (All Roles)
 
-**Test Eligibility Logic** (enforced in `/api/trainings/[id]/test/start`):
+**Test Eligibility Logic** (enforced in `/api/trainings/[id]/test/start` and `/api/trainings/[id]/test/check-eligibility`):
+
+**IMPORTANT**: These rules apply equally to ALL roles (ADMIN, TRAINER, WORKER). All users are employees who must follow the same test-taking rules.
 
 1. **First Test Rule** (DatumPosl = NULL):
-   - Worker CANNOT take test online if `_{code}DatumPosl` is NULL
+   - User CANNOT take test online if `_{code}DatumPosl` is NULL
    - First test MUST be taken in person with trainer (manual entry)
    - Eligibility check returns: `{ eligible: false, reason: "První test musí být absolvován osobně" }`
 
 2. **Retake Window Rule**:
-   - Worker can ONLY retake test 1 month before expiration (`DatumPristi`)
+   - User can ONLY retake test 1 month before expiration (`DatumPristi`)
    - Current date must be >= (DatumPristi - 30 days)
    - If too early: `{ eligible: false, reason: "Test lze opakovat až měsíc před vypršením platnosti" }`
 
@@ -391,10 +402,10 @@ if (isActive) {
 **Business Rule**:
 - ONLY ONE test can be active per training at any time
 - When activating test A → all other tests for same training are automatically deactivated
-- WORKER sees only active test in UI
-- TRAINER/ADMIN sees all tests (can switch active test via toggle)
+- **Employee view** (all roles on `/{slug}`): Only active test visible (via `?employee=true` param)
+- **Management view** (TRAINER/ADMIN on `/trainer/training/[code]/tests`): All tests visible (can switch active test via toggle)
 
-**Use Case**: Multiple test variants (Test A, Test B, Test C) for same training → only one shown to workers
+**Use Case**: Multiple test variants (Test A, Test B, Test C) for same training → only active one shown in employee view
 
 ### Soft Delete System - Cascade Behavior
 
@@ -595,7 +606,7 @@ npm run prepare          # Setup Husky pre-commit hooks
 ## Key Features
 
 ### Dashboard Pages
-- **Overview** (`/`): Main dashboard with real-time statistics from database
+- **Overview** (`/`): Main dashboard with real-time statistics from database (ALL roles land here)
   - Statistics cards with emoji indicators (🔵🟢🔴🟡) and user-friendly labels
   - Bar chart showing upcoming trainings by month
   - Recent completions list with last 5 trainings
@@ -822,8 +833,8 @@ import {
 
 ### Routing Structure
 - **App Router** with Next.js 15
-- Main routes:
-  - `app/(dashboard)/[[...node]]/` - Dynamic training routes with catch-all segments
+- Main routes (all roles land on `/` - personal training dashboard):
+  - `app/(dashboard)/[[...node]]/` - Dynamic training routes with catch-all segments (employee view for all roles)
   - `app/(dashboard)/profil/` - User profile page
   - `app/(dashboard)/admin/` - Admin dashboard and tools
   - `app/(dashboard)/trainer/` - Trainer dashboard and management
@@ -883,9 +894,9 @@ src/features/     # Feature-based modules
 ## API Endpoints - Complete List (24 routes)
 
 ### Training APIs (9 routes)
-- **GET /api/trainings** - List trainings (role-based: admin/trainer gets all, workers get their assigned)
-  - Query params: `?admin=true` (TRAINER/ADMIN only - get assigned/all trainings)
-  - WORKER: Returns only `Pozadovano = TRUE` trainings
+- **GET /api/trainings** - List trainings based on context:
+  - Default (all roles): Returns only `Pozadovano = TRUE` trainings with assigned trainer
+  - Query params: `?admin=true` (TRAINER: assigned trainings, ADMIN: all trainings)
 - **GET /api/trainings/[id]** - Get training detail with authorization check
   - TRAINER: Checks InspiritTrainingAssignment
   - Returns: Training object with tests
@@ -896,15 +907,15 @@ src/features/     # Feature-based modules
 - **GET /api/trainings/[id]/content** - Get training content sections
 - **GET /api/trainings/[id]/pdf** - Generate and download training content as PDF
 - **GET /api/trainings/[id]/tests** - Get all tests for a training (multiple test support)
-  - WORKER: Only active tests (isActive = true)
-  - TRAINER/ADMIN: All tests (including inactive)
+  - With `?employee=true`: Only active tests (for test-taking, used by all roles in employee view)
+  - Without param: WORKER sees only active, TRAINER/ADMIN sees all (for management)
 - **POST /api/trainings/[id]/tests** - Create new test for training (trainer/admin only)
   - Body: CreateTestSchema (Zod validated, max 100 questions)
   - Auto-calculates points per question
-- **GET /api/trainings/[id]/test/check-eligibility** - Pre-flight eligibility check
+- **GET /api/trainings/[id]/test/check-eligibility** - Pre-flight eligibility check (all roles)
   - Returns: eligible (boolean), reason (string), attemptCount (number)
-- **POST /api/trainings/[id]/test/start** - Start a new test attempt (with testId in body)
-  - Eligibility checks: First test, max attempts, retake window
+- **POST /api/trainings/[id]/test/start** - Start a new test attempt (all roles, with testId in body)
+  - Eligibility checks apply to ALL roles: First test, max attempts, retake window
   - Body: { testId: number }
 - **GET /api/trainings/by-code/[code]** - Get training by code
 - **GET /api/trainings/slug/[slug]** - Get training by URL slug
@@ -1176,10 +1187,11 @@ Never: Add training columns to Prisma schema
 
 ### Test Mode Switching Pattern
 - ViewMode state manages transitions: 'overview' | 'test' | 'results'
-- Separate components for each mode: 
+- Applies to ALL roles (ADMIN, TRAINER, WORKER) - same eligibility checks and test UI
+- Separate components for each mode:
   - `src/components/training/test-form.tsx` - Assessment form with questions
   - `src/components/training/test-results.tsx` - Score display and feedback
-- Test flow: handleStartTest → fetch test → start attempt → submit → show results
+- Test flow: handleStartTest → fetch test (`?employee=true`) → start attempt → submit → show results
 - Navigation maintains state: handleBackToOverview, handleRetryTest
 - Loading states and error handling for async operations
 
@@ -1204,7 +1216,7 @@ src/
 │   │   ├── test-form.tsx             # Test interface
 │   │   └── test-results.tsx          # Results display
 │   ├── layout/            # App-wide layout components
-│   │   ├── app-sidebar.tsx
+│   │   ├── app-sidebar.tsx  # Sidebar: role-specific management + "Moje skoleni" for all roles
 │   │   ├── header.tsx
 │   │   ├── providers.tsx  # All context providers
 │   │   └── ThemeToggle/   # Theme switching components
@@ -1478,6 +1490,15 @@ npm install --save-dev @playwright/test
 - Multiple tests per training support
 - Dynamic content generation based on TabCisZam_EXT columns
 
+### Unified Employee View (February 2025)
+- Extended required training visibility to ALL roles (previously WORKER-only)
+- ALL roles now land on `/` (personal training dashboard) - removed middleware redirects for ADMIN/TRAINER
+- Sidebar shows "Moje skoleni" section for ALL roles (plus role-specific management sections)
+- Test eligibility rules (first test in-person, 2 attempts, retake window) apply to ALL roles
+- Added `?employee=true` param to `/api/trainings/[id]/tests` to separate employee vs management views
+- `/api/trainings` (default) returns only required trainings for ALL roles
+- Management views (`?admin=true`, `/trainer/*`) remain unchanged
+
 ## Common Pitfalls to Avoid
 
 **Database Operations (CRITICAL - Read First):**
@@ -1636,10 +1657,12 @@ If Prisma cannot connect to SQL Server:
 
 ### Training Components
 - **Training Client** (`app/(dashboard)/[[...node]]/training-client.tsx`): Main training interface with mode switching
+  - Used by ALL roles (employee view) - same eligibility checks and test UI
   - Continuous content display (no collapsibles)
   - PDF download functionality with loading states
   - Enlarged action buttons with cursor pointer
   - Real-time database integration
+  - Fetches tests with `?employee=true` param (only active tests)
 - **Training PDF Document** (`components/training/training-pdf-document.tsx`): PDF generation component
   - Server-side rendering for PDF
   - Full Czech language support
