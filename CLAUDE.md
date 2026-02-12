@@ -245,7 +245,7 @@ The system dynamically generates training content based on database columns:
 ### How It Works
 1. **On Application Start** (`src/instrumentation.ts`):
    - Calls `initializeTrainings()` from `lib/init-trainings.ts`
-   - Scans TabCisZam_EXT table for training columns pattern: `_{code}DatumPosl`, `_{code}DatumPristi`, `_{code}Pozadovano`
+   - Scans TabCisZam_EXT table for training columns pattern: `_{code}DatumPosl`, `_{code}Pozadovano`
    - Creates missing Training records automatically via `lib/training-sync.ts`
    - Preserves existing training data
 
@@ -254,7 +254,13 @@ The system dynamically generates training content based on database columns:
    - Button: "Spustit manuální synchronizaci"
    - API endpoint: `POST /api/admin/sync-trainings`
 
-3. **Debug Tools** (not part of application):
+3. **VIEW Regeneration** (for DatumPristi calculation):
+   - API endpoint: `POST /api/admin/regenerate-view`
+   - Stored procedure: `EXEC sp_RegenerateInspiritCisZamView`
+   - Dynamically regenerates InspiritCisZam VIEW based on detected columns
+   - Uses `validityMonths` from InspiritTraining table (default: 12 months)
+
+4. **Debug Tools** (not part of application):
    - `prisma/check-columns.js` - Manual script for database analysis
    - Run with: `node prisma/check-columns.js`
 
@@ -263,16 +269,39 @@ For each training, the system looks for TWO physical columns in TabCisZam_EXT ta
 - `_{code}DatumPosl` - Last completion date (PHYSICAL column)
 - `_{code}Pozadovano` - Required flag (boolean, PHYSICAL column)
 
-The third column is COMPUTED in the VIEW:
+The third column is COMPUTED in the VIEW (dynamically generated):
 - `_{code}DatumPristi` - Next due date (COMPUTED via DATEADD in InspiritCisZam VIEW)
+  - Uses `validityMonths` from InspiritTraining table
+  - Default: 12 months if not configured
   - Example: `DATEADD(month, 24, _CMMDatumPosl) AS _CMMDatumPristi`
-  - Validity period (months) is set by superadmin in VIEW definition
 
 **CRITICAL:** All training columns have `_` (underscore) prefix!
 
 Example physical columns in TabCisZam_EXT: `_CMMDatumPosl`, `_CMMPozadovano`
 Example computed column in VIEW: `_CMMDatumPristi = DATEADD(month, 24, _CMMDatumPosl)`
 → Creates training with code "CMM"
+
+### Adding New Training (Complete Workflow)
+
+When DB admin adds new training columns to TabCisZam_EXT:
+
+```sql
+-- Step 1: Add physical columns (DB admin in SSMS)
+ALTER TABLE TabCisZam_EXT ADD _NoveSkolDatumPosl DATETIME2 NULL;
+ALTER TABLE TabCisZam_EXT ADD _NoveSkolPozadovano BIT NULL;
+
+-- Step 2: Regenerate VIEW to include DatumPristi calculation
+EXEC sp_RegenerateInspiritCisZamView;
+```
+
+Then in application:
+1. Run "Spustit manuální synchronizaci" in admin dashboard → creates InspiritTraining record
+2. (Optional) Set custom validity: Edit training → set validityMonths → regenerate VIEW again
+
+**API Endpoints for Sync:**
+- `POST /api/admin/sync-trainings` - Sync Training table with TabCisZam_EXT columns
+- `POST /api/admin/regenerate-view` - Regenerate InspiritCisZam VIEW dynamically
+- `GET /api/admin/regenerate-view` - Preview detected trainings without executing
 
 ## 📚 Advanced Testing System
 
